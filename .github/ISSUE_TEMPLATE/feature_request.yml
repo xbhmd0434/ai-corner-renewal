@@ -1,0 +1,42 @@
+name: Feature
+description: 提议一个有明确验收标准的改进
+title: "[Feature] "
+labels: ["type/feature"]
+body:
+  - type: textarea
+    id: user_problem
+    attributes:
+      label: 用户问题
+      description: 谁在什么场景遇到了什么问题？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      placeholder: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: 本次不做
+  - type: dropdown
+    id: area
+    attributes:
+      label: 主要所有权
+      options:
+        - 产品与体验
+        - 前端与工程
+        - AI 与数据
+        - 跨模块
+    validations:
+      required: true

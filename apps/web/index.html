@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f1eadc" />
+  <title>一角焕新 · 把灵感搬进我家</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%2322251f'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-size='36' fill='%23fbf8f1'%3E%E8%A7%92%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="paper-noise" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="一角焕新首页">
+      <span class="brand-mark">角</span>
+      <span>
+        <strong>一角焕新</strong>
+        <small>ROOM REMIX · MVP</small>
+      </span>
+    </a>
+    <div class="demo-badge"><i></i> 比赛演示模式 · 样例数据</div>
+    <button class="quiet-button" id="openLogButton">查看 AI 过程</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">DOUYIN × HOME × AI</p>
+        <h1>把刷到的喜欢，<br /><em>真正搬进家。</em></h1>
+        <p class="hero-lead">圈选一段家居灵感，拍下真实书桌。AI 会读懂空间、预算与租房限制，给出可预览、可购买、可执行的焕新方案。</p>
+        <div class="hero-actions">
+          <button class="primary-button" data-jump="1">开始搭配 <span>↗</span></button>
+          <button class="text-button" data-jump="4">直接看样例结果</button>
+        </div>
+        <dl class="hero-facts">
+          <div><dt>01</dt><dd>保留原空间结构</dd></div>
+          <div><dt>02</dt><dd>预算与限制双校验</dd></div>
+          <div><dt>03</dt><dd>内容、商品一站承接</dd></div>
+        </dl>
+      </div>
+      <div class="hero-visual">
+        <figure class="hero-photo">
+          <img src="./assets/desk-after-warm.png" alt="经过一角焕新后的温暖书桌空间" />
+          <figcaption><span>方案 01</span> 原木呼吸感 · ¥486</figcaption>
+        </figure>
+        <div class="floating-note note-one">不打孔<br /><strong>✓ 已满足</strong></div>
+        <div class="floating-note note-two">结构保持率<br /><strong>96%</strong></div>
+        <div class="hero-stamp">AI<br />适配</div>
+      </div>
+    </section>
+
+    <section class="workspace" id="workspace">
+      <aside class="step-rail" aria-label="焕新步骤">
+        <div class="rail-heading">
+          <span>YOUR REMIX</span>
+          <strong>4 步完成焕新</strong>
+        </div>
+        <button class="step-tab is-active" data-step="1">
+          <span>01</span><div><strong>选灵感</strong><small>从内容里圈出喜欢</small></div>
+        </button>
+        <button class="step-tab" data-step="2">
+          <span>02</span><div><strong>看空间</strong><small>上传真实书桌</small></div>
+        </button>
+        <button class="step-tab" data-step="3">
+          <span>03</span><div><strong>加约束</strong><small>预算与生活限制</small></div>
+        </button>
+        <button class="step-tab" data-step="4">
+          <span>04</span><div><strong>收方案</strong><small>预览、清单与教程</small></div>
+        </button>
+        <div class="privacy-note">
+          <span>⌁</span>
+          <p><strong>隐私说明</strong>本 MVP 默认不上传照片；刷新页面后本地预览会被清除。</p>
+        </div>
+      </aside>
+
+      <div class="stage">
+        <section class="stage-panel is-active" data-panel="1">
+          <div class="section-heading">
+            <div><p class="eyebrow">STEP 01 · INSPIRATION</p><h2>你想搬走哪一种感觉？</h2></div>
+            <p>演示中用 3 组结构化灵感代替真实抖音接口。选择后会提取可迁移元素，而不是照搬画面。</p>
+          </div>
+          <div class="inspiration-grid">
+            <button class="inspiration-card is-selected" data-style="warm">
+              <div class="inspiration-image warm-scene">
+                <span class="video-pill">▶ 00:18</span>
+                <span class="selection-ring">已圈选</span>
+              </div>
+              <div class="card-copy">
+                <span>01 / 原木呼吸感</span>
+                <strong>暖白 · 浅木 · 留白</strong>
+                <small>#租房桌搭　#自然系</small>
+              </div>
+            </button>
+            <button class="inspiration-card" data-style="compact">
+              <div class="inspiration-image compact-scene">
+                <span class="video-pill">▶ 00:24</span>
+                <span class="selection-ring">圈这里</span>
+              </div>
+              <div class="card-copy">
+                <span>02 / 收纳秩序感</span>
+                <strong>洞洞板 · 分区 · 高效</strong>
+                <small>#桌面收纳　#效率空间</small>
+              </div>
+            </button>
+            <button class="inspiration-card" data-style="green">
+              <div class="inspiration-image green-scene">
+                <span class="video-pill">▶ 00:31</span>
+                <span class="selection-ring">圈这里</span>
+              </div>
+              <div class="card-copy">
+                <span>03 / 轻绿治愈感</span>
+                <strong>植物 · 亚麻 · 柔光</strong>
+                <small>#治愈角落　#居家绿意</small>
+              </div>
+            </button>
+          </div>
+          <div class="extraction-strip" id="inspirationExtract">
+            <div><small>识别风格</small><strong>日式自然</strong></div>
+            <div><small>主色</small><strong><i class="swatch sand"></i>燕麦白　<i class="swatch oak"></i>浅橡木</strong></div>
+            <div><small>可迁移元素</small><strong>夹灯 / 桌上架 / 亚麻板</strong></div>
+            <div><small>不照搬</small><strong>墙面层板（需打孔）</strong></div>
+          </div>
+          <div class="panel-actions"><span></span><button class="primary-button" data-next="2">用这个灵感 <span>→</span></button></div>
+        </section>
+
+        <section class="stage-panel" data-panel="2">
+          <div class="section-heading">
+            <div><p class="eyebrow">STEP 02 · ROOM</p><h2>让 AI 看看你的书桌</h2></div>
+            <p>请尽量拍到桌面、墙面、插座和椅子。单张照片只做尺度估算，关键尺寸仍需复测。</p>
+          </div>
+          <div class="room-layout">
+            <label class="upload-zone" for="roomUpload">
+              <input id="roomUpload" type="file" accept="image/*" />
+              <img id="roomPreview" src="./assets/desk-before.png" alt="待分析的书桌空间" />
+              <span class="upload-hint">更换照片</span>
+              <span class="scan-line"></span>
+              <span class="detected-tag tag-desk">书桌 · 94%</span>
+              <span class="detected-tag tag-wall">可编辑墙面 · 88%</span>
+              <span class="detected-tag tag-chair">保留椅子 · 96%</span>
+            </label>
+            <div class="room-diagnosis">
+              <div class="diagnosis-heading"><span>AI 空间初诊</span><small>模拟识别结果</small></div>
+              <div class="score-ring"><strong>82</strong><small>可焕新指数</small></div>
+              <ul>
+                <li><i>01</i><div><strong>桌面被零碎物品切散</strong><small>建议先建立“抬高—收纳—留白”三层关系</small></div></li>
+                <li><i>02</i><div><strong>墙面利用率偏低</strong><small>租房限制下，优先使用倚墙软木板</small></div></li>
+                <li><i>03</i><div><strong>左侧自然光充足</strong><small>台灯宜放左后方，避免直射屏幕</small></div></li>
+              </ul>
+              <label class="measure-field"><span>桌面宽度（参考尺寸）</span><div><input id="deskWidth" type="number" min="80" max="240" value="120" /><b>cm</b></div></label>
+              <p class="uncertainty">⚠ 深度与插座位置为图像估算，购买前请复测。</p>
+            </div>
+          </div>
+          <div class="panel-actions"><button class="back-button" data-back="1">← 返回</button><button class="primary-button" data-next="3">确认空间 <span>→</span></button></div>
+        </section>
+
+        <section class="stage-panel" data-panel="3">
+          <div class="section-heading">
+            <div><p class="eyebrow">STEP 03 · CONSTRAINTS</p><h2>好看之前，先把生活放进去</h2></div>
+            <p>硬约束会进入规划和结果校验；审美偏好只参与排序，不会覆盖安全与预算。</p>
+          </div>
+          <div class="constraint-layout">
+            <div class="budget-card">
+              <span class="field-kicker">本次预算上限</span>
+              <div class="budget-value">¥ <strong id="budgetValue">500</strong></div>
+              <input id="budgetRange" type="range" min="200" max="1000" step="50" value="500" />
+              <div class="range-labels"><span>轻改 ¥200</span><span>进阶 ¥1000</span></div>
+              <div class="budget-allocation">
+                <div><span>收纳</span><i style="--w: 34%"></i><b>34%</b></div>
+                <div><span>照明</span><i style="--w: 28%"></i><b>28%</b></div>
+                <div><span>氛围</span><i style="--w: 22%"></i><b>22%</b></div>
+                <div><span>余量</span><i style="--w: 16%"></i><b>16%</b></div>
+              </div>
+            </div>
+            <div class="constraint-options">
+              <div class="option-group">
+                <span class="field-kicker">硬约束 · 必须满足</span>
+                <label class="toggle-row"><input id="noDrill" type="checkbox" checked /><span class="toggle"></span><strong>租房，不能打孔</strong><small>仅推荐可移动 / 免钉方案</small></label>
+                <label class="toggle-row"><input id="keepDesk" type="checkbox" checked /><span class="toggle"></span><strong>保留现有桌椅</strong><small>不更换主体家具</small></label>
+                <label class="toggle-row"><input id="petFriendly" type="checkbox" /><span class="toggle"></span><strong>家里有猫</strong><small>过滤易倾倒与有毒植物</small></label>
+              </div>
+              <div class="option-group">
+                <span class="field-kicker">本次最想改善</span>
+                <div class="chip-list" id="goalChips">
+                  <button class="chip is-selected">桌面收纳</button>
+                  <button class="chip is-selected">氛围照明</button>
+                  <button class="chip">视频出片</button>
+                  <button class="chip">久坐效率</button>
+                  <button class="chip">增加绿意</button>
+                </div>
+              </div>
+              <label class="prompt-field"><span class="field-kicker">还可以补充一句</span><textarea id="userPrompt" rows="3">希望桌面干净一些，但不要太像样板间。</textarea></label>
+            </div>
+          </div>
+          <div class="panel-actions"><button class="back-button" data-back="2">← 返回</button><button class="primary-button" id="generateButton">生成我的方案 <span>✦</span></button></div>
+        </section>
+
+        <section class="stage-panel" data-panel="4">
+          <div class="analysis-progress" id="analysisProgress">
+            <div class="progress-orbit"><span>角</span><i></i></div>
+            <p class="eyebrow">AI PLANNING</p>
+            <h2>正在把灵感适配到你的空间…</h2>
+            <div class="progress-steps">
+              <span class="is-done">理解空间</span><span>匹配商品</span><span>生成方案</span><span>校验结果</span>
+            </div>
+          </div>
+
+          <div class="results" id="results">
+            <div class="result-topline">
+              <div><p class="eyebrow">YOUR ROOM REMIX</p><h2>不是照搬，是刚好适合。</h2></div>
+              <div class="result-actions"><button class="quiet-button" id="replayButton">重新生成</button><button class="primary-button" id="saveButton">♡ 保存方案</button></div>
+            </div>
+            <div class="diagnosis-summary">
+              <span>AI 诊断</span>
+              <p id="diagnosisText">你的桌面有足够横向空间，左侧采光较好；在不打孔、保留桌椅的条件下，最有效的改动是抬高屏幕、收拢线材，并用倚墙织物板建立视觉焦点。</p>
+              <small>依据：空间图像 + 原木灵感 + 用户硬约束</small>
+            </div>
+
+            <div class="plan-switcher" id="planSwitcher">
+              <button class="is-active" data-plan="warm"><span>方案 01</span><strong>原木呼吸感</strong><small>¥486 · 6 件</small></button>
+              <button data-plan="compact"><span>方案 02</span><strong>高效收纳版</strong><small>¥328 · 5 件</small></button>
+              <button data-plan="green"><span>方案 03</span><strong>轻绿治愈版</strong><small>¥552 · 7 件</small></button>
+            </div>
+
+            <div class="plan-hero">
+              <div class="compare" id="compare">
+                <img class="compare-after" src="./assets/desk-after-warm.png" alt="焕新后书桌" />
+                <div class="compare-before" id="beforeLayer"><img src="./assets/desk-before.png" alt="焕新前书桌" /></div>
+                <input id="compareRange" type="range" min="0" max="100" value="42" aria-label="拖动查看改造前后" />
+                <span class="compare-label before-label">改造前</span>
+                <span class="compare-label after-label">方案预览</span>
+                <span class="compare-handle" id="compareHandle">↔</span>
+              </div>
+              <div class="plan-story">
+                <span class="plan-index">PLAN <b id="planNumber">01</b></span>
+                <h3 id="planTitle">原木呼吸感</h3>
+                <p id="planDescription">保留桌椅和自然采光，用低矮桌上架重整视觉中心。亚麻板以倚墙方式使用，满足租房免打孔限制。</p>
+                <div class="plan-metrics">
+                  <div><small>总预算</small><strong>¥<b id="planPrice">486</b></strong></div>
+                  <div><small>预计用时</small><strong id="planTime">35 分钟</strong></div>
+                  <div><small>安装难度</small><strong id="planDifficulty">简单</strong></div>
+                </div>
+                <div class="reason-tags" id="reasonTags"><span>✓ 不打孔</span><span>✓ 保留桌椅</span><span>✓ 尺寸适配</span></div>
+              </div>
+            </div>
+
+            <div class="result-grid">
+              <section class="result-card shopping-card">
+                <div class="card-heading"><div><span>01</span><h3>照着买</h3></div><small id="shoppingTotal">共 6 件 · ¥486</small></div>
+                <div class="product-list" id="productList"></div>
+                <button class="full-button" id="lowerBudgetButton">把预算压到 ¥300 内</button>
+              </section>
+              <section class="result-card steps-card">
+                <div class="card-heading"><div><span>02</span><h3>照着摆</h3></div><small>约 35 分钟</small></div>
+                <ol id="stepList"></ol>
+              </section>
+              <section class="result-card content-card">
+                <div class="card-heading"><div><span>03</span><h3>跟着学</h3></div><small>抖音样例内容</small></div>
+                <div class="tutorial-cover">
+                  <div class="tutorial-art"><span>▶</span></div>
+                  <div><strong>租房书桌如何做到<br />“有氛围但不费力”</strong><small>@一平米生活家 · 01:26</small></div>
+                </div>
+                <div class="content-reason">推荐理由：同为 1.2m 靠墙书桌，包含免打孔布置步骤和真实预算。</div>
+                <button class="full-button secondary">查看 3 个相似案例</button>
+              </section>
+              <section class="result-card validation-card">
+                <div class="card-heading"><div><span>04</span><h3>可信校验</h3></div><small>最后更新：刚刚</small></div>
+                <ul id="validationList">
+                  <li><span class="status-ok">通过</span><div><strong>结构保持</strong><small>墙体、窗户、桌椅未改变</small></div></li>
+                  <li><span class="status-ok">通过</span><div><strong>预算校验</strong><small id="budgetValidation">¥486 ≤ 预算 ¥500</small></div></li>
+                  <li><span class="status-ok">通过</span><div><strong>商品可得</strong><small>6/6 件样例商品有库存</small></div></li>
+                  <li><span class="status-warn">复测</span><div><strong>尺寸风险</strong><small>购买前请确认桌深 ≥ 55cm</small></div></li>
+                </ul>
+              </section>
+            </div>
+            <div class="result-footer">
+              <p>效果图为 AI 示意，商品价格与库存为比赛样例数据。涉及用电、承重和施工时请咨询专业人员。</p>
+              <button class="text-button" data-jump="1">再换一种灵感 →</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="logDialog">
+    <div class="dialog-heading"><div><p class="eyebrow">TRACE VIEW</p><h2>AI 过程不是黑盒</h2></div><button id="closeLogButton" aria-label="关闭">×</button></div>
+    <p class="dialog-lead">这版使用规则和样例数据模拟完整 Workflow，每一步都保留可替换的结构化结果。</p>
+    <div class="trace-list" id="traceList"></div>
+  </dialog>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="./data/demo-data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

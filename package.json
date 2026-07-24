@@ -1,0 +1,15 @@
+{
+  "name": "ai-corner-renewal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "将短视频家居灵感适配到真实空间的可解释 AI 焕新原型",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "check": "node --check apps/web/app.js && node --check apps/web/data/demo-data.js && node scripts/validate.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
