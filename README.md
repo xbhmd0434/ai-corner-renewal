@@ -49,6 +49,7 @@ apps/web/                 当前无构建依赖的 H5 MVP
 docs/product-spec.md      产品方案与比赛口径
 docs/architecture.md      数据对象、模块边界与演进架构
 docs/team-roles.md        三人团队分工与协作方式
+docs/ai-github-playbook.md 让 AI 完成日常 GitHub 协作的提示词
 docs/public-release.md    从私有协作到公开发布的检查表
 scripts/                  本地服务器与仓库校验脚本
 .github/                  Issue、PR 和 CI 配置
@@ -66,6 +67,8 @@ HANDOFF.md                可持续维护的工程交接文档
 项目当前由三人共同维护，按“产品体验、前端工程、AI 数据”划分长期所有权，详见 [`docs/team-roles.md`](docs/team-roles.md)。
 
 所有功能通过 Issue 描述验收标准，通过短分支和 Pull Request 合并。`main` 应始终保持可演示。
+
+没有 GitHub 协作经验时，可以直接复制 [`docs/ai-github-playbook.md`](docs/ai-github-playbook.md) 中的提示词，让 AI 完成检查、建分支、修改、测试、提交和创建 PR。
 
 ## 开源与数据边界
 
