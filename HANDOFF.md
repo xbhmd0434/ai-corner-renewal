@@ -108,6 +108,7 @@ empty
 - `scripts/serve.mjs`：无依赖静态服务器，仅用于本地预览。
 - `scripts/validate.mjs`：必要文件、本地引用和敏感内容检查。
 - `.github/workflows/validate.yml`：推送和 PR 时运行 `npm run check`。
+- `docs/ai-github-playbook.md`：三人使用 AI 完成 Issue、分支、PR、Review、CI 和回滚的标准提示词。
 
 ## 5. 配置
 
@@ -183,7 +184,7 @@ npm start
 4. 使用 GitHub Pages、静态托管或比赛指定环境发布 `apps/web`
 5. 核对发布版本、Commit SHA 和浏览器缓存
 
-当前仓库首次以 Private 形式协作。切换 Public 前必须完成 [`docs/public-release.md`](docs/public-release.md)。
+GitHub 仓库地址为 `https://github.com/xbhmd0434/ai-corner-renewal`。仓库于 2026-07-24 完成首次公开发布；公开前审计和未完成管理项记录在 [`docs/public-release.md`](docs/public-release.md)。
 
 ## 9. 三人协作
 
@@ -194,6 +195,8 @@ npm start
 - C：AI 与数据——协议、视觉理解、检索、校验和评测集。
 
 姓名与 GitHub 账号由团队在 [`docs/team-roles.md`](docs/team-roles.md) 中填写。跨所有权修改必须由对应负责人 Review。三人均对文档、隐私和 Demo 稳定性负责。
+
+三人统一使用 [`docs/ai-github-playbook.md`](docs/ai-github-playbook.md) 作为 AI 协作操作手册；AI 默认可以建分支、提交和开 Draft PR，但不能未经明确授权合并、公开数据或删除重要内容。
 
 ## 10. 已知限制与风险
 
