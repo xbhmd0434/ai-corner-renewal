@@ -6,13 +6,10 @@ AI 一角焕新是一个面向年轻租房和家居兴趣用户的空间适配�
 
 > 当前集成版本的主界面位于 `apps/douyin-demo`。推荐流、图片上传、空间解析与
 > 确认、设计任务、生成进度、资产历史和方案详情已经接入资源化 `/api/v1` 与
-> SQLite 持久化后端。兼容 AICard 页面、Agent Plan 空间理解、Seedream 主方案
-> 效果图和独立 3D 试搭仍保留在 `apps/web`，可通过独立命令运行。
+> SQLite 持久化后端。兼容 AICard 页面、Agent Plan 空间理解与 Seedream 主方案
+> 效果图仍保留在 `apps/web`，可通过独立命令运行。
 > 商品库存、内容召回、候选方案效果图和预算调整后的效果图仍使用可重复的样例
 > 数据，不代表已经接入抖音内部接口。
-> 独立的“挂件试搭实验室”已能加载本机 Hunyuan3D-2mini 生成的 shape-only GLB，
-> 让包和挂件作为两个资产进行挂点、位姿、多视角和本地方案保存；这仍是视觉适配
-> MVP，不代表尺寸、承重、软体形变或物理碰撞已经验证。
 > 本项目不是抖音官方产品，也不宣称拥有任何平台私有数据。
 
 ## 在线体验范围
@@ -45,16 +42,12 @@ AI 一角焕新是一个面向年轻租房和家居兴趣用户的空间适配�
 - 视频手动暂停后可进入“一角焕新”定帧框选，选择明确标注的视觉搜索候选，
   并把用户确认的商品保存为独立单品资产；真实视觉搜索与模型版本接口仍待后端实现
 - 桌面端和移动端响应式体验
-- 独立 3D 橱窗：包/挂件切换、推荐挂点、拖动、旋转、缩放与四个预设视角
-- 浏览器内加载 GLB、导出当前视角 PNG、`localStorage` 保存和恢复组合关系
-- 本机 Hunyuan3D-2mini 离线生成适配器；已生成 GLB 自动载入，失败时明确降级
-- 独立 Prompt 实验台：上传真实家居角落，先由视觉文本 Agent 生成布置方案和
-  商品槽位，再把确定方案编译给 Seedream；并排查看和下载结果，实验数据不入库
+- 正式流水线先生成 LayoutPlan 和 ProductSlot，再由 Seedream 生成主效果图并
+  通过服务端 RenderEvaluator 验收；结果进入私有媒体和 PlanVersion
 
 ## 本地运行
 
-需要 Node.js 22.5 或更高版本（推荐 Node 24）。Three.js 固定为 `0.180.0`，
-首次运行先安装依赖：
+需要 Node.js 22.5 或更高版本（推荐 Node 24）。首次运行先安装依赖：
 
 ```bash
 npm install
@@ -70,15 +63,8 @@ npm start
 `npm start` 会同时启动抖音前端、同源 API 代理和持久化后端。只启动新版静态
 前端可使用 `npm run start:douyin-web`，只启动后端使用
 `npm run start:backend`。旧兼容 AICard/Agent Plan 页面使用
-`npm run start:classic`，其 3D 试搭地址为
-`http://127.0.0.1:8765/accessory-studio.html`。
-同一命令还会提供
-`http://127.0.0.1:8765/prompt-lab.html`。Prompt 实验台读取服务端 Key，浏览器
-不会接触密钥；需要 `.env.local` 中启用 `AI_BACKEND_MODE=auto` 或 `live` 并配置
-`AGENT_PLAN_API_KEY`。上传图会在浏览器压缩后只用于本次请求，结果不会保存到
-SQLite 或 `data/private-media`；每次点击“开始改图”会先产生一次文本规划调用，
-规划返回 `ready` 后再产生一次真实图片调用。非家居或不可判断场景返回
-`needs_input`，不会继续消耗图片调用。
+`npm run start:classic`。旧 3D 试搭与 Prompt 实验台已经从项目移除，规划和生图
+能力统一由正式焕新流水线拥有。
 后端可独立验证：
 
 ```bash
@@ -105,18 +91,6 @@ npm run check:agent-plan-image
 `ROOM_ANALYZER_PROVIDER=agent_plan` 写入 `.env.local`；失败时仍返回同协议 Demo
 fallback。
 
-本机已经存在 Hunyuan3D-2mini 专用 Python 环境和模型缓存时，可生成无纹理 GLB：
-
-```bash
-npm run generate:3d -- --input path/to/item.png --output apps/web/assets/models/item.glb
-```
-
-先检查路径但不加载约 3.8 GB 权重时，在末尾加 `--dry-run`。默认使用
-`D:\LittleBlueWhale3D\.venv-hunyuan3d` 与
-`D:\LittleBlueWhale3D\.model-cache`；其他机器通过 `HUNYUAN_PYTHON` 和
-`HUNYUAN_CACHE_DIR` 覆盖。生成文件不提交 Git，可从试搭页“载入 GLB”在浏览器
-本地打开。
-
 后端也支持私有媒体、三类资产、SpaceVersion、不可变 DesignRequest、异步
 GenerationRun、PlanAsset/PlanVersion、预算/换风格调整、偏好和受控事件。直接以
 300 元生成会得到 240 元可执行组合；刷新和重启后仍能读取任务与版本。真实灵感
@@ -130,7 +104,7 @@ GenerationRun、PlanAsset/PlanVersion、预算/换风格调整、偏好和受控
 
 ```text
 apps/douyin-demo/         默认产品前端、同源代理、前端测试与视频素材
-apps/web/                 兼容 AICard、Prompt 实验台与独立 Three.js 3D 试搭页
+apps/web/                 兼容 AICard 页面与共享静态素材
 packages/contracts/       AICard v1、/api/v1 Schema、共享路由清单与 OpenAPI 生成器
 packages/validation/      预算、安装、结构、尺寸、库存和安全规则
 services/orchestrator/    SQLite Repository、领域服务、Workflow、HTTP API 与适配器
@@ -144,7 +118,7 @@ docs/model-integration.md 模型/Agent/精细图像 API 接入边界
 docs/team-roles.md        当前三人团队分工、Prompt/前端/产品并行规则
 docs/ai-github-playbook.md 让 AI 完成日常 GitHub 协作的提示词
 docs/public-release.md    从私有协作到公开发布的检查表
-scripts/                  本地服务器、仓库校验与混元 3D 命令适配器
+scripts/                  本地服务器、仓库校验与模型连通性检查
 .github/                  Issue、PR 和 CI 配置
 HANDOFF.md                可持续维护的工程交接文档
 ```
@@ -156,12 +130,10 @@ HANDOFF.md                可持续维护的工程交接文档
   本地 Demo，确认后优先写入真实 ItemAsset。
 - 兼容 Web：运行时 Live 集成原型；上传、`generate → revise(300)`、来源状态
   和错误提示已接 AICard API，保存仍只是本地摘要。
-- 3D 试搭：运行时静态 MVP；本机混元样例、双模型组合和浏览器保存已完成，图片到
-  GLB 目前通过本机命令执行，尚未进入持久任务 API。
 - 后端：可持久联调版；默认离线生成，资源、任务和方案可跨重启恢复。
-- 下一阶段：补齐账号隔离、资产管理动作与方案修订闭环。
-- 尚未实现：生产级账号/限流、真实内容商品、实时 image-to-image、厘米级测量、
-  持续视频理解、真实交易和硬装施工建议。
+- 公网交付：共享访问口令、会话 Cookie、限流、AI 总开关、单端口静态托管和
+  Docker 已接入；仍需在目标平台填写密钥并完成线上验收。
+- 尚未实现：真实内容商品、厘米级测量、持续视频理解、真实交易和硬装施工建议。
 
 ## 团队协作
 
@@ -188,10 +160,5 @@ HANDOFF.md                可持续维护的工程交接文档
 `/api/v1/media` 后，后端会清理元数据并写入非静态私有目录，以短时签名 URL 访问。
 Agent Plan 地址固定为官方 `ark.cn-beijing.volces.com/api/plan/v3`，原图不进入
 AICard、事件或日志；页面必须以 `LIVE / FALLBACK / DEMO` 如实标记调用来源。
-
-3D 页面直接载入的 GLB 和预览图片留在用户浏览器；本机混元生成默认离线读取模型
-缓存。当前生成 GLB 被 Git 忽略，生产实现必须进入私有对象存储，并在数据库
-只保存所有权、来源、尺寸、挂点和组合变换。当前 Hunyuan shape-only 输出没有
-纹理；模型与相关素材用于商业场景前必须另行核对其许可证和来源授权。
 
 安全问题请参阅 [SECURITY.md](SECURITY.md)，参与开发请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。

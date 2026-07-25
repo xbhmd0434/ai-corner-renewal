@@ -1,8 +1,5 @@
 import { createRoomAnalyzer } from "./adapters/room-analyzer.js";
-import {
-  createPromptLabGenerator,
-  createRenderGenerator
-} from "./adapters/render-generator.js";
+import { createRenderGenerator } from "./adapters/render-generator.js";
 import { createLayoutPlanner } from "./adapters/layout-planner.js";
 import { defaultRoomProfile } from "./data/demo-catalog.js";
 import { DeterministicAssetUnderstandingAdapter } from "./adapters/asset-understanding.js";
@@ -24,7 +21,6 @@ import {
 } from "./services/design-service.js";
 import { PlanService } from "./services/plan-service.js";
 import { EventService } from "./services/event-service.js";
-import { PromptLabService } from "./services/prompt-lab-service.js";
 import { ProductDiscoveryService } from "./services/product-discovery-service.js";
 import {
   AgentPlanProductDiscoveryProvider,
@@ -132,20 +128,6 @@ export function createPlatform({
     now
   });
   const eventService = new EventService({ repository: repo, now });
-  const promptLabService = new PromptLabService({
-    config,
-    planner: createLayoutPlanner({
-      config,
-      fetchImpl,
-      now: () => now().getTime()
-    }),
-    generator: createPromptLabGenerator({
-      config,
-      fetchImpl,
-      now: () => now().getTime()
-    })
-  });
-
   const productDiscoveryLiveAgentConfigured =
     config.backendMode !== "demo" && Boolean(config.agentPlanApiKey);
   const discoveryProvider = productDiscoveryLiveAgentConfigured
@@ -203,7 +185,6 @@ export function createPlatform({
     designRequestService,
     planService,
     eventService,
-    promptLabService,
     productDiscoveryService,
     relatedDesignService,
     publicationService,
@@ -218,7 +199,9 @@ export function createPlatform({
         api_versions: ["legacy", "v1"],
         openapi_url: "/api/openapi.json",
         backend_mode: config.backendMode,
-        auth_mode: "demo_fixed_actor",
+        auth_mode: config.publicAccessEnabled
+          ? "shared_access_code"
+          : "local_fixed_actor",
         actor_id: DEMO_ACTOR_ID,
         room_analyzer_configured:
           config.roomAnalyzerProvider === "gateway"
@@ -274,11 +257,6 @@ export function createPlatform({
             ? "agent_plan_visual_grounding"
             : "plan_grounded_fallback"
         },
-        prompt_lab: {
-          available: promptLabService.template().available,
-          prompt_version: promptLabService.template().prompt_version,
-          persistence: "none"
-        },
         features: {
           visual_search: true,
           product_discovery: true,
@@ -303,12 +281,6 @@ export function createPlatform({
     },
     async revise(request) {
       return planService.reviseLegacy(DEMO_ACTOR_ID, request);
-    },
-    promptLabTemplate() {
-      return promptLabService.template();
-    },
-    async renderPromptLab(request) {
-      return promptLabService.render(request);
     },
     createVisualSearchQuery(actorId, body) {
       return visualSearchService.create(actorId, body);

@@ -112,53 +112,6 @@ GenerationRun 的创建和轮询响应稳定包含：
   假设继续以及是否已有可预览方案；
 - 成功后的 `result.plan_asset_id` 与 PlanVersion/AICard。
 
-### `GET /api/prompt-lab`
-
-返回本地 Prompt 实验台的默认模板、不可变模板版本、当前图片模型、是否允许真实
-调用、输入限制和“不持久化”声明。该请求不会调用模型。
-
-Prompt 实验台是回环地址上的开发评测工具，不是 `/api/v1` 领域对象，也不会创建
-Media、Asset、DesignRequest、GenerationRun 或 PlanVersion。
-
-### `POST /api/prompt-lab/render`
-
-请求：
-
-```json
-{
-  "schema_version": "1.0",
-  "prompt_version": "layout-agent-v1.2.0",
-  "prompt": "用户在实验台中当前看到的布置 Agent Prompt",
-  "image_data_url": "data:image/jpeg;base64,..."
-}
-```
-
-服务端先把图片与 Prompt 交给文本视觉模型，校验其 `LayoutPlan` 与最多五个
-`ProductSlot`，再由唯一 Builder 编译 Seedream 指令。规划失败或返回
-`needs_input` 时不会调用图片模型。成功返回：
-
-```json
-{
-  "schema_version": "1.0",
-  "request_id": "http-request-...",
-  "source_mode": "live",
-  "prompt_version": "layout-agent-v1.2.0",
-  "planning_model": "doubao-seed-2.0-lite",
-  "planning_latency_ms": 2345,
-  "layout_plan": {},
-  "product_slots": [],
-  "model": "doubao-seedream-5.0-lite",
-  "latency_ms": 12345,
-  "media_type": "image/jpeg",
-  "image_data_url": "data:image/jpeg;base64,..."
-}
-```
-
-该响应只用于当前浏览器会话，不写入 SQLite、私有媒体目录、日志、Trace 或
-AICard。`AI_BACKEND_MODE=demo`、缺 Key、鉴权、限流、超时和供应方协议失败都会
-返回结构化错误，不伪造 Demo 成功图。每次 POST 都是一笔独立真实调用，当前没有
-取消、队列、历史或服务端配额管理。
-
 ### `POST /api/generate`
 
 请求：

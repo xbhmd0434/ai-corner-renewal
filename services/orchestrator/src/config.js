@@ -16,6 +16,17 @@ function integerFromEnv(value, fallback, { min, max }) {
   return parsed;
 }
 
+function booleanFromEnv(value, fallback) {
+  if (value === undefined || value === "") return fallback;
+  if (["1", "true", "yes", "on"].includes(String(value).toLowerCase())) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(String(value).toLowerCase())) {
+    return false;
+  }
+  throw new Error(`环境变量布尔值 ${value} 只能是 true/false 或 1/0`);
+}
+
 function enumFromEnv(value, fallback, allowed) {
   if (value === undefined || value === "") return fallback;
   if (!allowed.includes(value)) {
@@ -135,10 +146,20 @@ export function loadConfig(env = process.env) {
   }
   const dataDirectory = resolve(env.DATA_DIRECTORY || "./data");
   const host = env.ORCHESTRATOR_HOST || "127.0.0.1";
-  if (!isLoopbackHostname(host)) {
-    throw new Error(
-      "固定 Demo actor 尚无真实鉴权，ORCHESTRATOR_HOST 只能使用回环地址"
-    );
+  const publicAccessEnabled = !isLoopbackHostname(host);
+  const demoAccessCode = env.DEMO_ACCESS_CODE || "";
+  const sessionSigningSecret = env.SESSION_SIGNING_SECRET || "";
+  if (publicAccessEnabled) {
+    if (demoAccessCode.length < 8 || demoAccessCode.length > 128) {
+      throw new Error(
+        "公网监听要求 DEMO_ACCESS_CODE 为 8～128 字符"
+      );
+    }
+    if (Buffer.byteLength(sessionSigningSecret, "utf8") < 32) {
+      throw new Error(
+        "公网监听要求 SESSION_SIGNING_SECRET 至少 32 字节"
+      );
+    }
   }
   const databasePath = assertOutsideWebRoot(
     resolve(env.DATABASE_PATH || `${dataDirectory}/ai-corner-renewal.sqlite`),
@@ -151,7 +172,39 @@ export function loadConfig(env = process.env) {
 
   return {
     host,
-    port: integerFromEnv(env.ORCHESTRATOR_PORT, 8787, { min: 1, max: 65535 }),
+    port: integerFromEnv(env.PORT || env.ORCHESTRATOR_PORT, 8787, {
+      min: 1,
+      max: 65535
+    }),
+    publicAccessEnabled,
+    demoAccessCode,
+    sessionSigningSecret,
+    sessionTtlSeconds: integerFromEnv(env.SESSION_TTL_SECONDS, 4 * 60 * 60, {
+      min: 5 * 60,
+      max: 24 * 60 * 60
+    }),
+    trustProxy: booleanFromEnv(env.TRUST_PROXY, false),
+    authAttemptsPerWindow: integerFromEnv(env.AUTH_ATTEMPTS_PER_WINDOW, 10, {
+      min: 3,
+      max: 100
+    }),
+    authWindowSeconds: integerFromEnv(env.AUTH_WINDOW_SECONDS, 15 * 60, {
+      min: 60,
+      max: 24 * 60 * 60
+    }),
+    apiRequestsPerMinute: integerFromEnv(env.API_REQUESTS_PER_MINUTE, 240, {
+      min: 10,
+      max: 10_000
+    }),
+    aiRequestsPerMinute: integerFromEnv(env.AI_REQUESTS_PER_MINUTE, 12, {
+      min: 1,
+      max: 1_000
+    }),
+    aiMaxConcurrent: integerFromEnv(env.AI_MAX_CONCURRENT, 2, {
+      min: 1,
+      max: 20
+    }),
+    aiRequestsEnabled: booleanFromEnv(env.AI_REQUESTS_ENABLED, true),
     backendMode: enumFromEnv(env.AI_BACKEND_MODE, "demo", ["demo", "auto", "live"]),
     roomAnalyzerProvider,
     roomAnalyzerUrl,
@@ -256,6 +309,15 @@ export function loadConfig(env = process.env) {
       min: 1,
       max: 500
     }),
+    staticDirectory: resolve(
+      env.STATIC_DIRECTORY || "./apps/douyin-demo/douyin-static-demo"
+    ),
+    legacyAssetDirectory: resolve(
+      env.LEGACY_ASSET_DIRECTORY || "./apps/web/assets"
+    ),
+    fixtureDirectory: resolve(
+      env.FIXTURE_DIRECTORY || "./examples/responses"
+    ),
     allowedOrigins: (env.CORS_ORIGINS || DEFAULT_ALLOWED_ORIGINS.join(","))
       .split(",")
       .map((origin) => origin.trim())

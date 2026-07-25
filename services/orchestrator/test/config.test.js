@@ -35,8 +35,27 @@ test("room analyzer response limit defaults to 256 KiB and is configurable", () 
   );
   assert.throws(
     () => loadConfig({ ORCHESTRATOR_HOST: "0.0.0.0" }),
-    /回环地址/
+    /DEMO_ACCESS_CODE/
   );
+  assert.throws(
+    () =>
+      loadConfig({
+        ORCHESTRATOR_HOST: "0.0.0.0",
+        DEMO_ACCESS_CODE: "judge-code"
+      }),
+    /SESSION_SIGNING_SECRET/
+  );
+  const publicConfig = loadConfig({
+    ORCHESTRATOR_HOST: "0.0.0.0",
+    PORT: "8080",
+    DEMO_ACCESS_CODE: "judge-code",
+    SESSION_SIGNING_SECRET: "0123456789abcdef0123456789abcdef",
+    TRUST_PROXY: "true"
+  });
+  assert.equal(publicConfig.publicAccessEnabled, true);
+  assert.equal(publicConfig.port, 8080);
+  assert.equal(publicConfig.trustProxy, true);
+  assert.equal(publicConfig.aiMaxConcurrent, 2);
   assert.throws(
     () =>
       loadConfig({

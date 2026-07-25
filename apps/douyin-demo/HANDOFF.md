@@ -63,7 +63,7 @@ P0 要完整跑通两个书桌案例：
 ### 2.1 技术与运行
 
 - 原生 HTML、CSS、JavaScript；ES Module 只用于焕新工作台。
-- 无框架、无编译和无 `dist`；3D 试搭使用根目录安装的固定 Three.js 依赖。
+- 无框架、无编译和无 `dist`；旧 3D 试搭链路及 Three.js 依赖已移除。
 - 使用 Canvas 2D、IndexedDB、`sessionStorage`、`URL.createObjectURL`、
   `IntersectionObserver` 和原生视频事件。
 - 根目录 `index.html` 跳转到 `douyin-static-demo/index.html`。
@@ -205,8 +205,7 @@ douyin-static-demo/
 - 资产和方案列表每次从后端恢复；方案详情只消费
   `PlanVersionEnvelope → PlanResultViewModel`，展示前后图、候选商品、步骤和规则校验。
 - 结果可直接创建“降低预算”或“更换风格”的新 PlanVersion；旧版本不会覆盖。
-  历史方案可回填到核心卡片，结果页可展开商品/步骤/校验，并把最小方案上下文
-  交给现有 3D 试摆 Demo。
+  历史方案可回填到核心卡片，结果页可展开商品/步骤/校验。
 - before/after 与变化摘要之后已增加“把这一角搬回家”。页面先检查
   `/api/health.features.product_discovery`，再按当前不可变 PlanVersion 执行
   `list → 恢复/创建 → get 轮询`；ready、partial、empty、failed、unavailable、
@@ -229,16 +228,12 @@ douyin-static-demo/
   手机双栏，`<520px` 移除设备外壳并占满视口；没有 CDN 字体或外部图标依赖。
 - 浏览器 `sessionStorage` 只保存 ID、目标和约束草稿，不保存 File、Base64、短时媒体 URL 或密钥。
 - 旧 `me.js` Canvas/随机商品/Mock 识别仍存在于源码，但入口已退出主路径；不得把它描述成联网能力。
-- 3D 试搭以包和挂件两个独立资产保存 Composition；恢复时校验保存版本、视角、
-  挂点、position/rotation/scale，并把缩放约束在 `0.55–1.65`。若刷新后原本
-  通过文件选择器载入的本地 GLB 已不可用，保留合法摆放信息但明确回退到内置
-  演示模型，不把失效临时模型 ID 留在当前状态。
 
 ### 2.4 当前缺口与重做风险
 
 | 当前缺口 | 影响 | 推荐下一步 |
 | --- | --- | --- |
-| 视频框选前端已完成，但后端未实现 `VisualSearchQuery/Candidate/ModelVersion` | 目前候选是明确标注的本地 Demo；只验证用户链路，不证明真实检索或 3D 建模 | 按 `docs/visual-search-api.md` 实现能力发现、查询、确认和 2D ModelVersion |
+| 视频框选前端已完成，但真实视觉搜索供应方未接入 | 当前由后端 Demo/候选协议完成链路，不证明真实检索 | 按 `docs/visual-search-api.md` 接入真实查询、候选与确认能力 |
 | 资产详情只读；保存、重命名、归档、删除和解析失败重试尚无 UI | 后端能力未完整暴露 | 按 `resource_version` 增加 PATCH/DELETE 交互和冲突重拉 |
 | 任务支持一个空间、预算、不打孔、宠物、租房和备注；保留物未开放逐项选择 | 已能生成，但动态约束不完整 | 从 sealed SpaceVersion 的 detected objects 生成保留项 |
 | 结果已支持降预算、换风格和历史版本回填，但未提供谱系版本切换器与 PlanAsset 状态修改 | 能继续调整，但不能完整管理方案谱系 | 增加版本切换与 `PATCH plan` 保存/选定状态 |
@@ -1136,10 +1131,9 @@ fixture、Client 和 UI。
 - 未授权下载或保存完整视频；
 - 大规模搜索、向量数据库和自动资产合并；
 - 实时库存、支付和准确同款识别；
-- 真实视觉检索供应方、商品目录召回和 3D ModelVersion；当前前端候选是明确标注
-  的本地 Demo，轻量建模页只代表 2D 资产流程；
+- 真实视觉检索供应方和商品目录召回；当前候选仍需按 provenance 如实标识；
 - 多人家庭、跨设备同步；
-- 整屋、3D、实时 AR；
+- 整屋和实时 AR；
 - 自动分享原始空间照片；
 - 把当前 Canvas 遮罩包装成真实图像修复。
 

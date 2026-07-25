@@ -14,14 +14,6 @@ const required = [
   "apps/web/styles.css",
   "apps/web/app.js",
   "apps/web/data/demo-data.js",
-  "apps/web/accessory-studio.html",
-  "apps/web/accessory-studio.css",
-  "apps/web/accessory-studio.js",
-  "apps/web/data/accessory-demo-data.js",
-  "apps/web/prompt-lab.html",
-  "apps/web/prompt-lab.css",
-  "apps/web/prompt-lab.js",
-  "apps/web/assets/models/README.md",
   "apps/web/assets/desk-before.png",
   "apps/web/assets/desk-after-warm.png",
   "docs/product-spec.md",
@@ -46,16 +38,13 @@ const required = [
   "services/orchestrator/src/platform.js",
   "services/orchestrator/src/repository.js",
   "services/orchestrator/src/adapters/layout-planner.js",
-  "services/orchestrator/src/prompts/prompt-lab-default.js",
-  "services/orchestrator/src/services/prompt-lab-service.js",
   "examples/aicard.demo.json",
   "examples/requests/generate.main.json",
   "examples/requests/revise.to-300.json",
   "examples/run-backend-demo.mjs",
   "scripts/check-agent-plan.mjs",
   "scripts/generate-openapi.mjs",
-  "scripts/run-hunyuan.mjs",
-  "scripts/generate-hunyuan-shape.py"
+  "scripts/check-agent-plan-image.mjs"
 ];
 
 const missing = required.filter((path) => !existsSync(join(root, path)));
@@ -63,7 +52,7 @@ if (missing.length) {
   throw new Error(`缺少必要文件：\n${missing.join("\n")}`);
 }
 
-const htmlFiles = ["index.html", "accessory-studio.html", "prompt-lab.html"];
+const htmlFiles = ["index.html"];
 const localReferences = htmlFiles.flatMap((name) => {
   const file = join(webRoot, name);
   const html = readFileSync(file, "utf8");

@@ -137,7 +137,6 @@ const historyDrawer = new HistoryDrawer(elements.historyContent, {
 const resultSection = new ResultSection(elements.result, {
   onBudget: openBudgetDialog,
   onStyle: openStyleDialog,
-  onTryOn: openTryOn,
   onCancel: cancelActiveProductDiscovery,
   onRetry: retryProductDiscovery,
   onOfflineDemo: enterOfflineProductDiscoveryDemo,
@@ -1050,24 +1049,6 @@ async function reviseCurrentPlan(action) {
     update({ coreState: "RESULT_READY" });
     showToast(errorMessage(error, "新版本生成失败"));
   }
-}
-
-function openTryOn(viewModel) {
-  try {
-    sessionStorage.setItem(
-      "douyin-accessory-entry-context",
-      JSON.stringify({
-        kind: "renewal_plan",
-        plan_asset_id: viewModel.planAssetId,
-        plan_version_id: viewModel.planVersionId,
-        title: viewModel.title,
-        products: (viewModel.products || []).slice(0, 3)
-      })
-    );
-  } catch {
-    // 试摆页仍可使用默认演示组合。
-  }
-  window.location.href = "./try-on.html?source=renewal";
 }
 
 function openDialog(content, onSubmit) {

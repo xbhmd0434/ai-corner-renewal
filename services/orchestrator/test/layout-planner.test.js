@@ -89,6 +89,7 @@ test("Layout Planner 把图片和规划 Prompt 交给文本视觉模型并校验
   assert.match(requestedUrl, /\/chat\/completions$/);
   assert.equal(requestedOptions.headers.Authorization, "Bearer secret");
   assert.equal(body.response_format.type, "json_object");
+  assert.equal(body.max_tokens, 4000);
   assert.equal(body.messages[0].content[0].image_url.url, IMAGE_DATA_URL);
   assert.equal(body.messages[0].content[1].text, "分析场景并制定布置方案。");
   assert.equal(result.sourceType, "live");

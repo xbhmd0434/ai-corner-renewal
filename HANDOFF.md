@@ -42,6 +42,13 @@ SourceComponent 当作不可替换视觉锚点，ProductSlot 只描述其他补�
 因此 LayoutPlan、Prompt 与 `scene_assessment` 不再误用 Demo RoomProfile。
 RenderPrompt Builder 还会按 `selected_catalog_candidate.product_id` 从补充商品列表
 排除 SourceComponent，避免同一圈选组件被再次描述成“其他商品”并诱发重复生成。
+首轮真实基准暴露后又补了两层确定性门禁：`table_lamp/lighting` 等同义品类族不能
+再次进入 ProductSlot；包含整理目标时服务端强制补齐 `remove_trash` 与
+`organize_loose_items`。正式模式下 Layout Planner 只要 fallback/needs_input 就
+直接让 GenerationRun 失败，禁止再拿通用 fallback LayoutPlan 继续消耗 Seedream。
+视觉验收新增前后杂乱等级、清理比例、整理动作可见性、组件数量和额外同品类数量；
+整理任务清理比例低于 55%、结果不是低杂乱或出现第二件同品类组件时，服务端强制
+拒绝，不再相信模型自行给出的高分。
 
 视频圈选也已经进入正式后端：前端从视频关键帧裁剪用户 bbox 后，只上传裁剪图，
 媒体用途为 `visual_search_query`；`VisualSearchService` 调用文本视觉模型提取
@@ -81,13 +88,11 @@ Demo Catalog，不得描述成真实抖音商品或交易。
 | 运行面 | 成熟度 | 当前事实 |
 | --- | --- | --- |
 | `apps/web` | 运行时 Live 集成原型 | 离线样例/灵感读取 `REMIX_DATA`；完整流程调用 `health/generate/revise` 并展示 LIVE/FALLBACK/DEMO |
-| `apps/web/accessory-studio.html` | 运行时静态 3D MVP | Three.js 双模型试搭；本机混元 GLB、程序化降级、挂点/位姿/多视角、浏览器保存恢复 |
-| `apps/web/prompt-lab.html` | 两阶段布置评测原型 | 上传并压缩家居单图、编辑规划 Prompt，后端先规划再调 Seedream；并排预览和下载，实验数据不持久化 |
 | `apps/douyin-demo/douyin-static-demo/renewal.html` | 默认可持久联调集成原型 | 正式请求默认提交 `renewal-card/2.1`；单核心卡片承载灵感/SourceComponent、空间、约束、生成进度与结果；结果后接商品发现与购买/搜索承接 |
 | `/api/generate`、`/api/revise` | 向后兼容 | 请求和 AICard v1 响应不破坏；内部结果已持久化 |
 | `/api/v1` | P0 可持久联调版 | 41 条路由；新增视频圈选视觉查询/候选确认，私有媒体、SourceComponent 资产、任务、运行、方案版本、偏好和事件可用 |
 | 正式焕新管线 | 运行时静态集成，尚非生产级 | V2.1 请求执行 LayoutPlan/ProductSlot、SourceComponent 参考图生图、视觉验收和最多一次回炉；Demo 模式只验证结构，不执行真实视觉评分 |
-| 真实模型 | Agent Plan + Seedream + 本机 Hunyuan shape 已验收 | 空间识别、组件视觉身份、正式 LayoutPlan、主方案多图 image-to-image、效果图视觉验收与 Hunyuan3D-2mini shape-only GLB；尚缺真实商品目录与生产流量验收 |
+| 真实模型 | Agent Plan + Seedream 已验收 | 空间识别、组件视觉身份、正式 LayoutPlan、主方案多图 image-to-image 与效果图视觉验收；尚缺真实商品目录与生产流量验收 |
 | `remix-room-from-inspiration/` | 可移植 Agent Skill | 把组件/风格灵感与目标空间组合为结构保持的主方案、生图指令、质量门禁和带来源实施清单；不依赖本仓后端即可生成并校验 `corner-renewal/1.0` JSON |
 
 已实现：
@@ -213,35 +218,17 @@ Demo Catalog，不得描述成真实抖音商品或交易。
 - Seedream 5.0 Lite 图片编辑适配器：只为首次生成的主方案调用一次，输入原图、
   结构保持约束、摆放规则与商品名；输出校验 Base64、MIME、文件签名、大小和真实
   图片结构后写入私有媒体。
-- 独立 Prompt 实验台使用版本化 `layout-agent-v1.2.0` 布置规划模板。模板把
-  所有现有家具设为几何锁定对象，禁止规划移动、替换、删除、缩放或重绘家具，
-  只允许整理松散小物、移除明确垃圾和在现有空位新增物品；默认采用明显焕新
-  强度，以功能、主辅视觉区和氛围三个层次组织通常 3～5 个商品槽位。页面上传
-  PNG/JPEG/WebP 后压缩为受限 JPEG，文本视觉模型先输出经过边界校验的
-  `LayoutPlan + ProductSlot`，服务端 Builder 再编译 Seedream 指令。非家居场景
-  返回 `needs_input`，规划失败不会继续消耗图片调用；成功后返回规划、商品槽位、
-  模型、耗时和图片。该路径不创建媒体、资产、任务或方案版本。
+- 正式 V2.1 流水线使用版本化 LayoutPlan、RenderPromptSpec 和 RenderEvaluator；
+  规划、Seedream 生图、最多一次回炉、私有媒体与 PlanVersion 持久化由同一正式
+  管线拥有。旧 Prompt 实验台及专用 API 已移除。
 - 空间识别来源与效果图来源在 Web 分开显示；图片失败只降级效果图，结构化方案
   继续返回。
 - Web 会把后端返回的 `/api/v1/media/...` 私有媒体相对地址解析到 API
   `8787`，而不是错误请求 Web 静态端口 `8765`；这是 `0.5.1` 的破图修复。
 - Web 图片压缩、真实生成、AICard 映射、来源证据、结构化错误、重新生成和
   `revise(300)`。
-- 独立 3D 试搭实验室：包与挂件始终为两个资产；支持资产切换、三个挂点、拖拽、
-  X/Y 微调、旋转、缩放、立体/正面/右侧/背面视角和视觉适配提示。
-- 试搭方案通过 `localStorage` 保存 `baseModelId + attachmentModelId + anchorId +
-  transform + view`；保存后替换模型仍可恢复，重置不删除上次保存。
-- 恢复 3D 试搭时会校验 schema、视角、挂点、三维变换和缩放范围；保存记录引用
-  的本地 GLB 已不存在时，保留合法摆放状态并明确回退为演示模型，避免空场景或
-  无效变换污染当前状态。
-- 浏览器可直接读取本地 GLB 且不上传，当前视角可导出 PNG。仓库内若存在
-  `apps/web/assets/models/little-blue-whale-v1-shape.glb`，页面默认加载本机混元
-  样例；缺失或加载失败时明确降级为程序化小蓝鲸。
-- 本机 Hunyuan3D-2mini 适配器使用独立
-  `D:\LittleBlueWhale3D\.venv-hunyuan3d` 与离线缓存，不污染项目通用 Python；
-  已完成 3.8 GB 权重装载和生成命令 `--dry-run` 验收。
 - Agent Plan 自由文本可见标签到稳定空间/区域代码的保守归一化。
-- 抖音前端 67 项自动测试、后端/协议/3D 自动测试、真实 Seedream 闭环检查与
+- 抖音前端 68 项自动测试、后端/协议自动测试、真实 Seedream 闭环检查与
   一键可读后端示例。
 - 仓内抖音前端已提供同源静态/API 代理和一键启动；前端正式主链路为
   `video context 或 media upload → Asset → sealed SpaceVersion → DesignRequest
@@ -269,12 +256,8 @@ Demo Catalog，不得描述成真实抖音商品或交易。
 - `apps/web` 当前接的是兼容 AICard 接口，不是持久 `/api/v1`；保存仍是
   `localStorage` 摘要，刷新不恢复上传图。持久 `/api/v1` 前端主路径已经移到
   `apps/douyin-demo/douyin-static-demo/renewal.html`。
-- 3D 图片生成还不是 Web 后台任务：网页只做输入说明和本地 GLB 导入，真实生成
-  通过 `npm.cmd run generate:3d` 执行。生成队列、进度、取消、失败重试、模型
-  元数据和 Composition 尚未进入 SQLite `/api/v1`。
-- 当前包模型是程序化演示几何；混元挂件是 shape-only、无纹理样例。视觉提示不是
-  物理适配结论，尚无厘米级尺寸校准、软包形变、碰撞、挂件承重或 AR。
-- 没有真实账号鉴权、限流、公网上传滥用防护、多租户或多人家庭。
+- 公网使用共享访问口令和固定 Demo actor，不是多用户身份系统；仍没有账号隔离、
+  内容安全审核、多租户或多人家庭。
 - 没有真实商品、库存、交易、教程或抖音内部接口。
 - PlanVersion after 图后置真实视觉 Agent 已接入，但没有真实抖音商品目录、库存
   或交易接入。Agent 只识别方案新增物和高置信软装补充、生成 bbox 与检索需求；
@@ -360,50 +343,9 @@ QueryMedia（用户确认的裁剪图）
 ModelGenerationRun 和 ModelVersion 的 Repository/API 尚未实现，契约见
 `docs/visual-search-api.md`。
 
-3D 试搭当前是前端 MVP 对象，不应伪装成已持久化后端模型：
-
-```text
-BaseModel（包，独立）
-AttachmentModel（挂件，独立）
-  → Composition v1
-      baseModelId
-      attachmentModelId
-      anchorId
-      transform(position / rotation / scale)
-      view
-      savedAt
-```
-
-`apps/web/data/accessory-demo-data.js` 是当前演示身份、推荐挂点和默认组合的事实源；
-`room-remix-accessory-composition-v1` 是浏览器保存键。Composition 不保存合并网格，
-也不复制 GLB。生产演进对象应为：
-
-```text
-CaptureSet
-  → ModelGenerationRun
-    → ModelVersion(GLB 引用、bounds、dimensions、anchors、source/provenance)
-      → CompositionAsset
-        → CompositionVersion(两个 ModelVersion 引用 + transform + view)
-```
-
-上面第二组只是明确的目标模型，当前 Repository、migration 和 `/api/v1` 尚未实现，
-接入时不得直接把大体积 GLB 或图片 Base64 塞进 SQLite JSON。
-
-Prompt 实验台是明确的非持久评测对象，不加入上述方案谱系：
-
-```text
-PromptTemplate（稳定版本 layout-agent-v1.2.0）
-+ BrowserSourceImage（一次页面会话）
-+ PromptDraft（localStorage，仅文本）
-→ LayoutPlan + ProductSlot（文本视觉模型、仅当前响应）
-→ RenderPromptSpec（确定性 Builder）
-→ PromptLabRun（Seedream 同步调用，不入库）
-→ BrowserResultImage（一次页面会话，可手动下载）
-```
-
-更换原图会清空旧结果；修改 Prompt 后旧结果标为 stale，重新生成成功才成为当前
-结果。刷新后原图与结果清空，Prompt 文本可从浏览器恢复。不存在 Apply/Cancel、
-服务端历史或重启恢复；这与正式 `GenerationRun/PlanVersion` 有意隔离。
+旧 3D Composition 与 PromptLabRun 均已从当前对象模型移除。正式规划、生图和
+视觉验收只存在于 `DesignRequest → GenerationRun → PlanVersion` 谱系中；不得
+重新引入不持久的第二套实验结果对象。
 
 身份含义：
 
@@ -442,11 +384,6 @@ Repository 所有查询显式接收 actor。跨 actor、不存在和已删除资
 - Repository/Service：所有权、状态机、版本、删除、价格/库存来源。
 - 模型：只提取事实候选、提出方案或生成图像，不能拥有确定性规则。
 - 前端：只渲染和装配请求，不自行重新计算预算或发明业务结论。
-- 3D 前端：`accessory-demo-data.js` 拥有演示资产和挂点；
-  `accessory-studio.js` 拥有 Three.js 场景、预览态和 Composition 本地序列化。
-- Hunyuan 适配器：`generate-hunyuan-shape.py` 只负责图片到 shape-only GLB，
-  不拥有用户、资产、授权、挂点或 Composition 业务状态。
-
 ## 3. 状态、转换和组合
 
 资产有两个独立维度：
@@ -553,25 +490,6 @@ queued → analyzing_render → building_queries → retrieving_products
 - 失败调整保留派生任务和失败 run，不移动当前版本。
 - 方案内容变化才创建 PlanVersion；saved/selected 等用户状态只 PATCH PlanAsset。
 
-3D 试搭前端状态：
-
-```text
-default / restored
-  → 替换包或挂件、选挂点、拖动、旋转、缩放、切视角
-  → dirty preview
-  → save → localStorage saved
-
-dirty preview → reset → default（已保存版本仍在）
-dirty preview → restore → last saved
-```
-
-- 载入 `.glb` 是浏览器会话内资产；浏览器不会把文件上传或持久化二进制。刷新后
-  自定义 GLB 需要用户重新选择，当前保存恢复只保证内置稳定模型 ID。
-- 自动混元样例与程序化降级共享 `charm-whale-01` 业务身份，但
-  `renderSource` 必须说明本次究竟显示本机 GLB 还是演示几何。
-- 图片生成当前状态只到“前端校验完成/给出本机命令”；没有伪造 queued/running/
-  completed。后续接后端时必须为 `ModelGenerationRun` 增加真实队列状态、取消、
-  失败重试和重启恢复。
 - 多视角只是相机预设，不会生成或保存四份模型。
 
 ## 4. 代码与模块所有权
@@ -644,56 +562,36 @@ V2.1 并行期前端只修改 `apps/douyin-demo/**`，后端/契约线维护 `se
 - `src/services/commerce-handoff-service.js`：V2.1 CartIntent 校验、宿主 Bridge
   未接入时降级 search_bundle，token 短时 opaque。
 - `src/services/event-service.js`：白名单、最小化事件。
-- `src/services/prompt-lab-service.js`：实验请求、Prompt/图片校验、非持久结果和
-  两阶段编排、安全错误映射；规划不是 `ready` 时不能调用图片模型，也不能写
-  Repository 或 MediaService。
 - `src/workflow.js`：已有确定性生成内核；不能再复制第二套工作流。
 - `src/adapters/room-analyzer.js`：RoomProfile Agent Plan 直连与自有 HTTP 网关；
   稳定身份/用户确认尺寸不交给模型，响应必须过同一协议校验。
-- `src/adapters/layout-planner.js`：正式管线与 Prompt 实验台共用的文本视觉规划
+- `src/adapters/layout-planner.js`：正式管线使用的文本视觉规划
   传输/JSON 边界；支持最多四张输入图，限制 1～8 个动作和最多 5 个商品槽位。
 - `src/adapters/component-understanding.js`：视频裁剪图到受控组件视觉身份；禁止
   商品事实，未配置 Agent Plan 时显式返回 fallback。
 - `src/adapters/render-evaluator.js`：before/component/after 三图视觉验收；服务端
   重新计算通过条件，不信任模型返回的 `accepted` 布尔值。
 - `src/adapters/asset-understanding.js`：当前确定性解析 adapter。
-- `src/adapters/render-generator.js`：正式主方案与 Prompt 实验台共用 Seedream
-  请求、响应上限、图片签名和供应方错误分类；实验台使用独立包装，不改变 AICard。
-- `src/prompts/prompt-lab-default.js`：布置 Agent 模板、版本与确定性
-  `LayoutPlan → RenderPromptSpec` Builder 的事实源。
+- `src/adapters/render-generator.js`：正式主方案 Seedream 请求、响应上限、图片
+  签名和供应方错误分类。
 - `src/prompts/renewal-v2.js`：正式布局、正式生图和视觉验收 Prompt Builder；版本
   分别为 `layout-planner-v2.0.0`、`render-spec-builder-v2.0.0` 和
   `render-evaluator-v1.0.0`。
-- `docs/first-workflow-prompt-engineering-handoff.md`：第一链路完整 Prompt 工程
-  主交接入口，覆盖场景准入、布置规划、商品槽位、真实商品约束、生图、评测、
-  返修及迁入正式 `/api/generate` 的顺序。
 - `docs/backend-product-handoff.md`：从当前抖音前端和产品闭环出发的后端正式
   交接，定义本轮 P0、Agent/代码边界、正式 GenerationRun 阶段、接口承诺和产品
   验收标准；后端排期与联调优先读取本文。
-- `docs/sensitive-bundle-manifest.md`：完整敏感交接包的包含范围、不可恢复响应和
-  Key/用户图片/数据库的传输安全说明。
 - `src/adapters/model-ports.js`：真实模型/精细 API 的空端口和能力说明。
 - `test/v1-platform.test.js`：CORS、幂等、媒体、空间封存、生成、调整和重启。
 
 ### 前端与示例
 
-- `apps/web/index.html`、`styles.css`、`app.js`：空间焕新兼容 AICard 页面；右上角
-  进入 3D 试搭页。
-- `apps/web/accessory-studio.html`、`.css`、`.js`：独立 Three.js 3D 编辑器；
-  负责场景、双模型、GLB 导入、挂点/位姿、视角、PNG 导出和 Composition
-  `localStorage`。
-- `apps/web/prompt-lab.html`、`.css`、`.js`：独立 Prompt 评测页；管理空、图片
-  准备、就绪、生成中、成功、失败和 stale 结果状态。只把 Prompt 文本写入
-  `localStorage`，图片不写入浏览器持久存储。
-- `apps/web/data/accessory-demo-data.js`：3D 演示资产、挂点、视角和默认
-  Composition；新增模型身份或挂点先改这里并补测试。
-- `apps/web/assets/models/`：浏览器预览 GLB 的本地交接目录；二进制被 Git 忽略，
-  `README.md` 保留使用边界。
-- `scripts/serve.mjs`：静态 Web、`/vendor/three/*` 本地模块映射和只读
-  `/api/runtime/hunyuan` 运行状态；它不是业务后端。
-- `scripts/run-hunyuan.mjs`：定位专用 Python 并转发 CLI 参数。
-- `scripts/generate-hunyuan-shape.py`：Hunyuan3D-2mini 离线 shape-only GLB
-  适配器；默认 30 steps、guidance 5、octree 192、200000 chunks。
+- `apps/web/index.html`、`styles.css`、`app.js`：空间焕新兼容 AICard 页面。
+- `services/orchestrator/src/public-access.js`：共享口令会话、HMAC Cookie、认证尝试、
+  API/AI 限流、并发上限和真实 AI 总开关。
+- `services/orchestrator/src/static-files.js`：正式抖音前端、兼容图片与受控 fixture 的
+  单端口静态托管和目录穿越防护。
+- 根目录 `Dockerfile` / `.dockerignore`：Node 24 非 root 运行、`/app/data`
+  持久目录、健康检查和 Zeabur 镜像边界。
 - `apps/douyin-demo/**`：默认抖音宿主前端，只消费公开 HTTP、Schema
   和授权 Demo 图片；`api/**`、`adapters/**` 和 `renewal/**` 已接通。
 - `apps/douyin-demo/douyin-static-demo/renewal/components/**`：单核心界面的灵感、
@@ -728,20 +626,6 @@ GET  /api/openapi.json
 POST /api/generate
 POST /api/revise
 ```
-
-本地 Prompt 评测接口：
-
-```text
-GET  /api/prompt-lab
-POST /api/prompt-lab/render
-```
-
-GET 返回布置 Agent Prompt、版本、规划/生图模型、管线、限制和隐私声明。POST
-复核 Prompt、Data URL、Base64、MIME、图片签名和大小后，先调用文本视觉规划；
-只有合法 `ready` 方案才编译并调用 Seedream。成功响应中的 `layout_plan`、
-`product_slots` 和结果 Data URL
-只发回当前浏览器。该接口不是 `/api/v1` 生产契约，不持久化、不幂等、不创建
-领域对象；每次 POST 消耗一次规划调用，且只有规划通过时才消耗图片额度。
 
 已实现 `/api/v1`：
 
@@ -844,8 +728,14 @@ ProductDiscoveryRun 继续作为“实施”底座，但目标交互改为用户
 | `MEDIA_ACCESS_TTL_SECONDS` | `900` | 私有媒体 URL 有效期 |
 | `LIST_LIMIT_MAX` | `100` | 列表最大页长 |
 | `ROOM_ANALYZER_*` | 空/见模板 | Provider 选择、自有 RoomProfile 网关和响应限制 |
-| `HUNYUAN_PYTHON` | `D:\LittleBlueWhale3D\.venv-hunyuan3d\Scripts\python.exe` | 专用 GPU Python；只由本地生成命令使用 |
-| `HUNYUAN_CACHE_DIR` | `D:\LittleBlueWhale3D\.model-cache` | Hunyuan3D-2mini Hugging Face 离线模型缓存 |
+| `DEMO_ACCESS_CODE` | 空 | 公网共享访问口令；公网监听必填，8～128 字符 |
+| `SESSION_SIGNING_SECRET` | 空 | HMAC 会话签名密钥；公网监听必填，至少 32 字节 |
+| `SESSION_TTL_SECONDS` | `14400` | 评审会话有效期 |
+| `TRUST_PROXY` | `false` | Zeabur 设为 `true`，仅此时读取代理来源 IP |
+| `API_REQUESTS_PER_MINUTE` | `240` | 每会话/IP 通用 API 分钟限额 |
+| `AI_REQUESTS_PER_MINUTE` | `12` | 每会话/IP 昂贵 AI 请求分钟限额 |
+| `AI_MAX_CONCURRENT` | `2` | 单进程真实 AI 并发上限 |
+| `AI_REQUESTS_ENABLED` | `true` | 真实 AI 紧急总开关 |
 
 `ASSET_UNDERSTANDING_*`、`PLANNING_AGENT_*`、`RENDER_EDIT_*` 和
 `SEGMENTATION_*` 仍是预留的独立 Provider 接入位；当前 SourceComponent 理解、
@@ -855,10 +745,8 @@ Seedream。代码不会仅因写入预留 URL 就宣称能力可用。
 `.env`、`.env.local`、数据库、WAL、上传媒体和密钥不能提交；`.gitignore`
 已忽略 `.env*`（保留模板）和 `data/`。
 
-Three.js 是当前唯一前端运行依赖，固定为 `three@0.180.0`。`serve.mjs` 仅把
-`node_modules/three` 映射到 `/vendor/three/`，浏览器不依赖 CDN；修改版本后必须
-重新执行桌面/移动端 WebGL 验收。Hunyuan 的 torch、CUDA、Pillow 和 `hy3dgen`
-继续留在专用 venv，不得安装进 Codex 全局 Python 或 Node 项目。
+旧 Three.js、Hunyuan 与 Prompt Lab 依赖已经删除；项目当前没有第三方 Node 运行
+依赖，仍需保留 `package-lock.json` 供 Docker 中 `npm ci` 做可重复安装。
 
 ## 7. 数据、隐私与安全
 
@@ -883,34 +771,25 @@ Three.js 是当前唯一前端运行依赖，固定为 `three@0.180.0`。`serve.
 - 商品发现事件仅允许共享协议列出的稳定 ID、`commerce_action_type` 与
   `source_type`，不得发送 query、bbox、URL、自由文本或 after 图；本地离线 Demo
   不发送事件。
-- Prompt 实验台的请求图片、编辑 Prompt 和结果 Base64 也不得进入日志、事件、
-  Trace、AICard、SQLite 或 `data/private-media`；服务端只记录无 query 的固定路由、
-  状态、来源和耗时。结果通过同步 JSON 返回后由浏览器持有。
 - Agent Plan 专属 Base URL 固定到官方主机，禁止改成中转站；只发送请求内 data
   URL 或 HTTPS 图片，本地路径、`client://` 与私有逻辑引用不会外发。
 - Asset 与 Media 使用显式 binding/ref count；删除只物理清理 ref count 归零媒体。
 - 删除资产先撤销访问，再清媒体；历史 PlanVersion 保留非媒体事实并投影 redaction。
 - EventService 只接受 14 个白名单事件和受控短属性。
 - 用户图片不用于模型训练；接入供应方前必须确认其保留策略。
-- 3D 页“载入 GLB”和图片预览使用浏览器 `File`/Blob URL，不上传到 API；页面关闭
-  后 Blob URL 失效。`localStorage` 只保存模型 ID 和数字变换，不保存图片或 GLB。
-- `generate:3d` 默认设置 `HF_HUB_OFFLINE=1`，只读取本机模型缓存；传
-  `--allow-download` 才允许模型库联网。生成 GLB 可能保留用户物体的可识别几何，
-  因此默认被 Git 忽略，不能放入公共静态目录作为生产存储。
-- 当前本机混元样例复制到静态目录只用于本地验证，生产应将用户图片和生成模型
-  迁到私有对象存储、短时签名访问和删除/保留策略下。使用 Hunyuan 权重或第三方
-  商品图片做商业交付前必须复核许可证、肖像/商标和素材授权。
 
 仍有重要安全边界：
 
-- 当前固定 Demo actor 不是鉴权。
-- 没有限流或内容安全滥用防护。
-- 因此 `ORCHESTRATOR_HOST` 必须保持回环；不得直接公网绑定。
+- 共享访问口令只保护比赛入口，固定 Demo actor 仍不是多用户身份隔离。
+- 公网已有限流、AI 并发上限和总开关，但没有内容安全审核或真实账号审计。
+- 非回环监听必须同时配置 `DEMO_ACCESS_CODE` 与至少 32 字节
+  `SESSION_SIGNING_SECRET`，否则配置加载直接失败。
+- 公网 Cookie 为 `HttpOnly; Secure; SameSite=Lax`；Zeabur 必须通过 HTTPS 提供。
 
 ## 8. 本地运行、测试、构建和交付
 
-使用 Node.js `>=22.5`；推荐当前验证过的 Node 24。Three.js 是固定第三方依赖，
-首次拉取或 `node_modules` 缺失时必须先 `npm.cmd install`。Windows 若拦截
+使用 Node.js `>=22.5`；推荐当前验证过的 Node 24。首次拉取或
+`node_modules` 缺失时必须先 `npm.cmd install`。Windows 若拦截
 `npm.ps1`，使用 `npm.cmd`。
 
 ```powershell
@@ -935,7 +814,7 @@ node .\remix-room-from-inspiration\scripts\validate-renewal-plan.mjs `
 当前预期：
 
 ```text
-215 项唯一自动测试（后端、协议、3D 与抖音前端）
+209 项唯一自动测试（后端、协议与抖音前端）
 生成：原木呼吸感，6 件，¥486
 调整：高效收纳版 v2，4 件，¥240
 持久方案历史：1 个谱系、2 个版本
@@ -987,8 +866,24 @@ Seedream、视觉验收和最多一次回炉；成功后把结果图和 `manifes
 运行中真实发生；候选仍来自 Demo Catalog，也不能声称是真实抖音 SKU。
 
 这条命令会把空间图、组件裁剪图、派生规划和生成图发送到火山方舟视觉/Seedream
-服务并消耗额度，只有在图片与派生数据外发获得明确授权后才能执行。2026-07-26 已
-完成基准准备与文本鉴权，但因尚未获得这组图片外发的明确授权，未执行真实首跑。
+服务并消耗额度，只有在图片与派生数据外发获得明确授权后才能执行。
+
+2026-07-26 在用户明确授权后完成一次真实首跑：组件视觉理解成功识别
+`table_lamp`，标签为“蘑菇造型桌面台灯”，置信度 0.95，并确认
+`prod-green-mushroom-lamp` 为本地 Demo Catalog 候选。首张 Seedream 图保住双屏和
+蘑菇灯，但大量杂物仍在且额外出现夹灯；旧验收错误给出
+`clutter_risk=0.10/accepted=true`。该图已人工拒绝并保留为
+`artifacts/first-live-benchmark/result-first-rejected.jpg`，对应证据为
+`manifest-first-rejected.json`，不得当作合格效果图。
+
+随后已收紧门禁并暂停继续生图：正式 Layout Planner 失败后不再降级生图，后续尝试
+均停在 `planning 6/9`，没有新增 Seedream 图片。最后一次安全诊断为
+`planning_contract_invalid`，具体字段是
+`actions[1].placement 必须是非空字符串`。下一次继续时应先让 LayoutPlan
+normalizer 对缺失 placement 做受控默认/修复，或让 Provider 使用更强的结构化输出
+约束；当前输出预算已从 2200 提升到 4000 tokens，温度为 0，Prompt 版本为
+`layout-planner-v2.1.0`、`render-spec-builder-v2.1.0`、
+`render-evaluator-v1.1.0`。用户已要求暂时停止，不能自动继续外部调用。
 
 商品发现视觉 Agent 验收：
 
@@ -1023,8 +918,6 @@ npm.cmd run start:classic
 
 - 默认抖音前端：`http://127.0.0.1:8765/douyin-static-demo/index.html`
 - 兼容 AICard 页面：`http://127.0.0.1:8765/index.html`
-- Prompt 实验台：`http://127.0.0.1:8765/prompt-lab.html`
-- 3D 试搭：`http://127.0.0.1:8765/accessory-studio.html`
 - API：`http://127.0.0.1:8787`
 - 状态库：`./data/ai-corner-renewal.sqlite`
 - 私有媒体：`./data/private-media`
@@ -1032,26 +925,9 @@ npm.cmd run start:classic
 启动器会探测端口：兼容的现有 `8787` 后端会被复用；默认 `8765` 被占时会从
 `8766` 起选择空闲前端端口。显式指定的 `WEB_PORT` / `API_PORT` 不会被替换。
 
-本机 Hunyuan3D-2mini 生成：
-
-```powershell
-# 只验证输入、输出、专用环境和缓存路径；不加载模型
-npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\models\item.glb --dry-run
-
-# 真正生成 shape-only GLB；4060 8GB 默认约 2–5 分钟/件
-npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\models\item.glb
-```
-
-- 图片优先透明背景、单物体、完整轮廓；PNG/JPEG/WebP 均可。
-- 默认 30 steps、octree 192。显存不足先关闭其他 GPU 应用；仍失败再试
-  `--octree-resolution 128 --num-chunks 100000`。
-- 首次模型装载实测约 93 秒并占用 3.77 GiB 显存；这是装载时间，不等于完整生成
-  时间。shape-only 没有纹理，结果可在 3D 页“载入 GLB”检查。
-- 项目不自动安装或更新 Hunyuan 专用环境；其他机器通过 `.env.local`/进程环境
-  覆盖 `HUNYUAN_PYTHON` 和 `HUNYUAN_CACHE_DIR`。
-
-没有构建步骤或 `dist`；源码就是交付物。修改后端要重启 API，修改静态页面要
-重启 Web。候选交付顺序：
+本地开发没有前端构建步骤或 `dist`；源码就是静态交付物。生产通过根目录
+`Dockerfile` 构建 Node 24 镜像，并由同一个 Node 端口提供正式前端和 API。
+候选交付顺序：
 
 1. `npm.cmd run check`
 2. `npm.cmd run demo:backend`
@@ -1060,7 +936,9 @@ npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\mo
 5. 重启 API，重新读取资产、run 和方案历史
 6. 上传/删除一张测试图，确认旧短时 URL 失效
 7. 关闭真实 Provider，确认 fallback
-8. 记录版本、Commit SHA、部署地址和离线源码
+8. 以公网变量运行 `npm.cmd run start:production`，验证口令页、401、登录和首页
+9. 构建 Docker 镜像（当前 Windows 主机未安装 Docker，需由 Zeabur 首次构建验证）
+10. 记录版本、Commit SHA、部署地址和离线源码
 
 未经用户明确要求，不提交、推送、开 PR 或部署。
 
@@ -1069,16 +947,18 @@ npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\mo
 公网比赛部署的唯一执行方案见根目录 `DEPLOYMENT_PLAN.md`。该方案已经冻结为：
 Zeabur Server 上的单 Docker 服务、单 HTTPS 域名，正式入口为
 `apps/douyin-demo/douyin-static-demo`，Node 同端口提供静态页面和 `/api`，
-SQLite 与私有媒体挂载 `/app/data`，真实 Agent Plan / Seedream 只由服务端调用，
-云端不运行 Hunyuan3D。
+SQLite 与私有媒体挂载 `/app/data`，真实 Agent Plan / Seedream 只由服务端调用。
 
-这仍是**计划而不是当前实现**。截至 2026-07-26，Zeabur 新项目已不能使用旧共享
-集群，需要购买或绑定 Server；购买是按月固定费用并默认自动续费。当前代码仍以固定
-Demo actor 运行、没有真实鉴权和限流，而且 `loadConfig()` 会拒绝非回环 host，
-因此不得直接公网绑定。部署改造必须在后端并行任务形成稳定 Commit 后单独进行，
-先补访问口令会话、AI 限流/总开关、单端口静态托管、`PORT` 读取、Docker 和持久化
-重启测试。所有门槛通过前，不购买 Zeabur Server，也不在当前未提交工作区混入部署
-代码。
+代码侧部署能力已经实现：共享口令 HMAC 会话、登录前精简健康检查、API/AI 限流、
+并发上限、AI 总开关、安全公网监听门禁、`PORT` 读取、正式前端单端口托管、
+`Dockerfile`、`.dockerignore` 和 `/app/data` 路径均已接入。2026-07-26 已用
+公网配置在本机临时端口完成烟测：未登录口令页 200、受保护 API 401、登录 200、
+带 Cookie 首页 200、SQLite 写入指定数据目录。当前机器没有 Docker CLI，因此
+镜像构建仍需由 Zeabur 首次构建验证。
+
+Zeabur 新项目已不能使用旧共享集群，需要购买或绑定 Server；购买按月固定费用并
+默认自动续费。目标机型已选 Tencent Hong Kong 2 vCPU / 2 GB / 40 GB，
+US$6/月，ZeaburOS。购买与填入真实密钥仍由项目所有者在控制台完成。
 
 ### 8.1 V2.1 后端重启验证（2026-07-26）
 
@@ -1109,9 +989,10 @@ Demo actor 运行、没有真实鉴权和限流，而且 `loadConfig()` 会拒�
 
 ## 9. 自动测试覆盖
 
-`npm.cmd test` 当前覆盖 215 项自动测试，包含后端、协议、3D 数据模型与抖音前端
-Builder/Adapter/视觉框选/商品发现/状态语义。`npm.cmd run check` 在此基础上继续
-执行全部脚本语法、静态校验、OpenAPI 漂移检查和前端专用检查。
+2026-07-26 最近一次完整 `npm.cmd run check` 覆盖并通过 209 项唯一自动测试，
+包含后端、协议与抖音前端 Builder/Adapter/视觉框选/商品发现/状态语义；随后
+`check:douyin` 独立重跑 68 项前端测试并再次通过。新增公网部署测试覆盖未登录
+口令页、精简健康检查、受保护 API 401、登录 Cookie、正式首页以及 AI 总开关。
 
 - 4 个 JSON Schema 可解析与内部 `$ref`；13 个 V2.1 canonical fixture 逐字段通过
   `platform-v1.schema.json` 与排序/降级/空态断言。
@@ -1158,28 +1039,6 @@ Builder/Adapter/视觉框选/商品发现/状态语义。`npm.cmd run check` 在
 - Product Discovery 四路 Client、共享 fixture Adapter、ready/partial/empty/failed/
   unavailable/cancelled、四类 CommerceAction、bbox 热点边界和 PlanVersion/context
   迟到响应隔离。
-- 3D Composition 默认结构只保存双资产引用和变换，不含合并网格。
-- 3D 资产/挂点稳定 ID 唯一、默认视角存在、推荐挂点坐标处于编辑范围。
-
-2026-07-25 手工浏览器验收（以下 Prompt 实验台截图证据属于两阶段改造前版本；
-当前两阶段版本以自动测试和本地 HTTP 冒烟为准，尚未消耗真实额度重跑）：
-
-- Prompt 实验台 1440×1000：后端显示
-  `doubao-seedream-5.0-lite · 可调用`，默认 Prompt 1017 字，测试图压缩为
-  1300×882 / 107 KB，按钮进入可用状态；Mock 成功响应显示模型、1.8s 耗时与下载
-  入口，页面无控制台错误。390×844 无横向溢出，上传、Prompt、原图、结果依次
-  排列。浏览器验收拦截了生成 POST，没有额外消耗燃料值。
-- 1440×1000：Three.js/WebGL 初始化成功，本地模块无 CDN，画布 800×678；程序化
-  包与本机 5,351,904 字节混元 GLB 同屏，阴影和四个视角正常。
-- 花朵挂件 → 提手挂点 → X=0.31 → 110% → 右侧视角保存；切换星星后恢复，模型、
-  数值、缩放、视角和保存状态一致。
-- 390×844：页面无横向溢出，画布 390×470，原主页“挂件试搭”入口可见且不挤压
-  日志按钮。
-- `GET /api/runtime/hunyuan` 返回 `ready`，Python、权重和样例三个布尔值均为
-  true；`/vendor/three/build/three.module.js` 返回 200、603113 字节。
-- `npm.cmd run generate:3d ... --dry-run` 解析到本机专用 Python、离线缓存、30
-  steps 和 octree 192；另一次直接离线装载权重成功，GPU 为 RTX 4060 Laptop。
-
 `0.5.1` 另完成一次浏览器回放回归：用已持久化的 Live AICard 模拟
 `/api/generate` 响应，不再次调用 Seedream；页面把相对私有媒体地址解析到
 `127.0.0.1:8787`，媒体请求返回 200，JPEG 以 `2592×1760` 加载，页面无脚本错误。
@@ -1193,15 +1052,10 @@ Builder/Adapter/视觉框选/商品发现/状态语义。`npm.cmd run check` 在
 - 媒体共享 ref count、清理失败和 `deletion_pending` 故障注入。
 - 使用 Ajv 2020 对所有响应运行完整 Draft 2020-12 编译。
 - 真实 Seedream 限流、超时和供应方 5xx 的长期故障注入与燃料值统计。
-- Prompt 实验台当前没有服务端 run 历史、取消、并发配额、内容安全或 A/B 评分
-  报告；浏览器中止请求不保证已经发出的供应方调用停止。它只能在回环地址作为
-  人工评测工具使用，不能直接公网发布。
 - 正式 V2.1 已接 LayoutPlan/ProductSlot 与效果图视觉回炉，但商品检索仍是
   `DemoCommerceCatalogAdapter`；ProductSlot 只是无品牌需求槽位，只有服务端目录
   返回的 SelectedProduct 才能进入 AICard 商品事实。真实抖音商城检索、SKU 选择、
   商品参考图授权和线上评分分布尚未实现。
-- 真实 Hunyuan 单图生成的耗时/峰值显存回归、坏图/透明图/多物体输入和 OOM 故障
-  注入；当前只自动测 Composition 数据约束，完整 Three.js 交互仍是手工浏览器验收。
 
 仓内抖音前端另有：
 
@@ -1216,8 +1070,8 @@ Builder/Adapter/视觉框选/商品发现/状态语义。`npm.cmd run check` 在
   不遮挡操作。
 - 温馨风视觉搜索在 1440×900 与 390×844 Chrome 逐步验收框选、查询、候选、
   建模和完成状态；页面无横向溢出或控制台错误，流程关闭后会清理外层主题 class。
-- 根目录 `npm.cmd start` 单仓烟雾测试已验证实际自动选择端口后，推荐流、健康
-  代理和 `/vendor/three/` 均返回 200。
+- 根目录 `npm.cmd start` 单仓烟雾测试已验证实际自动选择端口后，推荐流与健康
+  代理均返回 200。
 - 商品发现购买承接已在 390×844、430×900、1440×900 Chrome 验收：三档均无
   横向溢出和控制台错误；真实 plan-grounded + Demo Catalog partial 结果显示
   “方案关联 · Demo 商品”，bbox=null 无热点。共享 ready fixture 注入合法 bbox 后
@@ -1246,20 +1100,6 @@ Builder/Adapter/视觉框选/商品发现/状态语义。`npm.cmd run check` 在
 5. 真实抖音内容目录与商品目录仍是 Demo：`DemoDouyinContentProvider` 与
    `DemoCommerceCatalogAdapter` 只能声称 `source_mode=fallback`。接入真实
    Provider 时需分别在 `/api/health.features` 单独开关，并保留 fallback 分支。
-
-3D 试搭下一阶段（继续本方向时按顺序）：
-
-1. 在 `/api/v1` 新增 `ModelGenerationRun` 后台任务和 `ModelVersion` 元数据，上传图
-   走私有媒体，不让浏览器执行系统命令；验收为创建任务、轮询、取消、失败重试和
-   进程重启恢复均可验证。
-2. 为包模型增加厘米级 bounds、可编辑挂点和用户确认；为挂件增加 connector 原点。
-   先做到同单位、稳定原点和三类包挂点，再谈“适配分数”。
-3. 增加 `CompositionAsset/Version` 持久化 API，保存两个 ModelVersion 引用与
-   transform；覆盖预览/保存/取消/恢复、换包/换挂件、空组合和旧版本迁移。
-4. 对 Hunyuan 输出做网格清理、法线修复、面数压缩和浏览器预算；为商品材质增加
-   单独的贴图/材质链路。8 GB 本机不要直接启用官方高显存纹理管线。
-5. 最后才接“视频圈选 → 搜同款/全景图 → 生成”。先用明确授权的静态商品图验收
-   生成质量、来源和删除闭环，不把搜索结果图片默认视为可存储素材。
 
 最优先：
 
@@ -1291,12 +1131,6 @@ Builder/Adapter/视觉框选/商品发现/状态语义。`npm.cmd run check` 在
   DesignRequest/PlanVersion snapshot 为准；若前端要求单 DTO 完整承载，发布
   AICard v2，不继续向 v1 塞隐式字段。
 - 候选和预算调整中的预生成效果图不能声明商品一一对应；缺尺寸必须继续提示复测。
-- 两个 3D 模型不能为了截图方便在领域层合并；合并只可作为明确的导出副本，
-  Composition 的事实源始终是双模型引用和变换。
-- 当前 94/100 等“视觉适配提示”是可解释演示启发式，不是模型测量或安全结论；
-  未接真实尺寸前禁止命名为兼容性评分。
-- 5 MB Hunyuan 样例已有约 30 万三角面历史记录；手机端批量展示前必须做 decimate、
-  LOD/懒加载和显存预算，不能把单模型流畅等同于橱窗列表可扩展。
 
 后续 Backlog：
 

@@ -40,7 +40,6 @@ export class ResultSection {
             <button class="primary-action" type="button" data-action="details">查看落地清单</button>
             <button class="secondary-action" type="button" data-action="budget">再省一点</button>
             <button class="secondary-action" type="button" data-action="style">换种感觉</button>
-            <a class="outline-action" href="#" data-action="tryon">在空间里试摆</a>
           </div>
           <div class="result-details" hidden>
             ${this.renderProducts(viewModel.products)}
@@ -64,10 +63,6 @@ export class ResultSection {
     });
     this.element.querySelector('[data-action="budget"]')?.addEventListener("click", () => this.actions.onBudget?.(viewModel));
     this.element.querySelector('[data-action="style"]')?.addEventListener("click", () => this.actions.onStyle?.(viewModel));
-    this.element.querySelector('[data-action="tryon"]')?.addEventListener("click", (event) => {
-      event.preventDefault();
-      this.actions.onTryOn?.(viewModel);
-    });
     this.shopTheLook.bind(this.element.querySelector("[data-shop-root]"), productDiscoveryViewModel);
     this.shopTheLook.bindHotspots(this.element);
   }

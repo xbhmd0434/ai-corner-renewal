@@ -263,57 +263,6 @@ function createSeedreamRequest({
   };
 }
 
-export function createPromptLabGenerator({
-  config,
-  fetchImpl = globalThis.fetch,
-  now = () => Date.now()
-}) {
-  const requestSeedream = createSeedreamRequest({ config, fetchImpl, now });
-  return async function generatePromptLabImage({
-    imageDataUrl,
-    prompt,
-    requestedMode = "live"
-  }) {
-    if (config.backendMode === "demo" || requestedMode === "demo") {
-      return {
-        sourceType: "fallback",
-        reason: "render_not_configured",
-        message: "当前 AI_BACKEND_MODE=demo，Prompt 实验台未调用模型。",
-        model: config.agentPlanImageModel,
-        latencyMs: 0
-      };
-    }
-    if (!config.agentPlanApiKey) {
-      return {
-        sourceType: "fallback",
-        reason: "render_not_configured",
-        message: "未配置 Agent Plan 专属 Key，Prompt 实验台无法调用模型。",
-        model: config.agentPlanImageModel,
-        latencyMs: 0
-      };
-    }
-    const startedAt = now();
-    try {
-      return await requestSeedream({
-        roomInput: {
-          image: {
-            data_url: imageDataUrl
-          }
-        },
-        prompt
-      });
-    } catch (error) {
-      return {
-        sourceType: "fallback",
-        reason: fallbackReason(error),
-        message: "Seedream 改图失败，请检查本地配置或稍后重试。",
-        model: config.agentPlanImageModel,
-        latencyMs: Math.max(0, now() - startedAt)
-      };
-    }
-  };
-}
-
 export function createRenderGenerator({
   config,
   fetchImpl = globalThis.fetch,

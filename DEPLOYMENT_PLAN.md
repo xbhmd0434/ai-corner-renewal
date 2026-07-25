@@ -3,7 +3,8 @@
 > 目标：给评委一个可直接打开的 HTTPS 链接，移动端优先；评委不需要安装软件、
 > clone 仓库或配置密钥。
 >
-> 当前状态：**方案已确定，尚未达到公网部署门槛，不要先购买服务器或部署。**
+> 当前状态：**代码侧部署改造已完成并通过生产烟测；待整理 Commit、推送 GitHub，
+> 然后购买服务器并由 Zeabur 完成首次 Docker 构建。**
 >
 > 最近核对：2026-07-26
 
@@ -18,7 +19,7 @@
 | 公网入口 | 一个 Zeabur HTTPS 域名，前后端同源 |
 | 运行时 | Node.js 24；Docker 使用 Debian slim 系镜像 |
 | AI | 服务端调用火山方舟 Agent Plan / Seedream |
-| 3D | 不在云端运行 Hunyuan3D；保留项目已有静态/降级体验 |
+| 3D | 旧 3D/试搭与 Hunyuan 链路已从项目移除 |
 | 数据 | SQLite 与私有媒体统一放在 `/app/data` |
 | 扩容 | 比赛期只允许单实例，避免 SQLite 多实例写入冲突 |
 | 安全 | 访问口令会话、AI 接口限流、总开关、请求体限制 |
@@ -59,7 +60,7 @@ Digital Ocean、Aliyun、Tencent 等供应商选项是正常现象，不是操�
 
 ## 3. 服务器选择规则
 
-只有在第 4 节的代码门槛全部通过后才购买。
+只有在第 4 节的代码门槛完成到允许首次 Zeabur 构建时才购买。
 
 推荐顺序：
 
@@ -85,7 +86,15 @@ Digital Ocean、Aliyun、Tencent 等供应商选项是正常现象，不是操�
 
 ## 4. 购买服务器前必须通过的门槛
 
-以下各项目前不应假定已经完成：
+当前实现状态：
+
+| Gate | 状态 | 证据 |
+| --- | --- | --- |
+| A 开发基线 | 待最终 Commit | `npm.cmd run check` 已通过；需清理并记录部署 SHA |
+| B 正式入口 | 已完成 | 单端口 `/` 已返回抖音版首页 |
+| C 公网安全 | 已完成 | 口令页、401、Cookie、AI 总开关自动测试与烟测通过 |
+| D 单端口 | 已完成 | 公网配置临时端口健康、登录、首页均通过 |
+| E Docker/持久化 | 部分完成 | Dockerfile/路径/SQLite 烟测通过；本机无 Docker CLI，镜像由 Zeabur 首次构建验证 |
 
 ### Gate A：开发基线稳定
 
@@ -99,7 +108,7 @@ Digital Ocean、Aliyun、Tencent 等供应商选项是正常现象，不是操�
 ### Gate B：正式前端入口冻结
 
 - `/` 打开 `apps/douyin-demo/douyin-static-demo/index.html`；
-- `renewal.html`、`try-on.html`、`me.html` 及静态资源均可访问；
+- `renewal.html`、`me.html` 及静态资源均可访问；
 - 页面请求统一走相对路径 `/api/...`；
 - 不把旧 `apps/web` 误当成比赛首页。
 
@@ -107,8 +116,8 @@ Digital Ocean、Aliyun、Tencent 等供应商选项是正常现象，不是操�
 
 ### Gate C：公网安全能力完成
 
-当前后端固定使用 `demo-user-001`，它不是用户鉴权；代码也主动拒绝绑定
-非回环地址。上线前必须先实现：
+当前后端仍固定使用 `demo-user-001`，共享口令保护比赛入口但不是多用户身份隔离。
+已经实现：
 
 - 访问口令由后端校验，成功后发放短期 HttpOnly 会话 Cookie；
 - AI 生成接口按会话和来源 IP 限流；
@@ -140,9 +149,11 @@ Digital Ocean、Aliyun、Tencent 等供应商选项是正常现象，不是操�
 - 容器重启后资产、方案和私有媒体仍可读取；
 - `.env`、`.env.local`、本地数据库、日志和测试产物不进入镜像。
 
-验收：本地构建并运行镜像，创建数据后重启容器，数据仍存在。
+验收：Zeabur 首次构建成功后创建测试数据，重启服务并确认数据仍存在。当前 Windows
+开发机未安装 Docker CLI，不能把“Dockerfile 已存在”误写为“本地镜像已经构建”。
 
-只有 Gate A～E 全部通过，才进入第 5 节购买服务器。
+Gate A 形成部署 Commit 后即可进入第 5 节；Gate E 的镜像构建和 Volume 重启验证
+在 Zeabur 首次部署中完成，失败则不绑定最终评审链接。
 
 ## 5. Zeabur 控制台操作
 
@@ -210,7 +221,14 @@ PRIVATE_MEDIA_DIRECTORY=/app/data/private-media
 ```dotenv
 DEMO_ACCESS_CODE=<单独生成的比赛访问口令>
 SESSION_SIGNING_SECRET=<至少 32 字节随机值>
-PUBLIC_BASE_URL=<生成域名后填写>
+SESSION_TTL_SECONDS=14400
+TRUST_PROXY=true
+AUTH_ATTEMPTS_PER_WINDOW=10
+AUTH_WINDOW_SECONDS=900
+API_REQUESTS_PER_MINUTE=240
+AI_REQUESTS_PER_MINUTE=12
+AI_MAX_CONCURRENT=2
+AI_REQUESTS_ENABLED=true
 ```
 
 注意：
@@ -225,10 +243,10 @@ PUBLIC_BASE_URL=<生成域名后填写>
 ### 5.5 生成域名
 
 1. 在服务 Networking / Domain 页面生成 `.zeabur.app` 域名；
-2. 把完整 HTTPS 地址填写为 `PUBLIC_BASE_URL`；
-3. 如代码需要明确 Origin，将 `CORS_ORIGINS` 设置为这一个 HTTPS 地址；
-4. 重新部署；
-5. 记录域名、Branch、Commit SHA 和部署时间。
+2. 如需允许独立前端来源，将 `CORS_ORIGINS` 设置为准确 HTTPS 地址；单域部署不
+   使用 `*`；
+3. 重新部署；
+4. 记录域名、Branch、Commit SHA 和部署时间。
 
 ## 6. 上线验收
 
@@ -305,16 +323,19 @@ AI 生成通常需要一定等待时间；若现场网络异常，可查看备�
 
 现在应当：
 
-1. 停留在 Zeabur 供应商选择页，不购买；
-2. 等后端并行任务完成、测试通过并提交；
-3. 按 Gate A～E 完成部署改造；
-4. 本地生产验收通过后，再回 Zeabur 购买最小香港 Server。
+1. 审查当前差异并形成明确部署 Commit SHA；
+2. 推送经过检查的生产分支到 GitHub；
+3. 购买已确认的 Tencent Hong Kong 2 vCPU / 2 GB / 40 GB、US$6/月 Server；
+4. 连接 GitHub，先填写安全变量与 Demo 模式变量；
+5. 让 Zeabur 完成首次 Docker 构建；
+6. 挂载 `/app/data` 后做重启持久化验证；
+7. 再填写真实 Agent Plan Key，完成一条真实生成并提交评审链接。
 
 当前不应当：
 
 - 随便选择一个供应商并付款；
 - 把本地 API Key 提交到仓库；
-- 直接把 `ORCHESTRATOR_HOST` 改为 `0.0.0.0`；
+- 未配置访问口令与签名密钥就尝试公网启动；
 - 使用 `CORS_ORIGINS=*`；
 - 把旧 `apps/web` 部署成比赛首页；
-- 在同一个未提交工作区同时混入部署改造。
+- 跳过首次 Zeabur 构建日志和 Volume 重启验证。

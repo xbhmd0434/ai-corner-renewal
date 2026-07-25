@@ -3,6 +3,11 @@ import { createServer } from "node:http";
 import { createOpenApiDocument } from "../../../packages/contracts/src/openapi.js";
 import { ApiError } from "./errors.js";
 import { v1Route } from "../../../packages/contracts/src/v1-route-manifest.js";
+import {
+  createPublicAccessController,
+  isExpensiveRequest
+} from "./public-access.js";
+import { sendLoginPage, serveStaticFile } from "./static-files.js";
 
 const makeRequestId = () => `http-request-${randomUUID()}`;
 const OPENAPI_DOCUMENT = createOpenApiDocument();
@@ -116,10 +121,25 @@ function setSecurityHeaders(response) {
 function applyCors(request, response, allowedOrigins) {
   const origin = request.headers.origin;
   if (!origin) return;
-  if (!allowedOrigins.includes(origin)) {
+  const forwardedProto = String(
+    request.headers["x-forwarded-proto"] || ""
+  )
+    .split(",")[0]
+    .trim();
+  const protocol =
+    forwardedProto === "https" || forwardedProto === "http"
+      ? forwardedProto
+      : request.socket.encrypted
+        ? "https"
+        : "http";
+  const sameOrigin = request.headers.host
+    ? `${protocol}://${request.headers.host}`
+    : "";
+  if (origin !== sameOrigin && !allowedOrigins.includes(origin)) {
     throw new ApiError("origin_not_allowed", "该浏览器来源未被允许", 403);
   }
   response.setHeader("Access-Control-Allow-Origin", origin);
+  response.setHeader("Access-Control-Allow-Credentials", "true");
   response.setHeader("Vary", "Origin");
   response.setHeader(
     "Access-Control-Allow-Methods",
@@ -357,10 +377,12 @@ function errorPayload(error, requestId) {
   const statusCode = isPublic ? error.statusCode : 500;
   return {
     statusCode,
-    headers:
-      statusCode === 405 && Array.isArray(error.allowedMethods)
+    headers: {
+      ...(statusCode === 405 && Array.isArray(error.allowedMethods)
         ? { Allow: [...new Set(error.allowedMethods)].sort().join(", ") }
-        : {},
+        : {}),
+      ...(error?.headers || {})
+    },
     body: {
       schema_version: "1.0",
       request_id: requestId,
@@ -952,6 +974,7 @@ export function createApiServer({
   logger = defaultLogger,
   requestIdFactory = makeRequestId
 }) {
+  const access = createPublicAccessController({ config });
   const server = createServer(async (request, responseObject) => {
     const startedAt = Date.now();
     const requestId = requestIdFactory();
@@ -960,6 +983,7 @@ export function createApiServer({
     let pathForLog = pathname;
     let statusCode = 500;
     let sourceMode;
+    let releaseAiSlot;
     responseObject.setHeader("X-Request-Id", requestId);
 
     try {
@@ -982,38 +1006,97 @@ export function createApiServer({
         return;
       }
 
+      if (pathname === "/api/auth/session") {
+        if (method === "GET") {
+          const currentSession = access.session(request);
+          statusCode = 200;
+          sendJson(responseObject, statusCode, {
+            schema_version: "1.0",
+            request_id: requestId,
+            authenticated: Boolean(currentSession),
+            expires_at: currentSession?.exp || null
+          });
+          return;
+        }
+        if (method === "POST") {
+          const body = await readJson(request, 4096, "POST");
+          const result = access.login(request, body?.access_code);
+          statusCode = 200;
+          sendJson(
+            responseObject,
+            statusCode,
+            {
+              schema_version: "1.0",
+              request_id: requestId,
+              authenticated: true,
+              expires_at: result.expiresAt
+            },
+            result.cookie ? { "Set-Cookie": result.cookie } : {}
+          );
+          return;
+        }
+        if (method === "DELETE") {
+          statusCode = 204;
+          sendNoContent(responseObject, {
+            "Set-Cookie": access.clearCookie()
+          });
+          return;
+        }
+        throw methodNotAllowed(["GET", "POST", "DELETE"]);
+      }
+
       if (method === "GET" && pathname === "/api/health") {
         const health = orchestrator.health();
+        const currentSession = access.session(request);
         statusCode = 200;
         sendJson(responseObject, statusCode, {
           schema_version: "1.0",
           request_id: requestId,
-          ...health
+          ...(currentSession || !access.enabled
+            ? health
+            : {
+                status: health.status,
+                service: health.service,
+                service_version: health.service_version,
+                auth_mode: health.auth_mode,
+                authentication_required: true
+              })
         });
         return;
       }
+
+      if (!pathname.startsWith("/api/")) {
+        if (!["GET", "HEAD"].includes(method)) {
+          throw methodNotAllowed(["GET", "HEAD"]);
+        }
+        if (access.enabled && !access.session(request)) {
+          statusCode = 200;
+          sendLoginPage(responseObject);
+          return;
+        }
+        statusCode = 200;
+        if (
+          await serveStaticFile(
+            request,
+            responseObject,
+            pathname,
+            config
+          )
+        ) {
+          return;
+        }
+        throw new ApiError("page_not_found", "页面不存在", 404);
+      }
+
+      const currentSession = access.requireSession(request);
+      access.enforceApiLimit(request, currentSession);
+      if (isExpensiveRequest(method, pathname)) {
+        releaseAiSlot = access.acquireAi(request, currentSession);
+      }
+
       if (method === "GET" && pathname === "/api/openapi.json") {
         statusCode = 200;
         sendJson(responseObject, statusCode, OPENAPI_DOCUMENT);
-        return;
-      }
-      if (method === "GET" && pathname === "/api/prompt-lab") {
-        statusCode = 200;
-        sendJson(responseObject, statusCode, {
-          request_id: requestId,
-          ...orchestrator.promptLabTemplate()
-        });
-        return;
-      }
-      if (method === "POST" && pathname === "/api/prompt-lab/render") {
-        const body = await readJson(request, config.requestBodyLimitBytes, "POST");
-        const result = await orchestrator.renderPromptLab(body);
-        sourceMode = result.source_mode;
-        statusCode = 200;
-        sendJson(responseObject, statusCode, {
-          request_id: requestId,
-          ...result
-        });
         return;
       }
       if (method === "POST" && pathname === "/api/generate") {
@@ -1037,26 +1120,18 @@ export function createApiServer({
           "/api/health",
           "/api/openapi.json",
           "/api/generate",
-          "/api/revise",
-          "/api/prompt-lab",
-          "/api/prompt-lab/render"
+          "/api/revise"
         ].includes(pathname) &&
         !(
           (method === "GET" && pathname === "/api/health") ||
           (method === "GET" && pathname === "/api/openapi.json") ||
-          (method === "GET" && pathname === "/api/prompt-lab") ||
           (method === "POST" &&
-            [
-              "/api/generate",
-              "/api/revise",
-              "/api/prompt-lab/render"
-            ].includes(pathname))
+            ["/api/generate", "/api/revise"].includes(pathname))
         )
       ) {
         const allowedMethod = [
           "/api/health",
-          "/api/openapi.json",
-          "/api/prompt-lab"
+          "/api/openapi.json"
         ].includes(pathname)
           ? "GET"
           : "POST";
@@ -1097,6 +1172,7 @@ export function createApiServer({
         });
       }
     } finally {
+      releaseAiSlot?.();
       logger.info({
         event: "api_request",
         request_id: requestId,

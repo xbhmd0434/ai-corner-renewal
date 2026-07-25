@@ -38,23 +38,12 @@ const productDiscoveryFixtureRoot = resolve(
   "examples",
   "responses"
 );
-const threeCandidates = [
-  resolve(projectRoot, "node_modules", "three"),
-  resolve(backendRoot, "node_modules", "three")
-];
-const threeRoot = threeCandidates.find((candidate) =>
-  existsSync(candidate)
-);
-if (!threeRoot) {
-  throw new Error("缺少 Three.js 依赖，请先在仓库根目录运行 npm install。");
-}
 const host = process.env.WEB_HOST || "127.0.0.1";
 const port = Number(process.env.WEB_PORT || 8765);
 const backendHost = process.env.API_HOST || "127.0.0.1";
 const backendPort = Number(process.env.API_PORT || 8787);
 const backendAssetPrefix =
   "/ai-corner-renewal/apps/web/assets/";
-const threePrefix = "/vendor/three/";
 const productDiscoveryFixturePrefix = "/__product-discovery-fixtures/";
 
 const mimeTypes = {
@@ -62,8 +51,6 @@ const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".glb": "model/gltf-binary",
-  ".gltf": "model/gltf+json",
   ".mp4": "video/mp4",
   ".png": "image/png",
   ".jpg": "image/jpeg",
@@ -88,12 +75,6 @@ function resolveStaticPath(requestUrl) {
       return safeResolve(
         backendAssetRoot,
         pathname.slice(backendAssetPrefix.length)
-      );
-    }
-    if (pathname.startsWith(threePrefix)) {
-      return safeResolve(
-        threeRoot,
-        pathname.slice(threePrefix.length)
       );
     }
     if (pathname.startsWith(productDiscoveryFixturePrefix)) {

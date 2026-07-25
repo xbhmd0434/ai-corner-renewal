@@ -18,6 +18,13 @@
 - 媒体保存在 `PRIVATE_MEDIA_DIRECTORY`，通过绑定 actor/media/purpose/过期时间的
   HMAC 短时 URL 访问，响应同样受精确 CORS 控制。
 - CORS 默认仅允许本机 8765 的 `127.0.0.1` 与 `localhost`。
+- 非回环监听必须同时配置 8～128 字符的 `DEMO_ACCESS_CODE` 和至少 32 字节的
+  `SESSION_SIGNING_SECRET`；缺任一项时服务拒绝启动。
+- 公网入口使用 HMAC 签名、短期、`HttpOnly; Secure; SameSite=Lax` 会话 Cookie。
+  未登录只能读取精简健康状态，其他 API 返回 401。
+- 认证尝试、通用 API 和昂贵 AI 请求分别限流；真实 AI 另有进程级并发上限与
+  `AI_REQUESTS_ENABLED` 紧急总开关。只有显式 `TRUST_PROXY=true` 时才信任第一跳
+  `X-Forwarded-For`。
 - 上游地址只来自服务端环境变量，客户端不能指定 URL。
 - Agent Plan 专属地址被限制为官方
   `https://ark.cn-beijing.volces.com/api/plan/v3`，避免把套餐 Key 发送到中转站
@@ -33,9 +40,10 @@
 - 资产删除先撤销逻辑访问，再按 media binding/ref count 物理清理独占文件；临时
   资源启动时和每 10 分钟执行过期清理。
 
-本轮没有账号和鉴权，API 只应绑定回环地址。若部署到共享或公网环境，必须先增加
-认证、速率限制、上传内容安全、配额、备份恢复和更完整审计。当前已有 P0 删除
-接口，但它不能替代生产级数据生命周期治理。
+公网共享口令只适合受控比赛评审，不提供真实账号或 actor 隔离；所有评委仍共享
+`demo-user-001` 数据域。正式多用户部署前必须增加真实身份、上传内容安全、独立
+配额、审计和备份恢复。当前已有 P0 删除接口，但它不能替代生产级数据生命周期
+治理。
 
 ## 报告方式
 

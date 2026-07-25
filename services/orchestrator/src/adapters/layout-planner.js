@@ -309,8 +309,8 @@ export function createLayoutPlanner({
               }
             ],
             response_format: { type: "json_object" },
-            temperature: 0.1,
-            max_tokens: 2200
+            temperature: 0,
+            max_tokens: 4000
           })
         }
       );
@@ -338,6 +338,10 @@ export function createLayoutPlanner({
       return {
         sourceType: "fallback",
         reason: reasonFor(error),
+        diagnostic:
+          typeof error?.message === "string"
+            ? error.message.slice(0, 300)
+            : "unknown planning error",
         message: "布置规划失败，未继续调用图片模型。",
         model: config.agentPlanTextModel,
         latencyMs: Math.max(0, now() - startedAt)

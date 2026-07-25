@@ -477,7 +477,7 @@ class VisualSearchExperience {
           <li class="active delay"><span>02</span><p><b>收好商品与来源</b><small>以后还能回到这段灵感</small></p></li>
           <li class="active delay-more"><span>03</span><p><b>放进我的收藏</b><small>下次焕新可以直接使用</small></p></li>
         </ol>
-        <p class="visual-search-model-note">当前先生成 2D 收藏预览；后续可继续补充真实 3D 模型</p>
+        <p class="visual-search-model-note">当前生成 2D 收藏预览，并保留来源与候选信息</p>
       </div>
     `;
     this.bindClose();

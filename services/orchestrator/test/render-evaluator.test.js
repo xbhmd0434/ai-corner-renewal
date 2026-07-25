@@ -87,3 +87,57 @@ test("没有 SourceComponent 的风格任务不要求组件一致性分数", asy
   });
   assert.equal(result.evaluation.accepted, true);
 });
+
+test("整理任务即使模型给高分，杂乱没有明显减少也必须失败", async () => {
+  const evaluator = createRenderEvaluator({
+    config: {
+      backendMode: "auto",
+      agentPlanApiKey: "secret",
+      agentPlanBaseUrl: "https://example.invalid/api/v3",
+      agentPlanTextModel: "vision-evaluator",
+      agentPlanLayoutTimeoutMs: 5000
+    },
+    fetchImpl: async () =>
+      responseWith({
+        accepted: true,
+        scores: {
+          base_fidelity: 0.95,
+          source_component_fidelity: 0.98,
+          change_visibility: 0.9,
+          visual_coherence: 0.88,
+          physical_plausibility: 0.9,
+          constraint_compliance: 0.95,
+          clutter_risk: 0.1
+        },
+        observations: {
+          before_clutter_level: "high",
+          after_clutter_level: "high",
+          clutter_reduction_ratio: 0.15,
+          organization_action_visible: false,
+          source_component_count: 1,
+          same_category_extra_count: 1
+        },
+        hard_failures: [],
+        repair_instruction: ""
+      })
+  });
+  const result = await evaluator({
+    beforeImageDataUrl: IMAGE,
+    componentImageDataUrl: IMAGE,
+    afterImageDataUrl: IMAGE,
+    sourceComponent: { source_component_id: "source-component-1" },
+    layoutPlan: {
+      status: "ready",
+      actions: [{ type: "organize_loose_items" }]
+    },
+    requestedMode: "live"
+  });
+  assert.equal(result.evaluation.accepted, false);
+  assert.ok(
+    result.evaluation.hard_failures.includes("clutter_not_reduced")
+  );
+  assert.ok(
+    result.evaluation.hard_failures.includes("duplicate_source_category")
+  );
+  assert.ok(result.evaluation.scores.clutter_risk >= 0.6);
+});

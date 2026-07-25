@@ -80,7 +80,7 @@ P0 只承诺已经有数据、Prompt 和测试基础的局部空间：
 | PlanVersion | 不可变版本和父子谱系 | 保留，新增 `renewal_manifest` |
 | AICard v1 | 结果兼容视图 | 保留兼容，不继续承载所有新语义 |
 | 正式 `workflow.js` | RoomProfile + 固定模板 + Demo 商品 | 退为 fallback |
-| Prompt Lab | 动态规划 + ProductSlot + Seedream | 迁入正式链路 |
+| 正式流水线 | 动态规划 + ProductSlot + Seedream | 已迁入正式链路，继续收紧验收 |
 | 商品 | 固定 Demo Catalog | P0 继续 Demo，并新增 after 图后置 ProductDiscoveryRun 协议；真实抖音目录仍后置 |
 | 效果图 | 主方案可 Live，候选和预算调整可能复用示意 | 增加一致性状态，禁止静默冒充新图 |
 
@@ -597,7 +597,8 @@ Prompt 不能保证家具像素级不变。分两级实施：
 | Render Spec Builder | `render-spec-builder-v2.0.0` | 纯代码编译，不调用模型 |
 | Render Evaluation | `render-evaluator-v1.0.0` | before/after 结构化评测 |
 
-现有 `layout-agent-v1.2.0` 保留在 Prompt Lab 作对照，不再成为正式新链路版本。
+旧 `layout-agent-v1.2.0` 与 Prompt Lab 已移除；正式版本只由
+`renewal-v2.js` 管理。
 
 ### 8.2 Scene Assessment Prompt
 
@@ -743,8 +744,8 @@ ProductSlot
 }
 ```
 
-Builder 输出 `RenderPromptSpec`，再由 Provider adapter 编译为字符串。正式链路和
-Prompt Lab 不再分别维护两套 Render Prompt。
+Builder 输出 `RenderPromptSpec`，再由 Provider adapter 编译为字符串。项目只维护
+正式流水线这一套 Render Prompt。
 
 Seedream 指令顺序固定：
 
@@ -1110,7 +1111,7 @@ package_version
 工作：
 
 - SceneAssessment 泛化；
-- Prompt Lab Layout Planner 迁入 RenewalPipeline；
+- 正式 Layout Planner 接入 RenewalPipeline；
 - 接 Demo ProductSlot 检索；
 - 一次规划返修；
 - 正式 PlanVersion 持久 RenewalManifest。

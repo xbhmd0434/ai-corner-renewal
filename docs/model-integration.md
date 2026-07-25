@@ -140,26 +140,21 @@ RoomProfile 来源；图片来源读取 `render.is_demo_asset` 和
 当前不向 Seedream 发送供应方商品图或 mask；候选方案和预算调整也不自动重绘，
 避免一次交互消耗多张额度。后续应由用户显式触发按需生成。
 
-本地 `apps/web/prompt-lab.html` 用于验证第一工作流的两阶段纵切片，不进入正式
-持久化方案工作流：
+正式焕新流水线直接执行两阶段规划与生图，并写入受控领域对象：
 
 ```text
-浏览器压缩的单张授权图片 + 用户当前可见的布置 Agent Prompt
+已封存 SpaceVersion + confirmed_intent + 用户约束
 → 文本视觉模型输出 LayoutPlan + ProductSlot
 → 服务端 Builder 编译只读生图指令
 → Seedream 编辑原图
-→ LayoutPlan、商品槽位和图片 Data URL 只返回浏览器，不持久化
+→ RenderEvaluator 验收
+→ 私有媒体 + GenerationRun + PlanVersion 持久化
 ```
 
-默认规划模板版本为 `layout-agent-v1.2.0`，事实源是
-`src/prompts/prompt-lab-default.js`。模板要求模型识别住宅场景、保留层、问题、
-布置动作与最多五个商品槽位；默认采用“明显焕新”强度，以功能、视觉焦点和氛围
-三个层次避免只添加单一收纳盒。所有现有家具的数量、位置、轮廓、尺寸、结构、材质
-和颜色均为几何锁定项，规划只允许整理松散小物、移除明确垃圾或新增物品。非家居
-场景返回 `needs_input`。服务端对规划 JSON
-做边界校验后才构造 Seedream 指令，规划失败时不调用图片模型。实验台
-只在 `AI_BACKEND_MODE=auto/live` 且服务端存在 Agent Plan Key 时可调用；失败
-返回结构化错误，不回退为看似成功的 Demo 图。
+规划与渲染模板事实源是 `src/prompts/renewal-v2.js`，执行入口是
+`FormalRenewalPipeline`。服务端对规划 JSON 做边界校验、过滤 SourceComponent
+同品类重复项并注入确定性整理动作后才构造 Seedream 指令；规划失败时不调用图片
+模型，视觉验收不通过时最多修复一次。旧 Prompt 实验台及专用 API 已移除。
 
 ### 3.4 `segmentation`
 

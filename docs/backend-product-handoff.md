@@ -74,12 +74,13 @@ Media
 这些能力已经足够承接正式后端，不需要再建一套“Agent 专用页面”或让前端直接调用
 多个模型接口。Agent 编排必须留在后端，前端只提交用户意图并消费阶段状态和结果。
 
-当前前端还展示了两个原型能力：
+当前前端还保留一个独立原型能力：
 
 | 能力 | 当前事实 | 后端本轮处理 |
 | --- | --- | --- |
 | 视频框选搜同款 | 前端框选、候选选择和 ItemAsset 写入已完成；候选仍是明确标注的本地 Demo | P1，不并入本轮第一链路 P0 |
-| 包与挂件 3D 试摆 | 静态 Three.js 组合原型；真实模型任务、碰撞和持久 Composition 未接 | 保持 Demo，不作为第一链路完成条件 |
+
+旧包与挂件 3D 试摆原型已经从项目中删除，不再占用当前对象模型、接口或上线范围。
 
 ## 3. 当前后端的真实基础与关键差距
 
@@ -706,11 +707,10 @@ ProductSlot、SelectedProduct 和 EvaluationResult 阶段快照，Provider 成�
 
 ## 13. 相关事实来源
 
-- `docs/first-workflow-prompt-engineering-handoff.md`：第一链路 Prompt 分层与现状；
 - `docs/backend-next-phase-handoff.md`：当前 `/api/v1` 对象、接口与状态；
 - `apps/douyin-demo/HANDOFF.md`：前端真实入口、状态机和联调边界；
 - `packages/contracts/schemas/*.json`：当前机器协议；
 - `packages/validation/src/index.js`：确定性业务校验；
 - `services/orchestrator/src/server.js`：实际 HTTP 路由；
-- `services/orchestrator/src/workflow.js`：当前正式方案编排；
-- `services/orchestrator/src/services/prompt-lab-service.js`：当前两阶段实验链路。
+- `services/orchestrator/src/services/formal-renewal-pipeline.js`：当前正式两阶段规划、
+  生图与视觉验收编排。

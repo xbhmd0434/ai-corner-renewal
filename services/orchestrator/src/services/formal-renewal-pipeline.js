@@ -10,6 +10,11 @@ import {
 } from "../prompts/renewal-v2.js";
 
 const clone = (value) => structuredClone(value);
+const SOURCE_CATEGORY_FAMILIES = Object.freeze([
+  new Set(["table_lamp", "lighting"]),
+  new Set(["desk_riser", "monitor_riser"]),
+  new Set(["desktop_storage", "file_storage", "underdesk_storage"])
+]);
 
 function bytesDataUrl(bytes, mediaType) {
   return `data:${mediaType};base64,${Buffer.from(bytes).toString("base64")}`;
@@ -28,11 +33,87 @@ function sourceComponentFrom(snapshot) {
     : null;
 }
 
+function sourceCategoryCodes(sourceComponent) {
+  const codes = [
+    sourceComponent?.category_code,
+    sourceComponent?.selected_catalog_candidate?.category_code
+  ].filter(Boolean);
+  const family = SOURCE_CATEGORY_FAMILIES.find((items) =>
+    codes.some((code) => items.has(code))
+  );
+  return new Set(family ? [...family, ...codes] : codes);
+}
+
+function enforceLayoutRules(layoutPlan, sourceComponent, snapshot) {
+  const plan = clone(layoutPlan);
+  const sourceCategories = sourceCategoryCodes(sourceComponent);
+  const removedSourceCategorySlots = [];
+  plan.product_slots = (plan.product_slots || []).filter((slot) => {
+    if (!sourceCategories.has(slot.category)) return true;
+    removedSourceCategorySlots.push(slot.slot_id);
+    return false;
+  });
+  plan.actions = (plan.actions || []).filter((action) => {
+    if (
+      action.type !== "add" ||
+      action.target?.startsWith("source_component:")
+    ) {
+      return true;
+    }
+    return !sourceCategories.has(action.target);
+  });
+
+  const organizationRequired =
+    (snapshot.goal_codes || []).includes("organization") ||
+    /整理|收纳|杂乱|散乱|垃圾|线缆/.test(snapshot.goal || "");
+  const actionTypes = new Set(plan.actions.map((action) => action.type));
+  const injectedActions = [];
+  if (organizationRequired && !actionTypes.has("remove_trash")) {
+    injectedActions.push({
+      type: "remove_trash",
+      target: "visible_trash_and_disposable_clutter",
+      placement: "desktop",
+      instruction:
+        "移除空瓶、包装、废纸和无明确用途的零散物；不得把垃圾重新摆进收纳盘。",
+      reason: "改造必须先消除可见垃圾，形成一眼可见的前后差异"
+    });
+  }
+  if (organizationRequired && !actionTypes.has("organize_loose_items")) {
+    injectedActions.push({
+      type: "organize_loose_items",
+      target: "remaining_daily_items_and_cables",
+      placement: "desktop_and_desktop_back",
+      instruction:
+        "只保留键盘、鼠标和必要设备在外；其余日用小物分类收纳，线缆集中隐藏到桌面后缘。",
+      reason: "降低桌面视觉噪声并恢复连续操作区"
+    });
+  }
+  plan.actions = [...injectedActions, ...plan.actions].slice(0, 8);
+  plan.product_slots = plan.product_slots.slice(0, 4);
+  if (organizationRequired) {
+    plan.render_instruction = [
+      plan.render_instruction,
+      "改造后的桌面必须明显比原图整洁：移除垃圾和大部分散乱小物，只保留必要输入设备与少量有意图的陈设；不能把原有杂物原样复制到新图。"
+    ].join(" ");
+  }
+  return {
+    plan,
+    enforcement: {
+      organization_required: organizationRequired,
+      injected_action_types: injectedActions.map((item) => item.type),
+      removed_source_category_slot_ids: removedSourceCategorySlots
+    }
+  };
+}
+
 function fallbackLayout(card, sourceComponent) {
   const sourceProductId =
     sourceComponent?.selected_catalog_candidate?.product_id || null;
+  const sourceCategories = sourceCategoryCodes(sourceComponent);
   const supplementaryProducts = (card.products || []).filter(
-    (item) => item.product_id !== sourceProductId
+    (item) =>
+      item.product_id !== sourceProductId &&
+      !sourceCategories.has(item.category)
   );
   return {
     status: "ready",
@@ -69,7 +150,7 @@ function fallbackLayout(card, sourceComponent) {
             }
           ]
         : []),
-      ...supplementaryProducts.slice(0, 5).map((product) => {
+      ...supplementaryProducts.slice(0, 4).map((product) => {
         const placement = card.plan?.placements?.find(
           (item) => item.product_id === product.product_id
         );
@@ -82,7 +163,7 @@ function fallbackLayout(card, sourceComponent) {
         };
       })
     ],
-    product_slots: supplementaryProducts.slice(0, 5).map((product, index) => {
+    product_slots: supplementaryProducts.slice(0, 4).map((product, index) => {
       const placement = card.plan?.placements?.find(
         (item) => item.product_id === product.product_id
       );
@@ -289,10 +370,46 @@ export class FormalRenewalPipeline {
       requestedMode:
         snapshot.options.analysis_mode === "demo" ? "demo" : "live"
     });
-    const layoutPlan =
+    const liveRequested =
+      this.config.backendMode !== "demo" &&
+      snapshot.options.analysis_mode !== "demo";
+    if (liveRequested && planning.sourceType !== "live") {
+      const code = planning.reason || "formal_layout_failed";
+      throw Object.assign(
+        new Error(
+          `正式布局规划失败：${code}${
+            planning.diagnostic ? ` (${planning.diagnostic})` : ""
+          }`
+        ),
+        {
+          code,
+          issues: planning.diagnostic
+            ? [
+                {
+                  path: "/layout_plan",
+                  code,
+                  message: planning.diagnostic
+                }
+              ]
+            : []
+        }
+      );
+    }
+    if (liveRequested && planning.plan?.status !== "ready") {
+      throw Object.assign(new Error("正式布局规划需要补充输入，未进入生图"), {
+        code: "formal_layout_needs_input"
+      });
+    }
+    const candidateLayoutPlan =
       planning.sourceType === "live" && planning.plan?.status === "ready"
         ? planning.plan
         : fallbackLayout(workingCard, sourceComponent);
+    const enforcedLayout = enforceLayoutRules(
+      candidateLayoutPlan,
+      sourceComponent,
+      snapshot
+    );
+    const layoutPlan = enforcedLayout.plan;
     if (
       sourceComponent &&
       !(layoutPlan.actions || []).some(
@@ -319,6 +436,14 @@ export class FormalRenewalPipeline {
       maturity: this.config.backendMode === "demo" ? "prototype" : "runtime_static",
       scene_assessment: clone(card.room_profile),
       source_component: clone(sourceComponent),
+      planning: {
+        source_mode: planning.sourceType,
+        reason: planning.reason || null,
+        diagnostic: planning.diagnostic || null,
+        model: planning.model || null,
+        latency_ms: planning.latencyMs ?? null,
+        enforcement: enforcedLayout.enforcement
+      },
       layout_plan: clone(layoutPlan),
       product_slots: clone(layoutPlan.product_slots || []),
       selected_products: selectedProducts.map((item) => item.product_id),

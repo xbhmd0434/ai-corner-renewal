@@ -1050,7 +1050,7 @@ function openAiEntrySheet(item, video) {
   layer.className = "ai-entry-layer";
   layer.setAttribute("aria-hidden", "false");
   layer.innerHTML = `
-    <div class="ai-entry-sheet" role="dialog" aria-modal="true" aria-label="选择 AI 试搭方式">
+    <div class="ai-entry-sheet" role="dialog" aria-modal="true" aria-label="进入 AI 一角焕新">
       <div class="ai-entry-sheet__grip"></div>
       <header class="ai-entry-sheet__header">
         <div>
@@ -1072,18 +1072,6 @@ function openAiEntrySheet(item, video) {
             </svg>
           </span>
           <span><b>放进我的空间</b><small>延续现有 AI 一角焕新</small></span>
-          <i>›</i>
-        </button>
-        <button type="button" data-ai-entry="accessory">
-          <span class="ai-entry-sheet__icon ai-entry-sheet__icon--tryon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M7 9a5 5 0 0 1 10 0"/>
-              <path d="M5 9h14l1 11H4L5 9z"/>
-              <circle cx="17.5" cy="11.5" r="2.2"/>
-              <path d="M17.5 13.7v3"/>
-            </svg>
-          </span>
-          <span><b>挂到我的包上</b><small>进入双模型 3D 试搭</small></span>
           <i>›</i>
         </button>
       </div>
@@ -1114,22 +1102,6 @@ function openAiEntrySheet(item, video) {
       );
       window.location.href = "./renewal.html?source=video";
     });
-  layer
-    .querySelector('[data-ai-entry="accessory"]')
-    .addEventListener("click", () => {
-      const context = buildVideoEntryContext(
-        item,
-        video,
-        "把视频里的小商品挂到我的包上"
-      );
-      writeSessionValue("douyin-accessory-entry-context", {
-        ...context,
-        kind: "video",
-        selected_asset_role: "attachment"
-      });
-      window.location.href = "./try-on.html?source=video";
-    });
-
   document.querySelector(".phone")?.append(layer);
 }
 
@@ -1180,7 +1152,7 @@ function renderFeed() {
       counters[0].textContent = formatCount(item.likes);
     });
 
-    // 单一 AI 入口在底部动作层分流空间焕新与 3D 挂件试搭，避免挤占操作栏。
+    // 单一 AI 入口把视频来源与时间点交给正式焕新流程。
     const actionRail = node.querySelector(".action-rail");
     if (actionRail) {
       const fusionBtn = document.createElement("button");
