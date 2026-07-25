@@ -14,16 +14,20 @@
 主输入收敛为一个已确认的组件或风格/氛围意图加一个目标场景，效果图生成和相关
 设计独立并发，结果通过私人保存/主动发布和「实施」整套清单形成内容与商业闭环。
 前后端下一阶段必须共同遵守 `docs/v2-parallel-development-contract.md`；独立任务
-分别见 `docs/v2-frontend-tasks.md` 和 `docs/v2-backend-tasks.md`。这些文档区分了
-当前实现和目标接口：未进入 Route Manifest、OpenAPI、Schema、测试及健康能力的
-意图确认、RelatedDesignRun、Publication 和 CartIntent 仍是待实施目标。
+分别见 `docs/v2-frontend-tasks.md` 和 `docs/v2-backend-tasks.md`。
 
-当前工作树包含大量尚未提交的前后端 Product Discovery 改动，旧 Commit
-`eb71e849c97aecd8532cfbe40d52123f863cc803` 不能代表完整现状。拆成前后端独立
-worktree 前，必须先形成一个双方可检出的基线 Commit 并记录 SHA；否则新建分支会
-丢失未跟踪文件和未提交实现。并行期间前端只修改 `apps/douyin-demo/**`，后端/契约
-线维护 `services/**`、`packages/contracts/**`、canonical fixtures 和 OpenAPI，
-共享协议变化必须先独立提交，再由双方 rebase。
+后端 V2.1（`renewal-card/2.1`）已在基线 Commit
+`4024b0cd3d54bbf07bab9348c158088c96ded21e` 之上完成 BE-00～BE-08：意图分析与
+用户确认、V2.1 DesignRequest 快照（含 `confirmed_intent` 快照与 `context_fingerprint`
+不可变签名、AI 示例场景 `scene_origin=ai_example / read_only=true` 门禁）、独立
+RelatedDesignRun 状态机（双 Provider：DemoDouyin 目录 + LocalPublication 索引）、
+V2.1 GenerationRun 语义适配（PlanVersion 保存 `implementation_source_roles` +
+只输出主效果图 + `experience_contract=renewal-card/2.1`）、Publication
+保存后主动发布（`indexing → published | index_failed | withdrawn`）、
+ProductDiscoveryRun 的 `implementation_list` 来源排序与去重、CartIntent 宿主
+交接（真实抖音 Bridge 未接时降级为 `search_bundle`/`unavailable`）、以及事件
+白名单扩展、`/api/health.features` 五个 V2.1 flag 与完整 E2E 测试。前端并行任务
+仍需按 `docs/v2-frontend-tasks.md` 消费上述契约。
 
 后端下一阶段的产品优先级、第一链路完成定义以及 Agent / 确定性代码责任边界，
 统一以 `docs/backend-product-handoff.md` 为准。正式 GenerationRun 应从固定方案
@@ -95,7 +99,62 @@ plan-grounded fallback、Demo Catalog grounding 与共享 fixture/协议测试�
   `listProductDiscoveryRuns`、`getProductDiscoveryRun`、
   `cancelProductDiscoveryRun`）与 `platform-v1.schema.json` 中
   `ProductDiscoveryRun`/`GroundedProductMatch`/`DiscoveredSubject`/`ProductDiscoveryProvenance`
-  同源，通过 `packages/contracts/src/openapi.js` 自动生成 OpenAPI。
+  同源，通过 `packages/contracts/src/openapi.js` 自动生成 OpenAPI。V2.1 packaging
+  阶段额外生成 `implementation_list`（来源角色 `video_selected|source_video|
+  ai_supplement`，`sort_group=0|1|2`）、`estimated_total_cny` 与 `currency`；
+  商品去重按 `product_id`，同一 product_id 不会跨 list_item 重复出现。
+- V2.1 renewal-card 协议全部实现（`renewal-card/2.1`）：
+  - `AssetService.confirmIntent` 生成不可变 `confirmed_intent` 快照，
+    `intent_analysis` 只读不覆盖；模糊场景返回 `parse_state=needs_confirmation`
+    并提供候选。
+  - `DeterministicAssetUnderstandingAdapter` 为 inspiration 输出结构化
+    `intent_analysis`，含 `state|suggested_type|component_reference|
+    style_reference|candidates`。
+  - `DesignRequestService` 支持 `options.experience_contract=renewal-card/2.1`，
+    未确认灵感 → `409 intent_confirmation_required`，快照保存
+    `confirmed_intent + context_fingerprint`（sha256 前 16 位）。
+  - AI 示例空间 seed 附带 `scene_origin=ai_example, read_only=true`，PATCH/DELETE
+    统一 `409 ai_example_scene_read_only`。
+  - `RelatedDesignService` 独立六阶段状态机（`queued → extracting_context →
+    retrieving_inspiration → retrieving_scene → reranking → packaging →
+    succeeded|failed|cancelled`），one-active、cancel、retry、refresh 与重启
+    恢复；结果计算双关系（inspiration + scene），单路降级标 `fallback_dimension`；
+    open_action 只允许白名单类型与 `snssdk1128://` deep link/内部
+    `internal_publication_id`；`DemoDouyinContentProvider` 与
+    `LocalPublicationIndexProvider` 两个 Port，未 published Publication 永不召回，
+    context_fingerprint 变化会取消迟到的 run。
+  - `PlanService` V2.1 分支：`experience_contract=renewal-card/2.1` 只输出
+    主效果图（`alternatives=[]`），PlanVersion 保存
+    `experience_contract` 与 `implementation_source_roles`（每个 product 归入
+    video_selected/source_video/ai_supplement 角色，from_reference_asset_id 追踪
+    来源）。
+  - `PublicationService`（保存 ≠ 发布）：`indexing → published | index_failed |
+    withdrawn`，同一 PlanVersion + actor 最多一个未撤下 Publication；发布前必须
+    `plan.lifecycle=saved`；`index_failed` 可重试且不影响私人方案；撤下立即从
+    RelatedDesign 本地索引消失，不删除 PlanAsset；`published_snapshot` 仅保存
+    scene_type/intent_type/source_attribution 与检索关键字，不复制私有渲染或
+    自由文本。
+  - `CommerceHandoffService` 生成 CartIntent：校验 list_item/match/quantity 归属
+    同一成功 ProductDiscoveryRun，全部有效 → `search_bundle`（真实抖音购物车
+    Bridge 未接入，`cart_batch_handoff=false`）；部分/全部无效返回
+    `partial`/`unavailable`；action.token 短时 opaque（randomBytes(24) base64url，
+    绑定 actor/run/items），日志不记录 token；不创建订单，不返回“购买成功”。
+- V2.1 契约与 Route Manifest（`packages/contracts/src/v1-route-manifest.js`）新增 9 个
+  operationId，全部进入 OpenAPI 3.1、`platform-v1.schema.json` 与 canonical
+  fixtures：`confirmInspirationIntent`、`createRelatedDesignRun`、
+  `listRelatedDesignRuns`、`getRelatedDesignRun`、`cancelRelatedDesignRun`、
+  `createPublication`、`getPublication`、`withdrawPublication`、`createCartIntent`。
+- `examples/contracts/renewal-v2/` 13 个 canonical fixture 覆盖组件/风格意图确认、
+  Related running/ready/partial/empty、Publication indexing/published、
+  Implementation ready-component/ready-style/partial、CartIntent unavailable；
+  逐字段通过 `platform-v1.schema.json` 与结构性测试。
+- `GET /api/health.features` 增加五个 V2.1 flag：`renewal_intent_v2=true`、
+  `related_designs=true`、`plan_publication=true`、`implementation_list_v2=true`、
+  `cart_batch_handoff=false`（真实抖音购物车 Bridge 未接入时保持 false，返回
+  search_bundle/unavailable，绝不冒充 live）。
+- EventService 白名单新增 6 个 V2.1 事件：`intent_confirmed`、`scene_switched`、
+  `related_design_opened`、`publication_requested`、`implementation_opened`、
+  `cart_handoff_requested`；仍拒绝图像、bbox、URL、token 与自由文本。
 - Agent Plan 专属 OpenAI 兼容网关 RoomProfile 适配器、固定官方 Base URL、低消耗
   鉴权脚本和同协议 fallback。
 - Seedream 5.0 Lite 图片编辑适配器：只为首次生成的主方案调用一次，输入原图、
@@ -472,8 +531,8 @@ V2.1 并行期前端只修改 `apps/douyin-demo/**`，后端/契约线维护 `se
 - `schemas/platform-v1.schema.json`：Media、Asset、SpaceVersion、DesignRequest、
   GenerationRun、PlanVersionEnvelope、Preference、EventBatchResult 聚合协议。
 - `src/index.js`：旧协议零依赖运行时断言。
-- `src/v1-route-manifest.js`：25 个 `/api/v1` 操作的方法、路径、幂等和请求类型
-  事实源；服务端路由和 OpenAPI 生成器共同消费。
+- `src/v1-route-manifest.js`：38 个 `/api/v1` 操作（V1 底座 29 + V2.1 新增 9）的方法、
+  路径、幂等和请求类型事实源；服务端路由和 OpenAPI 生成器共同消费。
 - `src/openapi.js`：从路由清单与 JSON Schema 组装 OpenAPI 3.1；生成文件由
   `scripts/generate-openapi.mjs` 写入 `docs/openapi.yaml`。
 
@@ -495,7 +554,13 @@ V2.1 并行期前端只修改 `apps/douyin-demo/**`，后端/契约线维护 `se
 - `src/services/asset-service.js`：资产、匹配、解析任务、空间版本、删除。
 - `src/services/design-service.js`：Preference 与不可变 DesignRequest。
 - `src/services/plan-service.js`：GenerationRun、现有 Workflow、方案谱系、调整和
-  旧接口持久兼容。
+  旧接口持久兼容。V2.1 分支只输出主效果图并计算 `implementation_source_roles`。
+- `src/services/related-design-service.js`：V2.1 独立 RelatedDesignRun 状态机、
+  DemoDouyin 与 LocalPublication 双 Provider、迟到运行按 context_fingerprint 丢弃。
+- `src/services/publication-service.js`：V2.1 Publication 不可变发布对象、
+  异步本地索引、`index_failed` 重试与撤下语义；不复制私有渲染到公开索引。
+- `src/services/commerce-handoff-service.js`：V2.1 CartIntent 校验、宿主 Bridge
+  未接入时降级 search_bundle，token 短时 opaque。
 - `src/services/event-service.js`：白名单、最小化事件。
 - `src/services/prompt-lab-service.js`：实验请求、Prompt/图片校验、非持久结果和
   两阶段编排、安全错误映射；规划不是 `ready` 时不能调用图片模型，也不能写
@@ -599,6 +664,13 @@ POST             /api/v1/events/batch
 POST/GET         /api/v1/plans/{plan_asset_id}/versions/{plan_version_id}/product-discovery-runs
 GET              /api/v1/product-discovery-runs/{product_discovery_run_id}
 POST             /api/v1/product-discovery-runs/{product_discovery_run_id}/cancel
+POST             /api/v1/product-discovery-runs/{product_discovery_run_id}/cart-intents
+POST             /api/v1/assets/{asset_id}/intent-confirmations
+POST/GET         /api/v1/design-requests/{design_request_id}/related-design-runs
+GET              /api/v1/related-design-runs/{related_design_run_id}
+POST             /api/v1/related-design-runs/{related_design_run_id}/cancel
+POST             /api/v1/plans/{plan_asset_id}/versions/{plan_version_id}/publications
+GET/DELETE       /api/v1/publications/{publication_id}
 ```
 
 Web 静态服务另有一个只读本机诊断端点：
@@ -638,7 +710,7 @@ ProductDiscoveryRun 继续作为“实施”底座，但目标交互改为用户
 - GenerationRun 统一返回 0～100 的 `progress` 和对象/null 形态的
   `needs_input`；待补对象从终态 AICard `follow_up` 投影，并明确是否已有预览。
 - `npm.cmd run openapi:generate` 更新可导入契约；`openapi:check` 及根检查验证生成
-  文件、25 个操作、幂等 Header、Schema 引用和示例不漂移。
+  文件、38 个操作、幂等 Header、Schema 引用和示例不漂移。
 
 旧接口内部持久化：
 
@@ -749,7 +821,7 @@ npm.cmd run demo:backend
 当前预期：
 
 ```text
-163 项唯一自动测试（96 项后端/协议/3D + 67 项抖音前端）
+269 项唯一自动测试（202 项后端/协议/3D + 67 项抖音前端）
 生成：原木呼吸感，6 件，¥486
 调整：高效收纳版 v2，4 件，¥240
 持久方案历史：1 个谱系、2 个版本
@@ -842,15 +914,70 @@ npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\mo
 
 未经用户明确要求，不提交、推送、开 PR 或部署。
 
+### 公网部署状态与既定方案
+
+公网比赛部署的唯一执行方案见根目录 `DEPLOYMENT_PLAN.md`。该方案已经冻结为：
+Zeabur Server 上的单 Docker 服务、单 HTTPS 域名，正式入口为
+`apps/douyin-demo/douyin-static-demo`，Node 同端口提供静态页面和 `/api`，
+SQLite 与私有媒体挂载 `/app/data`，真实 Agent Plan / Seedream 只由服务端调用，
+云端不运行 Hunyuan3D。
+
+这仍是**计划而不是当前实现**。截至 2026-07-26，Zeabur 新项目已不能使用旧共享
+集群，需要购买或绑定 Server；购买是按月固定费用并默认自动续费。当前代码仍以固定
+Demo actor 运行、没有真实鉴权和限流，而且 `loadConfig()` 会拒绝非回环 host，
+因此不得直接公网绑定。部署改造必须在后端并行任务形成稳定 Commit 后单独进行，
+先补访问口令会话、AI 限流/总开关、单端口静态托管、`PORT` 读取、Docker 和持久化
+重启测试。所有门槛通过前，不购买 Zeabur Server，也不在当前未提交工作区混入部署
+代码。
+
+### 8.1 V2.1 后端重启验证（2026-07-26）
+
+在基线 `4024b0c` + BE-00～BE-08 实现之上做过一次显式重启验证，未修改代码或
+运行配置，只为核对 31 个 API 路径与 5 个 V2.1 feature flag：
+
+- **重启方式**：探测到旧后端 PID 20840 仍占用 `127.0.0.1:8787`，`taskkill /F`
+  释放端口后运行 `npm run start:backend` 起当前源码。此后 `curl /api/health`、
+  `curl /api/openapi.json` 均返回 HTTP 200。
+- **31 个 path template**：`/api/health` + `/api/openapi.json` + 29 条 `/api/v1/**`，
+  映射到 OpenAPI 里 38 个 operations（`V1_ROUTE_MANIFEST` 与运行时 OpenAPI 逐条
+  对齐）。其中 V2.1 新增 7 条 unique path template / 9 个 operations：
+  `confirmInspirationIntent`、`createRelatedDesignRun`、`listRelatedDesignRuns`、
+  `getRelatedDesignRun`、`cancelRelatedDesignRun`、`createPublication`、
+  `getPublication`、`withdrawPublication`、`createCartIntent`；其余 22 条 unique
+  path template / 29 个 operations 为 V1 底座。
+- **5 个 V2.1 feature flag**（`/api/health.features`）实机返回值：
+  `renewal_intent_v2=true`、`related_designs=true`、`plan_publication=true`、
+  `implementation_list_v2=true`、`cart_batch_handoff=false`。真实抖音购物车
+  Bridge 未接入，`cart_batch_handoff=false` 与协议 §8 目标一致；接入后
+  CommerceHandoffService 的 `hostBridgeAvailable` 与该 flag 才可同时置为
+  `true`，此前保持返回 `search_bundle` / `unavailable`。
+- **其余原有 3 个 flag** 保持：`product_discovery=true`、
+  `product_discovery_live_agent=false`、`douyin_commerce_catalog=false`。
+- 本次验证过程使用的临时 `curl` 落盘目录 `/tmp/` 已进入 `.gitignore`，不进入
+  仓库；本轮未运行 `npm.cmd run check` 或改动代码/配置。
+
 ## 9. 自动测试覆盖
 
-`npm.cmd run check` 当前覆盖 163 项唯一自动测试：96 项后端/协议/3D 测试与
+`npm.cmd run check` 当前覆盖 269 项唯一自动测试：202 项后端/协议/3D 测试与
 67 项抖音前端 Builder、Adapter、视觉框选、商品发现和状态语义测试。根检查随后调用前端专用检查，
 额外完成全部前端脚本语法校验。
 
-- 4 个 JSON Schema 可解析与内部 `$ref`。
-- OpenAPI 3.1 覆盖共享清单中的 25 个 `/api/v1` 操作，幂等 Header 和所有本地
-  `$ref` 可解析，生成文件与路由/Schema 一致。
+- 4 个 JSON Schema 可解析与内部 `$ref`；13 个 V2.1 canonical fixture 逐字段通过
+  `platform-v1.schema.json` 与排序/降级/空态断言。
+- OpenAPI 3.1 覆盖共享清单中的 38 个 `/api/v1` 操作（V1 底座 29 + V2.1 新增 9），
+  幂等 Header 和所有本地 `$ref` 可解析，生成文件与路由/Schema 一致。
+- V2.1 服务测试：InspirationAsset 意图分析 5 项（component/style/needs_confirmation/
+  幂等确认/非 inspiration 拒绝）、DesignRequest V2.1 快照 4 项（context_fingerprint、
+  换场景、intent_confirmation_required、AI 示例场景只读）、RelatedDesignRun 6 项
+  （ready/partial/empty 状态机、one-active 409、cancel、非 V2.1 拒绝、重启恢复、
+  未发布 Publication 不召回）、Generation V2.1 3 项（alternatives=[]、
+  source_video 全标记、组件意图 video_selected/ai_supplement 门禁）、Publication 5 项
+  （save→publish 召回、draft 拒绝、单一未撤下、index_failed 重试、撤下不召回）、
+  Implementation list 3 项（排序单调、style 全 source_video、product_id 去重）、
+  CartIntent 6 项（search_bundle、篡改 match、非法 list_item、
+  ProductDiscoveryRun 未成功拒绝、重复/非法 quantity、部分 rejected）、
+  V2.1 HTTP e2e 4 项（意图确认+双 run+发布+实施+购物车、404、Idempotency-Key
+  重放/冲突、重启恢复）。
 - 旧 45 项 AICard、规则、Live/Fallback、HTTP 和内存 Store 回归。
 - Agent Plan 官方主机约束、模型名配置、本地环境优先级、OpenAI 兼容多模态请求、
   稳定 `room_id` 所有权、自由标签到受控区域代码的归一化、本地图片拒绝、401
@@ -945,16 +1072,21 @@ npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\mo
 
 当前一轮优先按 V2.1 并行协议执行：
 
-1. 先把当前未提交 Product Discovery 前后端纳入一个双方可检出的基线 Commit，
-   记录 SHA；没有这一步不创建独立 worktree。
-2. 契约/后端线先完成 `docs/v2-backend-tasks.md` 的 BE-00：Route Manifest、
-   Schema、OpenAPI 和 canonical fixtures；前端只消费这个契约 Commit。
-3. 前端按 `docs/v2-frontend-tasks.md` 实现意图确认、默认收起的“我的”、双 run
-   正交状态、保存/发布和按需“实施”；不再把预算与补充约束放入 V2.1 P0 主界面。
-4. 后端实现 confirmed intent、RelatedDesignRun、Publication、
-   `implementation_list` 和 CartIntent；生成与相关设计独立，保存与发布分离。
-5. 两线最后在同一候选 Commit 回归组件/风格、示例/真实场景、换场景迟到响应、
-   发布前后召回、实施排序、购物车不可用、Provider 失败和重启恢复，并记录回滚点。
+1. 基线 Commit `4024b0cd3d54bbf07bab9348c158088c96ded21e` 已作为契约基线；后端
+   BE-00～BE-08 已完成并通过 `npm.cmd run check` 与 `npm.cmd run openapi:check`。
+2. 前端仍需按 `docs/v2-frontend-tasks.md` 实现意图确认、默认收起的"我的"、双 run
+   正交状态、保存/发布和按需"实施"；`apps/douyin-demo/**` 可直接消费
+   `examples/contracts/renewal-v2/` canonical fixture 与 `/api/v1` 全部 38 条路由。
+3. 联调完成后需再次在同一候选 Commit 回归组件/风格、示例/真实场景、换场景迟到响应、
+   发布前后召回、实施排序、购物车不可用、Provider 失败和重启恢复；本次后端已经通过
+   V2.1 HTTP e2e 覆盖这些场景，联调时以真实前端交互回归为准。
+4. `cart_batch_handoff=false` 与真实抖音购物车 Bridge 未接入是本轮已知边界：
+   CommerceHandoffService 通过 `search_bundle`/`unavailable` 降级；不得展示"已加入
+   购物车"成功态。接入真实宿主 Bridge 时同时把 `hostBridgeAvailable` 置真并把
+   `douyin_cart_batch` action 通过健康检查置为 `true`。
+5. 真实抖音内容目录与商品目录仍是 Demo：`DemoDouyinContentProvider` 与
+   `DemoCommerceCatalogAdapter` 只能声称 `source_mode=fallback`。接入真实
+   Provider 时需分别在 `/api/health.features` 单独开关，并保留 fallback 分支。
 
 3D 试搭下一阶段（继续本方向时按顺序）：
 
