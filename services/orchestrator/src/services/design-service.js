@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { assertNoOwnerId, invalid } from "../errors.js";
 
 const TRIGGERS = new Set([
@@ -203,6 +203,20 @@ export class DesignRequestService {
       if (asset.lifecycle === "archived") {
         throw invalid("asset_not_usable", "归档参考资产不能用于新任务");
       }
+      // renewal-card/2.1：inspiration 必须已完成意图确认才能进入 DesignRequest
+      const experienceContract = body.options?.experience_contract;
+      if (
+        experienceContract === "renewal-card/2.1" &&
+        asset.asset_type === "inspiration" &&
+        !asset.attributes?.confirmed_intent
+      ) {
+        const error = new Error("灵感资产尚未完成意图确认");
+        error.name = "IntentConfirmationRequiredError";
+        error.code = "intent_confirmation_required";
+        error.statusCode = 409;
+        error.details = { asset_id: asset.asset_id };
+        throw error;
+      }
       return asset;
     });
 
@@ -310,6 +324,9 @@ export class DesignRequestService {
       options: {
         analysis_mode: body.options?.analysis_mode || "auto",
         include_trace: body.options?.include_trace === true,
+        ...(body.options?.experience_contract
+          ? { experience_contract: body.options.experience_contract }
+          : {}),
         ...(internal && body.options?.preferred_style_key
           ? { preferred_style_key: body.options.preferred_style_key }
           : {})
@@ -337,11 +354,34 @@ export class DesignRequestService {
         resource_version: asset.resource_version,
         name: asset.name,
         provenance: clone(asset.provenance),
-        attributes: clone(asset.attributes)
+        attributes: clone(asset.attributes),
+        confirmed_intent:
+          asset.asset_type === "inspiration"
+            ? clone(asset.attributes?.confirmed_intent || null)
+            : null
       })),
       preference_snapshot: clone(preferences),
       created_at: createdAt
     };
+    // context_fingerprint 用于 RelatedDesignRun/迟到结果隔离/迟到 Provider 隔离
+    const fingerprintInput = {
+      space_asset_id: space.asset_id,
+      space_version_id: spaceVersion.space_version_id,
+      space_version_resource_version: spaceVersion.resource_version,
+      reference_asset_ids: [...snapshot.reference_asset_ids],
+      confirmed_intents: snapshot.reference_snapshots
+        .filter((item) => item.confirmed_intent)
+        .map((item) => ({
+          asset_id: item.asset_id,
+          intent_type: item.confirmed_intent.intent_type,
+          summary: item.confirmed_intent.summary
+        })),
+      experience_contract: snapshot.options.experience_contract || null
+    };
+    snapshot.context_fingerprint = `sha256:${createHash("sha256")
+      .update(JSON.stringify(fingerprintInput))
+      .digest("hex")
+      .slice(0, 16)}`;
     const record = {
       schema_version: "1.0",
       design_request_id: designRequestId,
@@ -535,10 +575,19 @@ export class DesignRequestService {
       rejectUnknownKeys(
         body.options,
         internal
-          ? new Set(["analysis_mode", "include_trace", "preferred_style_key"])
-          : new Set(["analysis_mode", "include_trace"]),
+          ? new Set(["analysis_mode", "include_trace", "preferred_style_key", "experience_contract"])
+          : new Set(["analysis_mode", "include_trace", "experience_contract"]),
         "options"
       );
+      if (
+        present(body.options, "experience_contract") &&
+        body.options.experience_contract !== "renewal-card/2.1"
+      ) {
+        throw invalid(
+          "design_request_invalid",
+          "experience_contract 只支持 renewal-card/2.1"
+        );
+      }
       if (
         present(body.options, "analysis_mode") &&
         !ANALYSIS_MODES.has(body.options.analysis_mode)

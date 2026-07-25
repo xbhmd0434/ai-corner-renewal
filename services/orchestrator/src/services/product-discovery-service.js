@@ -707,6 +707,69 @@ export class ProductDiscoveryService {
           resultState = "ready";
         }
 
+        // === V2.1 implementation_list ===
+        // 从 PlanVersion.implementation_source_roles 提取角色映射
+        const planVersion = context.planVersion;
+        const roleMap = new Map();
+        for (const role of planVersion?.implementation_source_roles || []) {
+          roleMap.set(role.product_id, role.role);
+        }
+        const originLabels = {
+          video_selected: "视频圈选",
+          source_video: "原视频里出现",
+          ai_supplement: "AI 补充"
+        };
+        const originSortGroup = {
+          video_selected: 0,
+          source_video: 0,
+          ai_supplement: 1
+        };
+        // 每个 matched subject → 一个 list item；使用第一个 match 决定 origin
+        const implementationList = [];
+        let cursor = 0;
+        const bySortGroup = new Map();
+        const seenProductIds = new Set();
+        for (const subject of subjects) {
+          if (subject.match_state !== "matched") continue;
+          const matches = subject.matches || [];
+          if (!matches.length) continue;
+          // 商品去重：subject 主 match 若已被之前 subject 选中，尝试用备选
+          let selected = matches.find((match) => !seenProductIds.has(match.product_id));
+          if (!selected) continue;
+          seenProductIds.add(selected.product_id);
+          const alternatives = matches
+            .filter((match) => match.match_id !== selected.match_id)
+            .map((match) => match.match_id);
+          const originType = roleMap.get(selected.product_id) || "ai_supplement";
+          const sortGroup = originSortGroup[originType];
+          const groupIndex = bySortGroup.get(sortGroup) || 0;
+          bySortGroup.set(sortGroup, groupIndex + 1);
+          implementationList.push({
+            list_item_id: `implementation-item-${randomUUID()}`,
+            subject_id: subject.subject_id,
+            display_name: subject.label,
+            origin_type: originType,
+            origin_label: originLabels[originType],
+            sort_group: sortGroup,
+            sort_index: groupIndex,
+            disposition: "add",
+            quantity: 1,
+            selected_match_id: selected.match_id,
+            alternative_match_ids: alternatives
+          });
+          cursor += 1;
+        }
+        // 按 sort_group, sort_index 排序
+        implementationList.sort(
+          (a, b) => a.sort_group - b.sort_group || a.sort_index - b.sort_index
+        );
+        const estimatedTotal = implementationList.reduce((sum, item) => {
+          const subject = subjects.find((s) => s.subject_id === item.subject_id);
+          const match = subject?.matches?.find((m) => m.match_id === item.selected_match_id);
+          const price = Number.isInteger(match?.price_cny) ? match.price_cny : 0;
+          return sum + price * item.quantity;
+        }, 0);
+
         return {
           result_state: resultState,
           result: {
@@ -728,7 +791,10 @@ export class ProductDiscoveryService {
                 label: "未调用商品目录",
                 checked_at: this.now().toISOString()
               }
-            }
+            },
+            implementation_list: implementationList,
+            estimated_total_cny: estimatedTotal,
+            currency: "CNY"
           }
         };
       }

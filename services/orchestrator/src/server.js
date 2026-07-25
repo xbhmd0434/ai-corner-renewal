@@ -15,6 +15,10 @@ const LOG_ROUTE_TEMPLATES = [
     "/api/v1/assets/{asset_id}/parse-runs"
   ],
   [
+    /^\/api\/v1\/assets\/[^/]+\/intent-confirmations$/,
+    "/api/v1/assets/{asset_id}/intent-confirmations"
+  ],
+  [
     /^\/api\/v1\/assets\/[^/]+\/versions\/[^/]+$/,
     "/api/v1/assets/{asset_id}/versions/{space_version_id}"
   ],
@@ -24,12 +28,24 @@ const LOG_ROUTE_TEMPLATES = [
   ],
   [/^\/api\/v1\/assets\/[^/]+$/, "/api/v1/assets/{asset_id}"],
   [
+    /^\/api\/v1\/design-requests\/[^/]+\/related-design-runs$/,
+    "/api/v1/design-requests/{design_request_id}/related-design-runs"
+  ],
+  [
     /^\/api\/v1\/design-requests\/[^/]+\/runs$/,
     "/api/v1/design-requests/{design_request_id}/runs"
   ],
   [
     /^\/api\/v1\/design-requests\/[^/]+$/,
     "/api/v1/design-requests/{design_request_id}"
+  ],
+  [
+    /^\/api\/v1\/related-design-runs\/[^/]+\/cancel$/,
+    "/api/v1/related-design-runs/{related_design_run_id}/cancel"
+  ],
+  [
+    /^\/api\/v1\/related-design-runs\/[^/]+$/,
+    "/api/v1/related-design-runs/{related_design_run_id}"
   ],
   [
     /^\/api\/v1\/generation-runs\/[^/]+\/cancel$/,
@@ -49,8 +65,20 @@ const LOG_ROUTE_TEMPLATES = [
   ],
   [/^\/api\/v1\/plans\/[^/]+$/, "/api/v1/plans/{plan_asset_id}"],
   [
+    /^\/api\/v1\/plans\/[^/]+\/versions\/[^/]+\/publications$/,
+    "/api/v1/plans/{plan_asset_id}/versions/{plan_version_id}/publications"
+  ],
+  [
+    /^\/api\/v1\/publications\/[^/]+$/,
+    "/api/v1/publications/{publication_id}"
+  ],
+  [
     /^\/api\/v1\/plans\/[^/]+\/versions\/[^/]+\/product-discovery-runs$/,
     "/api/v1/plans/{plan_asset_id}/versions/{plan_version_id}/product-discovery-runs"
+  ],
+  [
+    /^\/api\/v1\/product-discovery-runs\/[^/]+\/cart-intents$/,
+    "/api/v1/product-discovery-runs/{product_discovery_run_id}/cart-intents"
   ],
   [
     /^\/api\/v1\/product-discovery-runs\/[^/]+$/,
@@ -507,6 +535,18 @@ async function dispatchV1({
       }
     },
     {
+      ...v1Route("confirmInspirationIntent"),
+      regex: /^\/api\/v1\/assets\/([^/]+)\/intent-confirmations$/,
+      run: ({ params, body }) => {
+        const value = platform.assetService.confirmIntent(
+          actorId,
+          decodeURIComponent(params[0]),
+          body
+        );
+        return response(200, value, etag(value));
+      }
+    },
+    {
       ...v1Route("createDesignRequest"),
       regex: /^\/api\/v1\/design-requests$/,
       run: ({ body }) =>
@@ -534,6 +574,55 @@ async function dispatchV1({
             actorId,
             decodeURIComponent(params[0]),
             body
+          )
+        )
+    },
+    {
+      ...v1Route("createRelatedDesignRun"),
+      regex: /^\/api\/v1\/design-requests\/([^/]+)\/related-design-runs$/,
+      run: ({ params, body }) =>
+        response(
+          202,
+          platform.relatedDesignService.create(
+            actorId,
+            decodeURIComponent(params[0]),
+            body
+          )
+        )
+    },
+    {
+      ...v1Route("listRelatedDesignRuns"),
+      regex: /^\/api\/v1\/design-requests\/([^/]+)\/related-design-runs$/,
+      run: ({ params }) =>
+        response(
+          200,
+          platform.relatedDesignService.list(
+            actorId,
+            decodeURIComponent(params[0])
+          )
+        )
+    },
+    {
+      ...v1Route("getRelatedDesignRun"),
+      regex: /^\/api\/v1\/related-design-runs\/([^/]+)$/,
+      run: ({ params }) =>
+        response(
+          200,
+          platform.relatedDesignService.get(
+            actorId,
+            decodeURIComponent(params[0])
+          )
+        )
+    },
+    {
+      ...v1Route("cancelRelatedDesignRun"),
+      regex: /^\/api\/v1\/related-design-runs\/([^/]+)\/cancel$/,
+      run: ({ params }) =>
+        response(
+          200,
+          platform.relatedDesignService.cancel(
+            actorId,
+            decodeURIComponent(params[0])
           )
         )
     },
@@ -653,6 +742,40 @@ async function dispatchV1({
         )
     },
     {
+      ...v1Route("createPublication"),
+      regex: /^\/api\/v1\/plans\/([^/]+)\/versions\/([^/]+)\/publications$/,
+      run: ({ params, body }) =>
+        response(
+          201,
+          platform.publicationService.create(
+            actorId,
+            decodeURIComponent(params[0]),
+            decodeURIComponent(params[1]),
+            body
+          )
+        )
+    },
+    {
+      ...v1Route("getPublication"),
+      regex: /^\/api\/v1\/publications\/([^/]+)$/,
+      run: ({ params }) =>
+        response(
+          200,
+          platform.publicationService.get(
+            actorId,
+            decodeURIComponent(params[0])
+          )
+        )
+    },
+    {
+      ...v1Route("withdrawPublication"),
+      regex: /^\/api\/v1\/publications\/([^/]+)$/,
+      run: ({ params }) => {
+        platform.publicationService.withdraw(actorId, decodeURIComponent(params[0]));
+        return response(204, null);
+      }
+    },
+    {
       ...v1Route("listProductDiscoveryRuns"),
       regex: /^\/api\/v1\/plans\/([^/]+)\/versions\/([^/]+)\/product-discovery-runs$/,
       run: ({ params }) =>
@@ -687,6 +810,19 @@ async function dispatchV1({
           platform.cancelProductDiscoveryRun(
             actorId,
             decodeURIComponent(params[0])
+          )
+        )
+    },
+    {
+      ...v1Route("createCartIntent"),
+      regex: /^\/api\/v1\/product-discovery-runs\/([^/]+)\/cart-intents$/,
+      run: ({ params, body }) =>
+        response(
+          201,
+          platform.commerceHandoffService.create(
+            actorId,
+            decodeURIComponent(params[0]),
+            body
           )
         )
     }

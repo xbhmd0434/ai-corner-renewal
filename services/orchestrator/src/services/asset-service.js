@@ -107,7 +107,9 @@ function seedAssets(now) {
       scene_type: seed.sceneType || "desk_corner",
       reference_width_cm: seed.width,
       default_budget_cny: 500,
-      long_term_constraints: ["no_drilling"]
+      long_term_constraints: ["no_drilling"],
+      scene_origin: "ai_example",
+      read_only: true
     },
     dedup_key: null,
     last_used_at: createdAt,
@@ -144,7 +146,28 @@ function seedAssets(now) {
       style_key: styleKey,
       styles: [styleKey],
       colors: styleKey === "green" ? ["green", "warm_white"] : ["wood", "warm_white"],
-      materials: ["wood", "fabric"]
+      materials: ["wood", "fabric"],
+      intent_analysis: {
+        state: "ready",
+        suggested_type: "style",
+        summary: name,
+        component_reference: null,
+        style_reference: {
+          style_keywords: [styleKey],
+          colors: styleKey === "green" ? ["green", "warm_white"] : ["wood", "warm_white"],
+          materials: ["wood", "fabric"]
+        },
+        candidates: [],
+        source_mode: "demo",
+        provider: "deterministic-demo",
+        model: null
+      },
+      confirmed_intent: {
+        intent_type: "style",
+        summary: name,
+        confirmed_by: "system_default",
+        confirmed_at: createdAt
+      }
     },
     dedup_key: `demo:${assetId}`,
     last_used_at: createdAt,
@@ -197,6 +220,8 @@ function seedAssets(now) {
     reference_width_cm: asset.attributes.reference_width_cm,
     attributes: {
       scene_type: asset.attributes.scene_type,
+      scene_origin: "ai_example",
+      read_only: true,
       reference_width_cm: asset.attributes.reference_width_cm,
       editable_regions: [
         {
@@ -815,6 +840,12 @@ export class AssetService {
   patch(actorId, assetId, body) {
     assertNoOwnerId(body);
     const asset = this.repository.get("assets", actorId, assetId);
+    if (asset.attributes?.scene_origin === "ai_example") {
+      throw conflict(
+        "ai_example_scene_read_only",
+        "AI 示例场景为只读，请复制后再编辑"
+      );
+    }
     requireVersion(asset.resource_version, body?.resource_version, this.summary(asset));
     const changes = body?.changes;
     if (!changes || typeof changes !== "object" || Array.isArray(changes)) {
@@ -921,6 +952,59 @@ export class AssetService {
         }
       }
     });
+    return this.summary(next);
+  }
+
+  confirmIntent(actorId, assetId, body) {
+    assertNoOwnerId(body);
+    const asset = this.repository.get("assets", actorId, assetId);
+    if (asset.asset_type !== "inspiration") {
+      throw invalid("intent_confirmation_invalid", "只有 inspiration 资产支持意图确认");
+    }
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      throw invalid("intent_confirmation_invalid", "请求体必须是对象");
+    }
+    if (body.schema_version !== "1.0") {
+      throw invalid("intent_confirmation_invalid", "schema_version 必须是 1.0");
+    }
+    rejectUnknownKeys(
+      body,
+      new Set(["schema_version", "resource_version", "intent_type", "summary"]),
+      "intent_confirmation_invalid"
+    );
+    requireVersion(asset.resource_version, body.resource_version, this.summary(asset));
+    if (!["component", "style"].includes(body.intent_type)) {
+      throw invalid("intent_confirmation_invalid", "intent_type 必须是 component 或 style");
+    }
+    if (
+      typeof body.summary !== "string" ||
+      !body.summary.trim() ||
+      body.summary.length > 200
+    ) {
+      throw invalid("intent_confirmation_invalid", "summary 必须是 1～200 字符");
+    }
+    const analysis = asset.attributes?.intent_analysis;
+    if (!analysis || analysis.state === "failed") {
+      throw conflict(
+        "intent_confirmation_unavailable",
+        "该资产尚未完成意图分析或分析已失败"
+      );
+    }
+    // 组件/风格与 analysis 的引用不一致时仍允许纠正，但确认后 confirmed_intent 是唯一权威
+    const now = this.now().toISOString();
+    const next = clone(asset);
+    next.attributes = clone(asset.attributes || {});
+    next.attributes.confirmed_intent = {
+      intent_type: body.intent_type,
+      summary: body.summary.trim(),
+      confirmed_by: "user",
+      confirmed_at: now
+    };
+    // 用户确认后 parse_state 必然是 ready
+    next.parse_state = "ready";
+    next.resource_version += 1;
+    next.updated_at = now;
+    this.repository.save("assets", actorId, next);
     return this.summary(next);
   }
 
@@ -1168,6 +1252,12 @@ export class AssetService {
       includeDeleted: true
     });
     if (!asset) throw new ApiError("resource_not_found", "资产不存在", 404);
+    if (asset.attributes?.scene_origin === "ai_example") {
+      throw conflict(
+        "ai_example_scene_read_only",
+        "AI 示例场景为只读，不能删除"
+      );
+    }
     if (asset.deleted_at && !asset.deletion_pending) return;
     const deletedAt = this.now().toISOString();
     asset.deleted_at = deletedAt;

@@ -393,7 +393,13 @@ const REQUEST_SCHEMAS = {
                 "product_discovery_retry_requested",
                 "commerce_match_clicked",
                 "commerce_search_copied",
-                "commerce_action_unavailable"
+                "commerce_action_unavailable",
+                "intent_confirmed",
+                "scene_switched",
+                "related_design_opened",
+                "publication_requested",
+                "implementation_opened",
+                "cart_handoff_requested"
               ]
             },
             event_id: { type: "string", minLength: 1, maxLength: 100 },
@@ -823,6 +829,56 @@ const OPERATIONS = {
     tag: "Product Discovery",
     summary: "取消 queued 或 running 的商品发现运行",
     success: ["200", "运行已取消", "ProductDiscoveryRun"]
+  },
+  confirmInspirationIntent: {
+    tag: "Renewal v2.1",
+    summary: "用户确认或纠正 InspirationAsset 的意图快照",
+    body: "IntentConfirmationRequest",
+    success: ["200", "确认后的资产", "Asset"],
+    etag: true
+  },
+  createRelatedDesignRun: {
+    tag: "Renewal v2.1",
+    summary: "创建 RelatedDesignRun，独立于 GenerationRun 并行运行",
+    body: "CreateRelatedDesignRunRequest",
+    success: ["202", "运行已排队", "RelatedDesignRun"]
+  },
+  listRelatedDesignRuns: {
+    tag: "Renewal v2.1",
+    summary: "读取 DesignRequest 的 RelatedDesignRun 历史",
+    success: ["200", "RelatedDesignRun 列表", "RelatedDesignRunList"]
+  },
+  getRelatedDesignRun: {
+    tag: "Renewal v2.1",
+    summary: "查询单次 RelatedDesignRun 的状态与结果",
+    success: ["200", "运行快照", "RelatedDesignRun"]
+  },
+  cancelRelatedDesignRun: {
+    tag: "Renewal v2.1",
+    summary: "取消 queued 或 running 的 RelatedDesignRun",
+    success: ["200", "运行已取消", "RelatedDesignRun"]
+  },
+  createPublication: {
+    tag: "Renewal v2.1",
+    summary: "对已保存的方案版本创建不可变 Publication，主动进入公开索引",
+    body: "CreatePublicationRequest",
+    success: ["201", "Publication 已创建并进入索引", "Publication"]
+  },
+  getPublication: {
+    tag: "Renewal v2.1",
+    summary: "读取 Publication 状态、发布快照与索引结果",
+    success: ["200", "Publication 详情", "Publication"]
+  },
+  withdrawPublication: {
+    tag: "Renewal v2.1",
+    summary: "撤下 Publication，不删除私有方案资产",
+    noContent: true
+  },
+  createCartIntent: {
+    tag: "Renewal v2.1",
+    summary: "从实施清单挑选商品并生成宿主购物车交接令牌",
+    body: "CreateCartIntentRequest",
+    success: ["201", "宿主交接已生成", "CartIntent"]
   }
 };
 
@@ -1082,7 +1138,8 @@ export function createOpenApiDocument() {
       { name: "Plans" },
       { name: "Preferences" },
       { name: "Events" },
-      { name: "Product Discovery" }
+      { name: "Product Discovery" },
+      { name: "Renewal v2.1" }
     ],
     paths: buildPaths(),
     components: {

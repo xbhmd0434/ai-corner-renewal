@@ -28,6 +28,9 @@ import {
   PlanGroundedDiscoveryProvider
 } from "./adapters/product-discovery-agent.js";
 import { DemoCommerceCatalogAdapter } from "./adapters/commerce-catalog.js";
+import { RelatedDesignService } from "./services/related-design-service.js";
+import { PublicationService } from "./services/publication-service.js";
+import { CommerceHandoffService } from "./services/commerce-handoff-service.js";
 
 export function createPlatform({
   config,
@@ -111,6 +114,17 @@ export function createPlatform({
     fetchImpl,
     now
   });
+  const relatedDesignService = new RelatedDesignService({
+    repository: repo,
+    designRequestService,
+    now
+  });
+  const publicationService = new PublicationService({ repository: repo, now });
+  const commerceHandoffService = new CommerceHandoffService({
+    repository: repo,
+    now,
+    config
+  });
 
   assetService.seed(DEMO_ACTOR_ID);
   preferenceService.get(DEMO_ACTOR_ID);
@@ -130,6 +144,8 @@ export function createPlatform({
   parseService.recover(DEMO_ACTOR_ID);
   planService.recover(DEMO_ACTOR_ID);
   productDiscoveryService.recover(DEMO_ACTOR_ID);
+  relatedDesignService.recover(DEMO_ACTOR_ID);
+  publicationService.recover(DEMO_ACTOR_ID);
 
   return {
     actorId: DEMO_ACTOR_ID,
@@ -143,6 +159,9 @@ export function createPlatform({
     eventService,
     promptLabService,
     productDiscoveryService,
+    relatedDesignService,
+    publicationService,
+    commerceHandoffService,
     health() {
       return {
         status: "ok",
@@ -203,7 +222,12 @@ export function createPlatform({
         features: {
           product_discovery: true,
           product_discovery_live_agent: false,
-          douyin_commerce_catalog: false
+          douyin_commerce_catalog: false,
+          renewal_intent_v2: true,
+          related_designs: true,
+          plan_publication: true,
+          implementation_list_v2: true,
+          cart_batch_handoff: false
         },
         repository_counts: repo.stats,
         maintenance: {
@@ -239,7 +263,13 @@ export function createPlatform({
     },
     async close() {
       clearInterval(maintenanceTimer);
-      await Promise.all([parseService.stop(), planService.stop(), productDiscoveryService.stop()]);
+      await Promise.all([
+        parseService.stop(),
+        planService.stop(),
+        productDiscoveryService.stop(),
+        relatedDesignService.stop(),
+        publicationService.stop()
+      ]);
       repo.close();
     }
   };

@@ -52,6 +52,21 @@ const TABLES = Object.freeze({
     table: "product_discovery_runs",
     id: "product_discovery_run_id",
     status: (value) => value.status
+  },
+  relatedDesignRuns: {
+    table: "related_design_runs",
+    id: "related_design_run_id",
+    status: (value) => value.status
+  },
+  publications: {
+    table: "publications",
+    id: "publication_id",
+    status: (value) => value.status
+  },
+  cartIntents: {
+    table: "cart_intents",
+    id: "cart_intent_id",
+    status: (value) => value.status
   }
 });
 

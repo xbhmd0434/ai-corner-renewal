@@ -73,15 +73,89 @@ export class DeterministicAssetUnderstandingAdapter {
     }
 
     if (asset.asset_type === "inspiration") {
+      const baseAttributes = clone(asset.attributes || {});
+      const providedAnalysis = baseAttributes.intent_analysis;
+      const confirmed = baseAttributes.confirmed_intent || null;
+      // 一次跑一次意图分析：来源固定 demo，摘要通过启发式决定
+      const styleKey = baseAttributes.style_key || "warm";
+      const styles = baseAttributes.styles || [styleKey];
+      const colors =
+        baseAttributes.colors || (styleKey === "green" ? ["green", "warm_white"] : ["wood", "warm_white"]);
+      const materials = baseAttributes.materials || ["wood", "fabric"];
+      const scope = baseAttributes.inspiration_scope || null;
+      // 有 selection_bbox 时优先视作组件；scope=color/material 视作风格；否则 needs_confirmation
+      let intentAnalysis = null;
+      const hasBbox = Boolean(asset.provenance?.selection_bbox);
+      if (scope === "item" || hasBbox) {
+        intentAnalysis = {
+          state: "ready",
+          suggested_type: "component",
+          summary: providedAnalysis?.summary || baseAttributes.name || asset.name || "视频圈选的组件",
+          component_reference: providedAnalysis?.component_reference || {
+            category_code: "unspecified_component",
+            colors: [...colors].slice(0, 4),
+            materials: [...materials].slice(0, 4),
+            shape_keywords: []
+          },
+          style_reference: null,
+          candidates: [],
+          source_mode: "demo",
+          provider: "deterministic-demo",
+          model: null
+        };
+      } else if (scope === "color" || scope === "material" || scope === "overall") {
+        intentAnalysis = {
+          state: "ready",
+          suggested_type: "style",
+          summary: providedAnalysis?.summary || baseAttributes.name || asset.name || "视频里的整体风格",
+          component_reference: null,
+          style_reference: providedAnalysis?.style_reference || {
+            style_keywords: [...styles].slice(0, 4),
+            colors: [...colors].slice(0, 4),
+            materials: [...materials].slice(0, 4)
+          },
+          candidates: [],
+          source_mode: "demo",
+          provider: "deterministic-demo",
+          model: null
+        };
+      } else {
+        intentAnalysis = {
+          state: "needs_confirmation",
+          suggested_type: null,
+          summary: providedAnalysis?.summary || asset.name || "无法判断是圈选具体组件还是整体风格",
+          component_reference: {
+            category_code: "unspecified_component",
+            colors: [...colors].slice(0, 3),
+            materials: [...materials].slice(0, 3),
+            shape_keywords: []
+          },
+          style_reference: {
+            style_keywords: [...styles].slice(0, 3),
+            colors: [...colors].slice(0, 3),
+            materials: [...materials].slice(0, 3)
+          },
+          candidates: [
+            { intent_type: "component", summary: "组件：视频里的具体物件" },
+            { intent_type: "style", summary: "风格：整体氛围" }
+          ],
+          source_mode: "demo",
+          provider: "deterministic-demo",
+          model: null
+        };
+      }
+      const parseState = intentAnalysis.state === "needs_confirmation" ? "needs_confirmation" : "ready";
       return {
         source_mode: "demo",
-        parse_state: "ready",
+        parse_state: parseState,
         attributes: {
-          ...clone(asset.attributes || {}),
-          style_key: asset.attributes?.style_key || "warm",
-          styles: asset.attributes?.styles || ["japanese_natural"],
-          colors: asset.attributes?.colors || ["oat_white", "light_oak"],
-          materials: asset.attributes?.materials || ["light_wood", "linen"]
+          ...baseAttributes,
+          style_key: styleKey,
+          styles,
+          colors,
+          materials,
+          intent_analysis: intentAnalysis,
+          confirmed_intent: confirmed
         },
         provider_trace: {
           provider: "deterministic-demo",

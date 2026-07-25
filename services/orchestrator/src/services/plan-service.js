@@ -1168,6 +1168,43 @@ export class PlanService {
       aggregateSourceType,
       revisionAction: run.revision_action
     });
+    const isRenewalV2 = snapshot.options?.experience_contract === "renewal-card/2.1";
+    if (isRenewalV2) {
+      // V2.1 只生成主效果图，不再暴露 3 张候选
+      card.alternatives = [];
+    }
+    // 计算 implementation_source_roles（后端不可变结论）：
+    // - component 意图：inspiration 对应类别的 plan product 记为 video_selected；其它为 ai_supplement
+    // - style 意图：所有 plan product 视为 source_video（原视频里出现的物件）；无 confirmed_intent 时全部 ai_supplement
+    const inspirationSnapshot = snapshot.reference_snapshots?.find(
+      (item) => item.asset_type === "inspiration"
+    );
+    const confirmed = inspirationSnapshot?.confirmed_intent || null;
+    const componentReference = inspirationSnapshot?.attributes?.intent_analysis?.component_reference || null;
+    const anchoredCategoryCode = confirmed?.intent_type === "component" ? componentReference?.category_code : null;
+    const implementationRoles = [];
+    if (card.plan?.product_ids?.length) {
+      for (const productId of card.plan.product_ids) {
+        const product = (card.products || []).find((p) => p.product_id === productId) || null;
+        let role;
+        if (confirmed?.intent_type === "component") {
+          if (product && anchoredCategoryCode && product.category === anchoredCategoryCode) {
+            role = "video_selected";
+          } else {
+            role = "ai_supplement";
+          }
+        } else if (confirmed?.intent_type === "style") {
+          role = "source_video";
+        } else {
+          role = "ai_supplement";
+        }
+        implementationRoles.push({
+          product_id: productId,
+          role,
+          from_reference_asset_id: inspirationSnapshot?.asset_id || null
+        });
+      }
+    }
     const mediaId = snapshot.space_snapshot.space_version.media_ids?.[0];
     if (mediaId) {
       card.render.before_ref = `asset://private-media/${mediaId}`;
@@ -1184,6 +1221,8 @@ export class PlanService {
       design_request_snapshot: clone(snapshot),
       revision_action: clone(run.revision_action),
       source_mode: card.source_mode,
+      experience_contract: isRenewalV2 ? "renewal-card/2.1" : null,
+      implementation_source_roles: implementationRoles,
       redactions: [],
       aicard: clone(card),
       created_at: createdAt,

@@ -153,6 +153,56 @@ const ROUTES = [
     operationId: "cancelProductDiscoveryRun",
     method: "POST",
     template: "/api/v1/product-discovery-runs/{product_discovery_run_id}/cancel"
+  },
+  // === renewal-card/2.1 新增路由 ===
+  {
+    operationId: "confirmInspirationIntent",
+    method: "POST",
+    template: "/api/v1/assets/{asset_id}/intent-confirmations",
+    idempotent: true
+  },
+  {
+    operationId: "createRelatedDesignRun",
+    method: "POST",
+    template: "/api/v1/design-requests/{design_request_id}/related-design-runs",
+    idempotent: true
+  },
+  {
+    operationId: "listRelatedDesignRuns",
+    method: "GET",
+    template: "/api/v1/design-requests/{design_request_id}/related-design-runs"
+  },
+  {
+    operationId: "getRelatedDesignRun",
+    method: "GET",
+    template: "/api/v1/related-design-runs/{related_design_run_id}"
+  },
+  {
+    operationId: "cancelRelatedDesignRun",
+    method: "POST",
+    template: "/api/v1/related-design-runs/{related_design_run_id}/cancel"
+  },
+  {
+    operationId: "createPublication",
+    method: "POST",
+    template: "/api/v1/plans/{plan_asset_id}/versions/{plan_version_id}/publications",
+    idempotent: true
+  },
+  {
+    operationId: "getPublication",
+    method: "GET",
+    template: "/api/v1/publications/{publication_id}"
+  },
+  {
+    operationId: "withdrawPublication",
+    method: "DELETE",
+    template: "/api/v1/publications/{publication_id}"
+  },
+  {
+    operationId: "createCartIntent",
+    method: "POST",
+    template: "/api/v1/product-discovery-runs/{product_discovery_run_id}/cart-intents",
+    idempotent: true
   }
 ];
 

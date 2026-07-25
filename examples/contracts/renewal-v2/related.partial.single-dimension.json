@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "contract_version": "renewal-card/2.1",
+  "related_design_run_id": "related-run-fixture-partial",
+  "design_request_id": "design-request-fixture-002",
+  "context_fingerprint": "sha256:9013affabc7811a2",
+  "reason": "initial",
+  "status": "succeeded",
+  "stage": "packaging",
+  "progress": 100,
+  "result_state": "partial",
+  "source_mode": "fallback",
+  "retryable": false,
+  "result": {
+    "items": [
+      {
+        "content_id": "douyin-content-fixture-scene-only",
+        "source_type": "douyin",
+        "title": "同样是书桌一角，另一个氛围",
+        "cover": { "media_id": null, "access_url": "demo://covers/scene-only.jpg" },
+        "author": { "display_name": "示例作者-scene" },
+        "relations": {
+          "inspiration": { "strength": "none", "reason_code": "no_component_match" },
+          "scene": { "strength": "strong", "reason_code": "same_scene_desk_corner" }
+        },
+        "reason_labels": ["同为书桌一角，但没有同款花瓶"],
+        "fallback_dimension": "inspiration",
+        "open_action": {
+          "type": "douyin_deeplink",
+          "url": "snssdk1128://user/profile/example-scene",
+          "internal_publication_id": null
+        }
+      }
+    ],
+    "notices": [
+      {
+        "code": "inspiration_dimension_unavailable",
+        "level": "info",
+        "message": "没有同款花瓶的内容可供关联，本次仅按场景推荐相关帖子。"
+      }
+    ],
+    "provenance": {
+      "douyin_content": "demo_catalog",
+      "user_publications": "local_index"
+    }
+  },
+  "error": null,
+  "created_at": "2026-07-25T14:00:00.000Z",
+  "updated_at": "2026-07-25T14:00:04.000Z"
+}

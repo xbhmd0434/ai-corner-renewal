@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "contract_version": "renewal-card/2.1",
+  "related_design_run_id": "related-run-fixture-empty",
+  "design_request_id": "design-request-fixture-003",
+  "context_fingerprint": "sha256:c1d2e3f4a5b60789",
+  "reason": "initial",
+  "status": "succeeded",
+  "stage": "packaging",
+  "progress": 100,
+  "result_state": "empty",
+  "source_mode": "fallback",
+  "retryable": false,
+  "result": {
+    "items": [],
+    "notices": [
+      {
+        "code": "no_related_content",
+        "level": "info",
+        "message": "没有找到与你的灵感和场景同时匹配的公开帖子。"
+      }
+    ],
+    "provenance": {
+      "douyin_content": "demo_catalog",
+      "user_publications": "local_index"
+    }
+  },
+  "error": null,
+  "created_at": "2026-07-25T14:00:00.000Z",
+  "updated_at": "2026-07-25T14:00:04.000Z"
+}

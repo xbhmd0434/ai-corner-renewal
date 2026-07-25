@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "asset_id": "inspiration-fixture-needs-confirmation",
+  "asset_type": "inspiration",
+  "lifecycle": "saved",
+  "parse_state": "needs_confirmation",
+  "name": "视频中的圆桌花瓶",
+  "tags": ["fixture"],
+  "is_default": false,
+  "resource_version": 2,
+  "current_space_version_id": null,
+  "expires_at": null,
+  "created_at": "2026-07-25T14:00:00.000Z",
+  "updated_at": "2026-07-25T14:00:00.500Z",
+  "provenance": {
+    "kind": "video_context",
+    "provider": "douyin_demo",
+    "external_content_id": "video-warm-desk-01",
+    "timestamp_ms": 3200,
+    "selection_bbox": { "x": 0.20, "y": 0.18, "width": 0.34, "height": 0.42 }
+  },
+  "attributes": {
+    "intent_analysis": {
+      "state": "needs_confirmation",
+      "suggested_type": null,
+      "summary": "既像装饰花瓶，也像整段桌搭氛围。请确认想搬进家的是这只花瓶，还是它营造的整体风格。",
+      "component_reference": {
+        "category_code": "vase",
+        "colors": ["cream"],
+        "materials": ["ceramic"],
+        "shape_keywords": ["rounded"]
+      },
+      "style_reference": {
+        "style_keywords": ["japanese_natural", "warm_cream"],
+        "colors": ["cream", "warm_white"],
+        "materials": ["light_wood", "linen"]
+      },
+      "candidates": [
+        { "intent_type": "component", "summary": "奶油白陶瓷花瓶" },
+        { "intent_type": "style", "summary": "奶油日式暖光桌搭" }
+      ],
+      "source_mode": "demo",
+      "provider": "deterministic-demo",
+      "model": null
+    },
+    "confirmed_intent": null
+  }
+}

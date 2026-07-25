@@ -45,6 +45,9 @@
     },
     {
       "name": "Product Discovery"
+    },
+    {
+      "name": "Renewal v2.1"
     }
   ],
   "paths": {
@@ -2229,6 +2232,625 @@
         }
       }
     },
+    "/api/v1/assets/{asset_id}/intent-confirmations": {
+      "post": {
+        "operationId": "confirmInspirationIntent",
+        "tags": [
+          "Renewal v2.1"
+        ],
+        "summary": "用户确认或纠正 InspirationAsset 的意图快照",
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntentConfirmationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "确认后的资产",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Asset"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/api/v1/design-requests/{design_request_id}/related-design-runs": {
+      "post": {
+        "operationId": "createRelatedDesignRun",
+        "tags": [
+          "Renewal v2.1"
+        ],
+        "summary": "创建 RelatedDesignRun，独立于 GenerationRun 并行运行",
+        "parameters": [
+          {
+            "name": "design_request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRelatedDesignRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "运行已排队",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelatedDesignRun"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "get": {
+        "operationId": "listRelatedDesignRuns",
+        "tags": [
+          "Renewal v2.1"
+        ],
+        "summary": "读取 DesignRequest 的 RelatedDesignRun 历史",
+        "parameters": [
+          {
+            "name": "design_request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "RelatedDesignRun 列表",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelatedDesignRunList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/api/v1/related-design-runs/{related_design_run_id}": {
+      "get": {
+        "operationId": "getRelatedDesignRun",
+        "tags": [
+          "Renewal v2.1"
+        ],
+        "summary": "查询单次 RelatedDesignRun 的状态与结果",
+        "parameters": [
+          {
+            "name": "related_design_run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "运行快照",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelatedDesignRun"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/api/v1/related-design-runs/{related_design_run_id}/cancel": {
+      "post": {
+        "operationId": "cancelRelatedDesignRun",
+        "tags": [
+          "Renewal v2.1"
+        ],
+        "summary": "取消 queued 或 running 的 RelatedDesignRun",
+        "parameters": [
+          {
+            "name": "related_design_run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "运行已取消",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelatedDesignRun"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{plan_asset_id}/versions/{plan_version_id}/publications": {
+      "post": {
+        "operationId": "createPublication",
+        "tags": [
+          "Renewal v2.1"
+        ],
+        "summary": "对已保存的方案版本创建不可变 Publication，主动进入公开索引",
+        "parameters": [
+          {
+            "name": "plan_asset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          },
+          {
+            "name": "plan_version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePublicationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Publication 已创建并进入索引",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Publication"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/api/v1/publications/{publication_id}": {
+      "get": {
+        "operationId": "getPublication",
+        "tags": [
+          "Renewal v2.1"
+        ],
+        "summary": "读取 Publication 状态、发布快照与索引结果",
+        "parameters": [
+          {
+            "name": "publication_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Publication 详情",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Publication"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "withdrawPublication",
+        "tags": [
+          "Renewal v2.1"
+        ],
+        "summary": "撤下 Publication，不删除私有方案资产",
+        "parameters": [
+          {
+            "name": "publication_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "操作成功，无响应体",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/api/v1/product-discovery-runs/{product_discovery_run_id}/cart-intents": {
+      "post": {
+        "operationId": "createCartIntent",
+        "tags": [
+          "Renewal v2.1"
+        ],
+        "summary": "从实施清单挑选商品并生成宿主购物车交接令牌",
+        "parameters": [
+          {
+            "name": "product_discovery_run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCartIntentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "宿主交接已生成",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartIntent"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "operationId": "getHealth",
@@ -3380,6 +4002,112 @@
           },
           "provenance": {
             "$ref": "#/components/schemas/ProductDiscoveryProvenance"
+          },
+          "implementation_list": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImplementationListItem"
+            }
+          },
+          "estimated_total_cny": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              null,
+              "CNY"
+            ]
+          }
+        }
+      },
+      "ImplementationListItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "list_item_id",
+          "subject_id",
+          "display_name",
+          "origin_type",
+          "origin_label",
+          "sort_group",
+          "sort_index",
+          "disposition",
+          "quantity",
+          "selected_match_id",
+          "alternative_match_ids"
+        ],
+        "properties": {
+          "list_item_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "subject_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "origin_type": {
+            "enum": [
+              "video_selected",
+              "source_video",
+              "ai_supplement"
+            ]
+          },
+          "origin_label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "sort_group": {
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2
+            ]
+          },
+          "sort_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "disposition": {
+            "enum": [
+              "existing",
+              "add",
+              "optional"
+            ]
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "selected_match_id": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "alternative_match_ids": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "$ref": "#/components/schemas/Identifier"
+            }
           }
         }
       },
@@ -3751,6 +4479,895 @@
                 },
                 "code": {
                   "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "IntentAnalysis": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "suggested_type",
+          "summary",
+          "source_mode"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "ready",
+              "needs_confirmation",
+              "failed"
+            ]
+          },
+          "suggested_type": {
+            "oneOf": [
+              {
+                "enum": [
+                  "component",
+                  "style"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "component_reference": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "category_code"
+                ],
+                "properties": {
+                  "category_code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "colors": {
+                    "type": "array",
+                    "maxItems": 8,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 32
+                    }
+                  },
+                  "materials": {
+                    "type": "array",
+                    "maxItems": 8,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 32
+                    }
+                  },
+                  "shape_keywords": {
+                    "type": "array",
+                    "maxItems": 8,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 32
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "style_reference": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "style_keywords"
+                ],
+                "properties": {
+                  "style_keywords": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 8,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 32
+                    }
+                  },
+                  "colors": {
+                    "type": "array",
+                    "maxItems": 8,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 32
+                    }
+                  },
+                  "materials": {
+                    "type": "array",
+                    "maxItems": 8,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 32
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "candidates": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "intent_type",
+                "summary"
+              ],
+              "properties": {
+                "intent_type": {
+                  "enum": [
+                    "component",
+                    "style"
+                  ]
+                },
+                "summary": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                }
+              }
+            }
+          },
+          "source_mode": {
+            "enum": [
+              "demo",
+              "live",
+              "fallback"
+            ]
+          },
+          "provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ConfirmedIntent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "intent_type",
+          "summary",
+          "confirmed_by",
+          "confirmed_at"
+        ],
+        "properties": {
+          "intent_type": {
+            "enum": [
+              "component",
+              "style"
+            ]
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "confirmed_by": {
+            "enum": [
+              "user",
+              "system_default"
+            ]
+          },
+          "confirmed_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "IntentConfirmationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "resource_version",
+          "intent_type",
+          "summary"
+        ],
+        "properties": {
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "resource_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "intent_type": {
+            "enum": [
+              "component",
+              "style"
+            ]
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        }
+      },
+      "RelatedDesignRun": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "contract_version",
+          "related_design_run_id",
+          "design_request_id",
+          "context_fingerprint",
+          "status",
+          "stage",
+          "progress",
+          "result_state",
+          "source_mode",
+          "retryable",
+          "result",
+          "error",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "contract_version": {
+            "const": "renewal-card/2.1"
+          },
+          "related_design_run_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "design_request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "context_fingerprint": {
+            "type": "string",
+            "minLength": 8
+          },
+          "reason": {
+            "enum": [
+              "initial",
+              "retry",
+              "refresh"
+            ]
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "stage": {
+            "enum": [
+              "queued",
+              "extracting_context",
+              "retrieving_inspiration",
+              "retrieving_scene",
+              "reranking",
+              "packaging"
+            ]
+          },
+          "progress": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "result_state": {
+            "oneOf": [
+              {
+                "enum": [
+                  "ready",
+                  "partial",
+                  "empty"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_mode": {
+            "enum": [
+              "demo",
+              "live",
+              "fallback",
+              null
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RelatedDesignResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "code",
+                  "message",
+                  "retryable"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "retryable": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "RelatedDesignRunList": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "items"
+        ],
+        "properties": {
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "RelatedDesignResult": {
+        "type": "object",
+        "required": [
+          "items",
+          "notices",
+          "provenance"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 24,
+            "items": {
+              "$ref": "#/components/schemas/RelatedDesignItem"
+            }
+          },
+          "notices": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "douyin_content": {
+                "type": "string"
+              },
+              "user_publications": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "RelatedDesignItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "content_id",
+          "source_type",
+          "title",
+          "cover",
+          "author",
+          "relations",
+          "reason_labels",
+          "fallback_dimension",
+          "open_action"
+        ],
+        "properties": {
+          "content_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "source_type": {
+            "enum": [
+              "douyin",
+              "user_publication"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "cover": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "media_id",
+              "access_url"
+            ],
+            "properties": {
+              "media_id": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "access_url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "author": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "display_name"
+            ],
+            "properties": {
+              "display_name": {
+                "type": "string",
+                "maxLength": 100
+              }
+            }
+          },
+          "relations": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "inspiration",
+              "scene"
+            ],
+            "properties": {
+              "inspiration": {
+                "$ref": "#/components/schemas/RelatedDesignRelation"
+              },
+              "scene": {
+                "$ref": "#/components/schemas/RelatedDesignRelation"
+              }
+            }
+          },
+          "reason_labels": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          "fallback_dimension": {
+            "oneOf": [
+              {
+                "enum": [
+                  "inspiration",
+                  "scene"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_action": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "douyin_deeplink",
+                  "internal_publication",
+                  "unavailable"
+                ]
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "internal_publication_id": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Identifier"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "RelatedDesignRelation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "strength",
+          "reason_code"
+        ],
+        "properties": {
+          "strength": {
+            "enum": [
+              "strong",
+              "weak",
+              "none"
+            ]
+          },
+          "reason_code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        }
+      },
+      "CreateRelatedDesignRunRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "reason"
+        ],
+        "properties": {
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "reason": {
+            "enum": [
+              "initial",
+              "retry",
+              "refresh"
+            ]
+          },
+          "options": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 24
+              },
+              "sources": {
+                "type": "array",
+                "uniqueItems": true,
+                "minItems": 1,
+                "items": {
+                  "enum": [
+                    "douyin",
+                    "user_publication"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "Publication": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "contract_version",
+          "publication_id",
+          "plan_asset_id",
+          "plan_version_id",
+          "status",
+          "visibility",
+          "title",
+          "published_snapshot",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "contract_version": {
+            "const": "renewal-card/2.1"
+          },
+          "publication_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "plan_asset_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "plan_version_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "status": {
+            "enum": [
+              "indexing",
+              "published",
+              "index_failed",
+              "withdrawn"
+            ]
+          },
+          "visibility": {
+            "enum": [
+              "public"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "published_snapshot": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "scene_type",
+              "intent_type",
+              "source_attribution"
+            ],
+            "properties": {
+              "scene_type": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "intent_type": {
+                "enum": [
+                  "component",
+                  "style"
+                ]
+              },
+              "source_attribution": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            }
+          },
+          "error": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "withdrawn_at": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "CreatePublicationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "title",
+          "cover_source",
+          "source_attribution_acknowledged"
+        ],
+        "properties": {
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "cover_source": {
+            "enum": [
+              "plan_render"
+            ]
+          },
+          "source_attribution_acknowledged": {
+            "const": true
+          }
+        }
+      },
+      "CartIntent": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "cart_intent_id",
+          "status",
+          "accepted_count",
+          "rejected",
+          "action",
+          "created_at"
+        ],
+        "properties": {
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "cart_intent_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "partial",
+              "unavailable"
+            ]
+          },
+          "accepted_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rejected": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "list_item_id",
+                "reason_code"
+              ],
+              "properties": {
+                "list_item_id": {
+                  "$ref": "#/components/schemas/Identifier"
+                },
+                "reason_code": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "action": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "douyin_cart_batch",
+                  "search_bundle",
+                  "unavailable"
+                ]
+              },
+              "token": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "expires_at": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Timestamp"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "CreateCartIntentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "items"
+        ],
+        "properties": {
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "list_item_id",
+                "match_id",
+                "quantity"
+              ],
+              "properties": {
+                "list_item_id": {
+                  "$ref": "#/components/schemas/Identifier"
+                },
+                "match_id": {
+                  "$ref": "#/components/schemas/Identifier"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
                 }
               }
             }
@@ -5442,7 +7059,13 @@
                     "product_discovery_retry_requested",
                     "commerce_match_clicked",
                     "commerce_search_copied",
-                    "commerce_action_unavailable"
+                    "commerce_action_unavailable",
+                    "intent_confirmed",
+                    "scene_switched",
+                    "related_design_opened",
+                    "publication_requested",
+                    "implementation_opened",
+                    "cart_handoff_requested"
                   ]
                 },
                 "event_id": {

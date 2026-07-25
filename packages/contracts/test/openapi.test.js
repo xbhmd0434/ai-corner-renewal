@@ -31,7 +31,7 @@ function collectRefs(value, refs = []) {
 test("OpenAPI 覆盖共享清单中的全部 /api/v1 路由", () => {
   const document = createOpenApiDocument();
   assert.equal(document.openapi, "3.1.0");
-  assert.equal(V1_ROUTE_MANIFEST.length, 29);
+  assert.equal(V1_ROUTE_MANIFEST.length, 38);
 
   for (const route of V1_ROUTE_MANIFEST) {
     const operation = document.paths[route.template]?.[route.method.toLowerCase()];
