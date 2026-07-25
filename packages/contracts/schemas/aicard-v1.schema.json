@@ -1,0 +1,1021 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ai-corner-renewal/aicard-v1.schema.json",
+  "title": "AICard v1",
+  "description": "AI 一角焕新前后端唯一结果协议。DesignPlan 只引用 product_id，ProductCandidate 保存商品权威详情。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "source_mode",
+    "status",
+    "generated_at",
+    "room_profile",
+    "inspiration_profile",
+    "constraints",
+    "plan",
+    "validation",
+    "products",
+    "tutorials",
+    "render",
+    "alternatives",
+    "notices",
+    "data_sources",
+    "trace",
+    "follow_up"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "request_id": {
+      "$ref": "#/$defs/NonEmptyString"
+    },
+    "source_mode": {
+      "enum": [
+        "demo",
+        "live",
+        "fallback"
+      ]
+    },
+    "status": {
+      "enum": [
+        "ready",
+        "needs_input",
+        "fallback_ready"
+      ]
+    },
+    "generated_at": {
+      "$ref": "#/$defs/NonEmptyString"
+    },
+    "room_profile": {
+      "$ref": "#/$defs/RoomProfile"
+    },
+    "inspiration_profile": {
+      "$ref": "#/$defs/InspirationProfile"
+    },
+    "constraints": {
+      "$ref": "#/$defs/UserConstraints"
+    },
+    "plan": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/DesignPlan"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "validation": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ValidationReport"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ProductCandidate"
+      }
+    },
+    "tutorials": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TutorialCandidate"
+      }
+    },
+    "render": {
+      "$ref": "#/$defs/Render"
+    },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Alternative"
+      }
+    },
+    "notices": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Notice"
+      }
+    },
+    "data_sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/DataSource"
+      }
+    },
+    "trace": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TraceEntry"
+      }
+    },
+    "follow_up": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/FollowUp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "plan": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "plan"
+        ]
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "const": "needs_input"
+          },
+          "follow_up": {
+            "allOf": [
+              {
+                "not": {
+                  "type": "null"
+                }
+              },
+              {
+                "properties": {
+                  "can_continue_with_assumptions": {
+                    "const": false
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "validation": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "validation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "const": "needs_input"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "needs_input"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "follow_up": {
+            "not": {
+              "type": "null"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ready"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "source_mode": {
+            "enum": [
+              "demo",
+              "live"
+            ]
+          },
+          "plan": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "validation": {
+            "allOf": [
+              {
+                "not": {
+                  "type": "null"
+                }
+              },
+              {
+                "properties": {
+                  "overall_status": {
+                    "enum": [
+                      "pass",
+                      "needs_confirmation"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          "follow_up": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "fallback_ready"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "source_mode": {
+            "const": "fallback"
+          },
+          "plan": {
+            "not": {
+              "type": "null"
+            }
+          },
+          "validation": {
+            "allOf": [
+              {
+                "not": {
+                  "type": "null"
+                }
+              },
+              {
+                "properties": {
+                  "overall_status": {
+                    "enum": [
+                      "pass",
+                      "needs_confirmation"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          "follow_up": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "NonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000,
+      "pattern": "\\S"
+    },
+    "StringArray": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/ShortString"
+      }
+    },
+    "ShortString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "\\S"
+    },
+    "RoomProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "room_id",
+        "room_type",
+        "reference_width_cm",
+        "fixed_elements",
+        "editable_zones",
+        "lighting",
+        "uncertainties",
+        "needs_confirmation"
+      ],
+      "properties": {
+        "room_id": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "room_type": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "reference_width_cm": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 40,
+              "maximum": 400
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fixed_elements": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "editable_zones": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "lighting": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "direction",
+            "confidence"
+          ],
+          "properties": {
+            "direction": {
+              "$ref": "#/$defs/NonEmptyString"
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "uncertainties": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "needs_confirmation": {
+          "$ref": "#/$defs/StringArray"
+        }
+      }
+    },
+    "InspirationProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inspiration_id",
+        "source_type",
+        "style",
+        "colors",
+        "materials",
+        "transferable_elements",
+        "excluded_elements"
+      ],
+      "properties": {
+        "inspiration_id": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "source_type": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "style": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "colors": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "materials": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "transferable_elements": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "excluded_elements": {
+          "$ref": "#/$defs/StringArray"
+        }
+      }
+    },
+    "UserConstraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "budget_cny",
+        "hard_constraints",
+        "soft_preferences",
+        "goals"
+      ],
+      "properties": {
+        "budget_cny": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "hard_constraints": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "no_drilling",
+              "keep_desk",
+              "keep_chair",
+              "pet_safe"
+            ]
+          }
+        },
+        "soft_preferences": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "goals": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/StringArray"
+            },
+            {
+              "minItems": 1
+            }
+          ]
+        }
+      }
+    },
+    "Revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parent_plan_id",
+        "target_budget_cny",
+        "reason",
+        "removed_product_ids",
+        "added_product_ids"
+      ],
+      "properties": {
+        "parent_plan_id": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "target_budget_cny": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "reason": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "removed_product_ids": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "added_product_ids": {
+          "$ref": "#/$defs/StringArray"
+        }
+      }
+    },
+    "Placement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "product_id",
+        "zone",
+        "instruction"
+      ],
+      "properties": {
+        "product_id": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "zone": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "instruction": {
+          "$ref": "#/$defs/NonEmptyString"
+        }
+      }
+    },
+    "PlanStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_id",
+        "title",
+        "instruction"
+      ],
+      "properties": {
+        "step_id": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "title": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "instruction": {
+          "$ref": "#/$defs/NonEmptyString"
+        }
+      }
+    },
+    "DesignPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_id",
+        "room_id",
+        "inspiration_id",
+        "version",
+        "title",
+        "summary",
+        "total_price_cny",
+        "product_ids",
+        "preserved_elements",
+        "placements",
+        "steps",
+        "render_ref",
+        "assumptions",
+        "constraint_tags"
+      ],
+      "properties": {
+        "plan_id": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "room_id": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "inspiration_id": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "title": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "summary": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "total_price_cny": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "product_ids": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "preserved_elements": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "placements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Placement"
+          }
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PlanStep"
+          }
+        },
+        "render_ref": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "assumptions": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "constraint_tags": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "revision": {
+          "$ref": "#/$defs/Revision"
+        }
+      }
+    },
+    "Availability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "source_type",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "source_type": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "checked_at": {
+          "$ref": "#/$defs/NonEmptyString"
+        }
+      }
+    },
+    "SourceMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_type",
+        "label",
+        "updated_at"
+      ],
+      "properties": {
+        "source_type": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "label": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "updated_at": {
+          "$ref": "#/$defs/NonEmptyString"
+        }
+      }
+    },
+    "ProductCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "product_id",
+        "name",
+        "category",
+        "price_cny",
+        "dimensions_cm",
+        "dimensions_label",
+        "installation",
+        "pet_safe",
+        "reason",
+        "availability",
+        "source"
+      ],
+      "properties": {
+        "product_id": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "name": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "category": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "price_cny": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "dimensions_cm": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "width",
+            "depth",
+            "height"
+          ],
+          "properties": {
+            "width": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "depth": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "height": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "dimensions_label": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "installation": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "pet_safe": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "availability": {
+          "$ref": "#/$defs/Availability"
+        },
+        "source": {
+          "$ref": "#/$defs/SourceMetadata"
+        },
+        "replacement_for": {
+          "$ref": "#/$defs/NonEmptyString"
+        }
+      }
+    },
+    "ValidationCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "status",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        },
+        "message": {
+          "$ref": "#/$defs/NonEmptyString"
+        }
+      }
+    },
+    "ValidationReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "report_id",
+        "plan_id",
+        "plan_version",
+        "overall_status",
+        "checks",
+        "warnings"
+      ],
+      "properties": {
+        "report_id": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "plan_id": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "plan_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "overall_status": {
+          "enum": [
+            "pass",
+            "needs_confirmation",
+            "failed",
+            "blocked"
+          ]
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ValidationCheck"
+          }
+        },
+        "warnings": {
+          "$ref": "#/$defs/StringArray"
+        }
+      }
+    },
+    "Render": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "before_ref",
+        "after_ref",
+        "is_ai_generated",
+        "is_demo_asset",
+        "disclaimer"
+      ],
+      "properties": {
+        "before_ref": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "after_ref": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/NonEmptyString"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_ai_generated": {
+          "type": "boolean"
+        },
+        "is_demo_asset": {
+          "type": "boolean"
+        },
+        "disclaimer": {
+          "$ref": "#/$defs/NonEmptyString"
+        }
+      }
+    },
+    "TutorialCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content_id",
+        "title",
+        "author",
+        "reason",
+        "source",
+        "jump_url"
+      ],
+      "properties": {
+        "content_id": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "title": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "author": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "reason": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "source": {
+          "$ref": "#/$defs/SourceMetadata"
+        },
+        "jump_url": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/NonEmptyString"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "Alternative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan",
+        "validation",
+        "products",
+        "render"
+      ],
+      "properties": {
+        "plan": {
+          "$ref": "#/$defs/DesignPlan"
+        },
+        "validation": {
+          "$ref": "#/$defs/ValidationReport"
+        },
+        "products": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProductCandidate"
+          }
+        },
+        "render": {
+          "$ref": "#/$defs/Render"
+        }
+      }
+    },
+    "Notice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "level",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "level": {
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "message": {
+          "$ref": "#/$defs/NonEmptyString"
+        }
+      }
+    },
+    "DataSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "source_type",
+        "label",
+        "updated_at"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "source_type": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "label": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "updated_at": {
+          "$ref": "#/$defs/NonEmptyString"
+        }
+      }
+    },
+    "TraceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step",
+        "skill",
+        "status",
+        "source_mode",
+        "summary"
+      ],
+      "properties": {
+        "step": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "skill": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "status": {
+          "enum": [
+            "completed",
+            "fallback",
+            "skipped"
+          ]
+        },
+        "source_mode": {
+          "enum": [
+            "demo",
+            "live",
+            "fallback"
+          ]
+        },
+        "summary": {
+          "$ref": "#/$defs/NonEmptyString"
+        }
+      }
+    },
+    "FollowUp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason_code",
+        "question",
+        "required_fields",
+        "can_continue_with_assumptions"
+      ],
+      "properties": {
+        "reason_code": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "question": {
+          "$ref": "#/$defs/NonEmptyString"
+        },
+        "required_fields": {
+          "$ref": "#/$defs/StringArray"
+        },
+        "can_continue_with_assumptions": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

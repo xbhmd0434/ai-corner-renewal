@@ -1,0 +1,20 @@
+{
+  "type": "module",
+  "name": "douyin-static-demo",
+  "version": "1.0.0",
+  "description": "抖音展示 Demo - AI 一角焕新 P0",
+  "scripts": {
+    "start": "node scripts/start-all.mjs",
+    "start:all": "node scripts/start-all.mjs",
+    "start:web": "node scripts/serve.mjs",
+    "check:integration": "node scripts/check-integration.mjs",
+    "check": "node --check scripts/serve.mjs && node --check scripts/start-all.mjs && node --check douyin-static-demo/app.js && node --check douyin-static-demo/me.js && node --check douyin-static-demo/api/http-client.js && node --check douyin-static-demo/api/legacy-client.js && node --check douyin-static-demo/api/v1-client.js && node --check douyin-static-demo/adapters/aicard-view-model.js && node --check douyin-static-demo/adapters/design-task-builder.js && node --check douyin-static-demo/adapters/plan-version-view-model.js && node --check douyin-static-demo/adapters/asset-view-model.js && node --check douyin-static-demo/renewal/main.js && node --check douyin-static-demo/renewal/router.js && node --check douyin-static-demo/renewal/renewal-store.js && node --check douyin-static-demo/try-on/main.js && node --check douyin-static-demo/try-on/data.js && node --test",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  }
+}

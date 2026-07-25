@@ -18,8 +18,11 @@
         <small>ROOM REMIX · MVP</small>
       </span>
     </a>
-    <div class="demo-badge"><i></i> 比赛演示模式 · 样例数据</div>
-    <button class="quiet-button" id="openLogButton">查看 AI 过程</button>
+    <div class="demo-badge runtime-offline" id="runtimeBadge"><i></i> 正在检查本地后端…</div>
+    <div class="topbar-actions">
+      <a class="quiet-button studio-entry" href="./accessory-studio.html">挂件试搭 <span>↗</span></a>
+      <button class="quiet-button" id="openLogButton">查看 AI 过程</button>
+    </div>
   </header>
 
   <main>
@@ -69,7 +72,7 @@
         </button>
         <div class="privacy-note">
           <span>⌁</span>
-          <p><strong>隐私说明</strong>本 MVP 默认不上传照片；刷新页面后本地预览会被清除。</p>
+          <p><strong>隐私说明</strong>照片会在生成时经本地后端发送到火山方舟做本次空间分析；Key 不进入浏览器，刷新后预览会清除。</p>
         </div>
       </aside>
 
@@ -139,9 +142,9 @@
               <span class="detected-tag tag-chair">保留椅子 · 96%</span>
             </label>
             <div class="room-diagnosis">
-              <div class="diagnosis-heading"><span>AI 空间初诊</span><small>模拟识别结果</small></div>
-              <div class="score-ring"><strong>82</strong><small>可焕新指数</small></div>
-              <ul>
+              <div class="diagnosis-heading"><span>AI 空间初诊</span><small id="roomDiagnosisMode">生成前预估</small></div>
+              <div class="score-ring"><strong id="roomScore">82</strong><small>识别置信参考</small></div>
+              <ul id="roomDiagnosisList">
                 <li><i>01</i><div><strong>桌面被零碎物品切散</strong><small>建议先建立“抬高—收纳—留白”三层关系</small></div></li>
                 <li><i>02</i><div><strong>墙面利用率偏低</strong><small>租房限制下，优先使用倚墙软木板</small></div></li>
                 <li><i>03</i><div><strong>左侧自然光充足</strong><small>台灯宜放左后方，避免直射屏幕</small></div></li>
@@ -198,10 +201,17 @@
           <div class="analysis-progress" id="analysisProgress">
             <div class="progress-orbit"><span>角</span><i></i></div>
             <p class="eyebrow">AI PLANNING</p>
-            <h2>正在把灵感适配到你的空间…</h2>
+            <h2 id="analysisTitle">正在把灵感适配到你的空间…</h2>
             <div class="progress-steps">
               <span class="is-done">理解空间</span><span>匹配商品</span><span>生成方案</span><span>校验结果</span>
             </div>
+          </div>
+
+          <div class="analysis-error" id="analysisError" hidden>
+            <span>连接没有完成</span>
+            <h2>这次没有伪装成成功。</h2>
+            <p id="analysisErrorMessage">请确认本地后端已经启动。</p>
+            <button class="primary-button" id="retryButton">重新尝试 <span>↻</span></button>
           </div>
 
           <div class="results" id="results">
@@ -209,10 +219,22 @@
               <div><p class="eyebrow">YOUR ROOM REMIX</p><h2>不是照搬，是刚好适合。</h2></div>
               <div class="result-actions"><button class="quiet-button" id="replayButton">重新生成</button><button class="primary-button" id="saveButton">♡ 保存方案</button></div>
             </div>
+            <div class="source-proof-grid">
+              <div class="source-proof source-demo" id="sourceProof">
+                <span id="sourceModeLabel">DEMO</span>
+                <strong id="sourceModeTitle">空间识别：离线样例</strong>
+                <small id="sourceModeDetail">完成上传后才会请求 Agent Plan</small>
+              </div>
+              <div class="source-proof source-demo" id="renderProof">
+                <span id="renderModeLabel">DEMO</span>
+                <strong id="renderModeTitle">效果图：预生成样例</strong>
+                <small id="renderModeDetail">真实生成后会单独显示 Seedream LIVE</small>
+              </div>
+            </div>
             <div class="diagnosis-summary">
               <span>AI 诊断</span>
               <p id="diagnosisText">你的桌面有足够横向空间，左侧采光较好；在不打孔、保留桌椅的条件下，最有效的改动是抬高屏幕、收拢线材，并用倚墙织物板建立视觉焦点。</p>
-              <small>依据：空间图像 + 原木灵感 + 用户硬约束</small>
+              <small id="diagnosisBasis">依据：本地空间档案 + Demo 灵感 + 用户硬约束</small>
             </div>
 
             <div class="plan-switcher" id="planSwitcher">
@@ -273,7 +295,7 @@
               </section>
             </div>
             <div class="result-footer">
-              <p>效果图为 AI 示意，商品价格与库存为比赛样例数据。涉及用电、承重和施工时请咨询专业人员。</p>
+              <p id="resultDisclaimer">效果图为 AI 示意，商品价格与库存为比赛样例数据。涉及用电、承重和施工时请咨询专业人员。</p>
               <button class="text-button" data-jump="1">再换一种灵感 →</button>
             </div>
           </div>
@@ -284,7 +306,7 @@
 
   <dialog id="logDialog">
     <div class="dialog-heading"><div><p class="eyebrow">TRACE VIEW</p><h2>AI 过程不是黑盒</h2></div><button id="closeLogButton" aria-label="关闭">×</button></div>
-    <p class="dialog-lead">这版使用规则和样例数据模拟完整 Workflow，每一步都保留可替换的结构化结果。</p>
+    <p class="dialog-lead" id="dialogLead">当前展示离线样例；实际生成后会用来源标记区分 LIVE、FALLBACK 与 DEMO。</p>
     <div class="trace-list" id="traceList"></div>
   </dialog>
   <div class="toast" id="toast" role="status"></div>

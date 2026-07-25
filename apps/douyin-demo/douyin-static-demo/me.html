@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>抖音“我”页 Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./me.css" />
+  </head>
+  <body>
+    <main class="home-shell">
+      <section class="phone phone--me" aria-label="个人主页">
+        <div class="me-scroll" id="meScroll" role="document">
+          <header class="me-hero">
+            <img class="me-hero__bg" src="../C罗.png" width="1170" height="1400" alt="个人主页封面" decoding="async" />
+            <div class="me-hero__veil" aria-hidden="true"></div>
+
+            <div class="me-topbar">
+              <div class="me-topbar__left">
+                <button class="me-pill" type="button" data-me-click="已点击添加朋友">
+                  <span class="me-pill__dot" aria-hidden="true"></span>
+                  <span>添加朋友</span>
+                </button>
+                <button class="me-pill" type="button" data-me-click="已打开新访客">
+                  <span class="me-pill__dot" aria-hidden="true"></span>
+                  <span>新访客</span>
+                  <span class="me-pill__count">99+</span>
+                </button>
+              </div>
+
+              <div class="me-topbar__actions" aria-label="快捷操作">
+                <button class="me-icon" type="button" aria-label="搜索" data-me-click="已打开搜索">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="11" cy="11" r="6"></circle>
+                    <path d="M20 20l-3.6-3.6"></path>
+                  </svg>
+                </button>
+                <button class="me-icon" type="button" aria-label="菜单" data-me-click="已打开菜单">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 7h14"></path>
+                    <path d="M5 12h14"></path>
+                    <path d="M5 17h14"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="me-identity">
+              <div class="me-avatar" aria-label="头像">
+                <img src="../姆巴佩.png" width="800" height="800" alt="头像" loading="eager" decoding="async" />
+                <button class="me-avatar__add" type="button" aria-label="添加头像挂件" data-me-click="已点击头像加号">+</button>
+              </div>
+
+              <div class="me-title">
+                <h1 class="me-name">白了少年头</h1>
+                <button class="me-ai" type="button" data-me-click="已进入创建 AI 形象">
+                  <span>创建 AI 形象</span>
+                  <span class="me-ai__arrow" aria-hidden="true">›</span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <main class="me-main">
+            <section class="me-stats" aria-label="数据与入口">
+              <div class="me-stats__row">
+                <button class="me-stat" type="button" data-me-click="进入获赞">
+                  <strong>339</strong>
+                  <span>获赞</span>
+                </button>
+                <button class="me-stat" type="button" data-me-click="进入互关">
+                  <strong>27</strong>
+                  <span>互关</span>
+                </button>
+                <button class="me-stat" type="button" data-me-click="进入关注">
+                  <strong>82</strong>
+                  <span>关注</span>
+                </button>
+                <button class="me-stat" type="button" data-me-click="进入粉丝">
+                  <strong>33</strong>
+                  <span>粉丝</span>
+                </button>
+                <button class="me-edit" type="button" data-me-click="编辑主页">
+                  编辑主页
+                </button>
+              </div>
+
+              <section class="me-shortcuts" aria-label="常用功能">
+                <button class="me-shortcut" type="button" data-me-click="打开我的订单">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 7h14l-1.4 13H6.4L5 4h-2"></path>
+                    <path d="M8.5 20.5a1 1 0 1 0 0 .01"></path>
+                    <path d="M17.5 20.5a1 1 0 1 0 0 .01"></path>
+                  </svg>
+                  <span>我的订单</span>
+                </button>
+                <button class="me-shortcut" type="button" data-me-click="打开观看历史">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 8v4l3 2"></path>
+                    <path d="M12 21a9 9 0 1 0-8.6-6.2"></path>
+                    <path d="M3 15v-4h4"></path>
+                  </svg>
+                  <span>观看历史</span>
+                </button>
+                <button class="me-shortcut" type="button" data-me-click="打开我的钱包">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7z"></path>
+                    <path d="M4 9h17"></path>
+                    <path d="M17 13h2"></path>
+                  </svg>
+                  <span>我的钱包</span>
+                </button>
+                <button class="me-shortcut" type="button" data-me-click="打开常访问的人">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4z"></path>
+                    <path d="M4 20a8 8 0 0 1 16 0"></path>
+                  </svg>
+                  <span>常访问的人</span>
+                </button>
+                <button class="me-shortcut" type="button" data-me-click="打开全部功能">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 5h7v7H4z"></path>
+                    <path d="M13 5h7v7h-7z"></path>
+                    <path d="M4 14h7v7H4z"></path>
+                    <path d="M13 14h7v7h-7z"></path>
+                  </svg>
+                  <span>全部功能</span>
+                </button>
+              </section>
+            </section>
+
+
+
+            <nav class="me-tabs" aria-label="内容分类">
+              <button class="me-tab active" type="button" data-me-tab="works">
+                作品<span class="me-tab__caret" aria-hidden="true">▼</span>
+              </button>
+              <button class="me-tab" type="button" data-me-tab="daily">日常</button>
+              <button class="me-tab" type="button" data-me-tab="recommend">推荐</button>
+              <button class="me-tab" type="button" data-me-tab="fav">收藏</button>
+              <button class="me-tab" type="button" data-me-tab="like">喜欢</button>
+            </nav>
+
+            <section class="me-grid" id="meGrid" data-active-tab="works" aria-label="作品列表">
+              <button class="me-grid__item" type="button" aria-label="作品 1" data-me-click="打开作品 1">
+                <img src="../C罗.png" width="1170" height="1400" alt="作品封面 1" loading="lazy" decoding="async" />
+                <span class="me-grid__meta">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5v14l12-7z"></path>
+                  </svg>
+                  6.1w
+                </span>
+              </button>
+              <button class="me-grid__item" type="button" aria-label="作品 2" data-me-click="打开作品 2">
+                <img src="../姆巴佩.png" width="800" height="800" alt="作品封面 2" loading="lazy" decoding="async" />
+                <span class="me-grid__meta">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5v14l12-7z"></path>
+                  </svg>
+                  9.9w
+                </span>
+              </button>
+              <button class="me-grid__item" type="button" aria-label="作品 3" data-me-click="打开作品 3">
+                <img src="../克罗地亚莫德里奇.png" width="700" height="700" alt="作品封面 3" loading="lazy" decoding="async" />
+                <span class="me-grid__meta">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5v14l12-7z"></path>
+                  </svg>
+                  18.6w
+                </span>
+              </button>
+              <button class="me-grid__item" type="button" aria-label="作品 4" data-me-click="打开作品 4">
+                <img src="../鍏嬬綏鍦颁簹鑾痉閲屽.png" width="800" height="800" alt="作品封面 4" loading="lazy" decoding="async" />
+                <span class="me-grid__meta">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5v14l12-7z"></path>
+                  </svg>
+                  3.2w
+                </span>
+              </button>
+              <button class="me-grid__item" type="button" aria-label="作品 5" data-me-click="打开作品 5">
+                <img src="../C罗.png" width="1170" height="1400" alt="作品封面 5" loading="lazy" decoding="async" />
+                <span class="me-grid__meta">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5v14l12-7z"></path>
+                  </svg>
+                  2.7w
+                </span>
+              </button>
+              <button class="me-grid__item" type="button" aria-label="作品 6" data-me-click="打开作品 6">
+                <img src="../姆巴佩.png" width="800" height="800" alt="作品封面 6" loading="lazy" decoding="async" />
+                <span class="me-grid__meta">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5v14l12-7z"></path>
+                  </svg>
+                  7.4w
+                </span>
+              </button>
+            </section>
+          </main>
+        </div>
+
+        <div class="me-toast" id="meToast" role="status" aria-live="polite"></div>
+
+        <section class="me-space-layer" id="meSpaceLayer" aria-hidden="true">
+          <div class="me-space-page" id="meSpacePage" role="dialog" aria-modal="true" aria-label="个性化空间优化与商品识别"></div>
+        </section>
+
+        <footer class="bottom-nav bottom-nav--light" aria-label="底部导航">
+          <button class="bottom-item" type="button" data-nav-target="./index.html">首页</button>
+          <button class="bottom-item" type="button" data-me-click="朋友入口">朋友</button>
+          <button class="shoot-button" id="meShootSubmit" type="button" aria-label="打开空间优化">+</button>
+          <button class="bottom-item" type="button" data-me-click="消息入口">消息</button>
+          <button class="bottom-item active" type="button" aria-current="page">我</button>
+        </footer>
+      </section>
+    </main>
+
+    <script src="./nav.js"></script>
+    <script src="./me.js"></script>
+  </body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>抖音静态刷视频 Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="home-shell">
+      <section class="phone" aria-label="短视频主页">
+        <header class="top-nav">
+          <button class="icon-button" aria-label="添加">+</button>
+          <nav class="feed-tabs" aria-label="视频频道">
+            <button class="tab">关注</button>
+            <button class="tab active">推荐</button>
+            <button class="tab">同城</button>
+          </nav>
+          <button class="icon-button" aria-label="搜索">⌕</button>
+        </header>
+
+        <div class="feed" id="feed" aria-live="polite"></div>
+
+
+
+        <footer class="bottom-nav" aria-label="底部导航">
+          <button class="bottom-item active">首页</button>
+          <button class="bottom-item">朋友</button>
+          <button class="shoot-button" id="feedShootButton" aria-label="发布">+</button>
+          <button class="bottom-item">消息</button>
+          <button class="bottom-item" data-nav-target="./me.html">我</button>
+        </footer>
+
+        <!-- 视频流物品提取与融合弹层 -->
+        <section class="video-fusion-layer" id="videoFusionLayer" aria-hidden="true">
+          <div class="video-fusion-page" id="videoFusionPage" role="dialog" aria-modal="true" aria-label="AI 跨图像物品融合"></div>
+        </section>
+      </section>
+    </main>
+
+    <template id="videoTemplate">
+      <article class="video-slide">
+        <video playsinline loop preload="metadata"></video>
+        <div class="scrim"></div>
+        <div class="video-copy">
+          <strong class="author"></strong>
+          <p class="caption"></p>
+          <p class="tags"></p>
+          <div class="music-pill">♪ 原声 · 正在播放</div>
+        </div>
+        <div class="action-rail">
+          <button class="avatar-button" aria-label="关注作者"><span></span><b>+</b></button>
+          <button class="stack-button like-button" aria-label="点赞"><span>♡</span><small></small></button>
+          <button class="stack-button" aria-label="评论"><span>▣</span><small></small></button>
+          <button class="stack-button" aria-label="收藏"><span>☆</span><small></small></button>
+          <button class="stack-button" aria-label="分享"><span>↗</span><small>分享</small></button>
+        </div>
+        <button class="play-toggle" aria-label="播放或暂停视频">▶</button>
+      </article>
+    </template>
+
+    <script src="./nav.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

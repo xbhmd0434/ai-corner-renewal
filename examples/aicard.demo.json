@@ -1,0 +1,1135 @@
+{
+  "schema_version": "1.0",
+  "request_id": "req-demo-001",
+  "source_mode": "demo",
+  "status": "ready",
+  "generated_at": "2026-07-24T16:00:00.000Z",
+  "room_profile": {
+    "room_id": "demo-room-001",
+    "room_type": "desk_corner",
+    "reference_width_cm": 120,
+    "fixed_elements": [
+      "wall",
+      "window",
+      "desk",
+      "chair"
+    ],
+    "editable_zones": [
+      "desktop",
+      "desktop_back",
+      "underdesk_right",
+      "wall_leaning_zone"
+    ],
+    "lighting": {
+      "direction": "left",
+      "confidence": 0.82
+    },
+    "uncertainties": [
+      "desk_depth",
+      "socket_position"
+    ],
+    "needs_confirmation": [
+      "desk_depth",
+      "socket_position"
+    ]
+  },
+  "inspiration_profile": {
+    "inspiration_id": "demo-inspiration-warm",
+    "source_type": "demo",
+    "style": [
+      "japanese_natural"
+    ],
+    "colors": [
+      "oat_white",
+      "light_oak"
+    ],
+    "materials": [
+      "light_wood",
+      "linen",
+      "ceramic"
+    ],
+    "transferable_elements": [
+      "clamp_lamp",
+      "desk_riser",
+      "leaning_linen_board"
+    ],
+    "excluded_elements": [
+      "drilled_wall_shelf"
+    ]
+  },
+  "constraints": {
+    "budget_cny": 500,
+    "hard_constraints": [
+      "no_drilling",
+      "keep_desk",
+      "keep_chair"
+    ],
+    "soft_preferences": [
+      "clean_but_lived_in"
+    ],
+    "goals": [
+      "organization",
+      "ambient_lighting"
+    ]
+  },
+  "plan": {
+    "plan_id": "plan-warm-req-demo-001-v1",
+    "room_id": "demo-room-001",
+    "inspiration_id": "demo-inspiration-warm",
+    "version": 1,
+    "title": "原木呼吸感",
+    "summary": "保留桌椅和左侧自然采光，以低矮桌上架、暖光与亚麻质感重整视觉中心，全程免打孔。",
+    "total_price_cny": 486,
+    "product_ids": [
+      "prod-warm-oak-riser",
+      "prod-warm-clamp-lamp",
+      "prod-warm-linen-board",
+      "prod-warm-storage-trays",
+      "prod-warm-cable-box",
+      "prod-warm-pothos-planter"
+    ],
+    "preserved_elements": [
+      "desk",
+      "chair",
+      "wall",
+      "window",
+      "left_natural_light"
+    ],
+    "placements": [
+      {
+        "product_id": "prod-warm-oak-riser",
+        "zone": "desktop_center_back",
+        "instruction": "桌上架沿桌面后缘居中，左右各保留至少 20cm 操作区。"
+      },
+      {
+        "product_id": "prod-warm-clamp-lamp",
+        "zone": "desktop_left_back",
+        "instruction": "夹在桌面左后侧，灯头避开屏幕反光方向。"
+      },
+      {
+        "product_id": "prod-warm-linen-board",
+        "zone": "wall_leaning_zone",
+        "instruction": "直接倚墙放在桌上架后方，不粘贴、不打孔。"
+      },
+      {
+        "product_id": "prod-warm-storage-trays",
+        "zone": "desktop_right",
+        "instruction": "A5 与 A6 收纳盘按使用频率叠放在右侧。"
+      },
+      {
+        "product_id": "prod-warm-cable-box",
+        "zone": "desktop_back",
+        "instruction": "插排和余线统一收入桌面后缘的理线盒。"
+      },
+      {
+        "product_id": "prod-warm-pothos-planter",
+        "zone": "desktop_right_back",
+        "instruction": "作为低矮焦点放在右后侧；有宠物时替换为安全候选。"
+      }
+    ],
+    "steps": [
+      {
+        "step_id": "step-1",
+        "title": "清空并分区",
+        "instruction": "桌面只保留每日使用物，低频物品移入抽屉。"
+      },
+      {
+        "step_id": "step-2",
+        "title": "抬高视觉中心",
+        "instruction": "桌上架居中，左右各留至少 20cm 操作区。"
+      },
+      {
+        "step_id": "step-3",
+        "title": "整理光线与线材",
+        "instruction": "灯放左后侧；电源和余线统一收入理线盒。"
+      },
+      {
+        "step_id": "step-4",
+        "title": "补一处柔软焦点",
+        "instruction": "亚麻板直接倚墙，不粘贴、不打孔；按宠物情况选择绿植。"
+      }
+    ],
+    "render_ref": "./assets/desk-after-warm.png",
+    "assumptions": [
+      "desk_width_at_least_100cm",
+      "desk_depth_at_least_55cm",
+      "left_light_source_confirmed",
+      "product_dimensions_with_null_values_need_remeasurement"
+    ],
+    "constraint_tags": [
+      "no_drilling",
+      "keep_desk",
+      "keep_chair"
+    ]
+  },
+  "validation": {
+    "report_id": "validation-plan-warm-req-demo-001-v1-v1",
+    "plan_id": "plan-warm-req-demo-001-v1",
+    "plan_version": 1,
+    "overall_status": "needs_confirmation",
+    "checks": [
+      {
+        "code": "price_total",
+        "status": "pass",
+        "message": "方案总价与 6 件所选商品合计一致（¥486）"
+      },
+      {
+        "code": "budget",
+        "status": "pass",
+        "message": "所选商品合计 ¥486，未超过预算 ¥500（剩余 ¥14）"
+      },
+      {
+        "code": "no_drilling",
+        "status": "pass",
+        "message": "已核对 6 件商品，均为免打孔安装方式"
+      },
+      {
+        "code": "preserved_elements",
+        "status": "pass",
+        "message": "方案明确保留：desk、chair"
+      },
+      {
+        "code": "editable_zones",
+        "status": "pass",
+        "message": "全部 6 个摆放位置均位于可编辑区"
+      },
+      {
+        "code": "structure",
+        "status": "pass",
+        "message": "方案未声明改动固定结构，且房间身份一致"
+      },
+      {
+        "code": "dimensions",
+        "status": "warn",
+        "message": "商品尺寸不全：prod-warm-clamp-lamp(width/depth/height)、prod-warm-linen-board(depth)、prod-warm-storage-trays(width/depth/height)、prod-warm-cable-box(depth/height)、prod-warm-pothos-planter(width/depth/height)；空间尺寸待确认：desk_depth；方案依赖尺寸假设：desk_width_at_least_100cm、desk_depth_at_least_55cm、product_dimensions_with_null_values_need_remeasurement。购买前需复测"
+      },
+      {
+        "code": "availability",
+        "status": "pass",
+        "message": "全部 6 件商品均标记为可购买"
+      },
+      {
+        "code": "pet_safety",
+        "status": "pass",
+        "message": "本次方案未启用宠物安全硬约束"
+      }
+    ],
+    "warnings": [
+      "confirm_dimensions_before_purchase",
+      "measure_desk_depth_before_purchase"
+    ]
+  },
+  "products": [
+    {
+      "product_id": "prod-warm-oak-riser",
+      "name": "浅橡木桌上架",
+      "category": "desk_riser",
+      "price_cny": 129,
+      "dimensions_cm": {
+        "width": 58,
+        "depth": 20,
+        "height": 8
+      },
+      "dimensions_label": "58 × 20 × 8cm",
+      "installation": "freestanding",
+      "pet_safe": true,
+      "reason": "用低矮层次抬高视觉中心，同时保留桌面两侧操作区。",
+      "availability": {
+        "status": "demo_available",
+        "source_type": "demo",
+        "checked_at": "2026-07-25T00:00:00+08:00"
+      },
+      "source": {
+        "source_type": "demo",
+        "label": "本地结构化演示商品库（非实时）",
+        "updated_at": "2026-07-25T00:00:00+08:00"
+      }
+    },
+    {
+      "product_id": "prod-warm-clamp-lamp",
+      "name": "暖白夹式台灯",
+      "category": "lighting",
+      "price_cny": 99,
+      "dimensions_cm": {
+        "width": null,
+        "depth": null,
+        "height": null
+      },
+      "dimensions_label": "三档调光；演示数据未提供外形尺寸",
+      "installation": "clamp",
+      "pet_safe": true,
+      "reason": "夹装在桌边即可补充暖光，不占主要工作区，也不需要墙面打孔。",
+      "availability": {
+        "status": "demo_available",
+        "source_type": "demo",
+        "checked_at": "2026-07-25T00:00:00+08:00"
+      },
+      "source": {
+        "source_type": "demo",
+        "label": "本地结构化演示商品库（非实时）",
+        "updated_at": "2026-07-25T00:00:00+08:00"
+      }
+    },
+    {
+      "product_id": "prod-warm-linen-board",
+      "name": "亚麻织物留言板",
+      "category": "display_board",
+      "price_cny": 79,
+      "dimensions_cm": {
+        "width": 40,
+        "depth": null,
+        "height": 55
+      },
+      "dimensions_label": "40 × 55cm",
+      "installation": "leaning",
+      "pet_safe": true,
+      "reason": "采用倚墙摆放迁移亚麻质感，替代灵感中需要打孔的墙面层板。",
+      "availability": {
+        "status": "demo_available",
+        "source_type": "demo",
+        "checked_at": "2026-07-25T00:00:00+08:00"
+      },
+      "source": {
+        "source_type": "demo",
+        "label": "本地结构化演示商品库（非实时）",
+        "updated_at": "2026-07-25T00:00:00+08:00"
+      }
+    },
+    {
+      "product_id": "prod-warm-storage-trays",
+      "name": "奶油白收纳盘 × 2",
+      "category": "desktop_storage",
+      "price_cny": 58,
+      "dimensions_cm": {
+        "width": null,
+        "depth": null,
+        "height": null
+      },
+      "dimensions_label": "A5 / A6，2 件套",
+      "installation": "freestanding",
+      "pet_safe": true,
+      "reason": "把每日小物分区，减少桌面散落，同时延续燕麦白配色。",
+      "availability": {
+        "status": "demo_available",
+        "source_type": "demo",
+        "checked_at": "2026-07-25T00:00:00+08:00"
+      },
+      "source": {
+        "source_type": "demo",
+        "label": "本地结构化演示商品库（非实时）",
+        "updated_at": "2026-07-25T00:00:00+08:00"
+      }
+    },
+    {
+      "product_id": "prod-warm-cable-box",
+      "name": "隐藏式理线盒",
+      "category": "cable_management",
+      "price_cny": 45,
+      "dimensions_cm": {
+        "width": 32,
+        "depth": null,
+        "height": null
+      },
+      "dimensions_label": "长边 32cm；其余尺寸需复测",
+      "installation": "freestanding",
+      "pet_safe": true,
+      "reason": "集中遮挡插排和余线，降低视觉噪声并减少宠物直接接触线材。",
+      "availability": {
+        "status": "demo_available",
+        "source_type": "demo",
+        "checked_at": "2026-07-25T00:00:00+08:00"
+      },
+      "source": {
+        "source_type": "demo",
+        "label": "本地结构化演示商品库（非实时）",
+        "updated_at": "2026-07-25T00:00:00+08:00"
+      }
+    },
+    {
+      "product_id": "prod-warm-pothos-planter",
+      "name": "绿萝陶盆组合",
+      "category": "plant",
+      "price_cny": 76,
+      "dimensions_cm": {
+        "width": null,
+        "depth": null,
+        "height": null
+      },
+      "dimensions_label": "演示数据未提供尺寸",
+      "installation": "freestanding",
+      "pet_safe": false,
+      "reason": "提供一处柔软绿植焦点；有宠物时必须替换为明确标注的安全候选。",
+      "availability": {
+        "status": "demo_available",
+        "source_type": "demo",
+        "checked_at": "2026-07-25T00:00:00+08:00"
+      },
+      "source": {
+        "source_type": "demo",
+        "label": "本地结构化演示商品库（非实时）",
+        "updated_at": "2026-07-25T00:00:00+08:00"
+      }
+    }
+  ],
+  "tutorials": [
+    {
+      "content_id": "tutorial-warm-no-drill-reset",
+      "title": "35 分钟免打孔原木桌面整理",
+      "author": "一角焕新演示内容",
+      "reason": "与 warm 方案的免打孔执行步骤相匹配；此条目不是平台真实视频。",
+      "source": {
+        "source_type": "demo",
+        "label": "本地教程演示条目（非真实视频）",
+        "updated_at": "2026-07-25T00:00:00+08:00"
+      },
+      "jump_url": null
+    },
+    {
+      "content_id": "tutorial-compact-zoning",
+      "title": "25 分钟按频率完成桌面分区",
+      "author": "一角焕新演示内容",
+      "reason": "与 compact 方案的免打孔执行步骤相匹配；此条目不是平台真实视频。",
+      "source": {
+        "source_type": "demo",
+        "label": "本地教程演示条目（非真实视频）",
+        "updated_at": "2026-07-25T00:00:00+08:00"
+      },
+      "jump_url": null
+    },
+    {
+      "content_id": "tutorial-green-workspace",
+      "title": "45 分钟布置低矮绿植与柔光",
+      "author": "一角焕新演示内容",
+      "reason": "与 green 方案的免打孔执行步骤相匹配；此条目不是平台真实视频。",
+      "source": {
+        "source_type": "demo",
+        "label": "本地教程演示条目（非真实视频）",
+        "updated_at": "2026-07-25T00:00:00+08:00"
+      },
+      "jump_url": null
+    }
+  ],
+  "render": {
+    "before_ref": "./assets/desk-before.png",
+    "after_ref": "./assets/desk-after-warm.png",
+    "is_ai_generated": true,
+    "is_demo_asset": true,
+    "disclaimer": "预生成 AI 效果示意；不代表厘米级测量、实时库存或施工结果。"
+  },
+  "alternatives": [
+    {
+      "plan": {
+        "plan_id": "plan-compact-req-demo-001-v1",
+        "room_id": "demo-room-001",
+        "inspiration_id": "demo-inspiration-warm",
+        "version": 1,
+        "title": "高效收纳版",
+        "summary": "减少装饰，把预算集中在线材、文件和常用小物分区，适合任务切换频繁的桌面。",
+        "total_price_cny": 328,
+        "product_ids": [
+          "prod-compact-file-rack",
+          "prod-compact-underdesk-drawer",
+          "prod-compact-monitor-riser",
+          "prod-compact-magnetic-clips",
+          "prod-compact-sorting-cups"
+        ],
+        "preserved_elements": [
+          "desk",
+          "chair",
+          "wall",
+          "window",
+          "left_natural_light"
+        ],
+        "placements": [
+          {
+            "product_id": "prod-compact-file-rack",
+            "zone": "desktop_right_back",
+            "instruction": "文件架靠右后侧，避免遮挡左侧自然光。"
+          },
+          {
+            "product_id": "prod-compact-underdesk-drawer",
+            "zone": "underdesk_right",
+            "instruction": "抽拉盒固定在右侧桌板下，避开腿部活动范围。"
+          },
+          {
+            "product_id": "prod-compact-monitor-riser",
+            "zone": "desktop_center_back",
+            "instruction": "屏幕增高架居中，正面保留键盘收纳空间。"
+          },
+          {
+            "product_id": "prod-compact-magnetic-clips",
+            "zone": "desktop_back",
+            "instruction": "在桌后固定三条常用线出口，其余线材收入桌下。"
+          },
+          {
+            "product_id": "prod-compact-sorting-cups",
+            "zone": "desktop_right",
+            "instruction": "分类杯放在文件架前方，只保留每日使用文具。"
+          }
+        ],
+        "steps": [
+          {
+            "step_id": "step-1",
+            "title": "按使用频率分三类",
+            "instruction": "每天、每周、低频物品分别处理。"
+          },
+          {
+            "step_id": "step-2",
+            "title": "垂直收纳文件",
+            "instruction": "文件架靠右，避免遮挡左侧自然光。"
+          },
+          {
+            "step_id": "step-3",
+            "title": "隐藏零碎物",
+            "instruction": "抽拉盒放置充电头和备用文具。"
+          },
+          {
+            "step_id": "step-4",
+            "title": "固定线材出口",
+            "instruction": "桌后预留三条常用线，其余收入盒中。"
+          }
+        ],
+        "render_ref": "./assets/desk-after-warm.png",
+        "assumptions": [
+          "desk_width_at_least_90cm",
+          "underdesk_surface_accepts_no_drill_slide",
+          "left_light_source_confirmed",
+          "product_dimensions_with_null_values_need_remeasurement"
+        ],
+        "constraint_tags": [
+          "no_drilling",
+          "keep_desk",
+          "keep_chair",
+          "pet_safe"
+        ]
+      },
+      "validation": {
+        "report_id": "validation-plan-compact-req-demo-001-v1-v1",
+        "plan_id": "plan-compact-req-demo-001-v1",
+        "plan_version": 1,
+        "overall_status": "needs_confirmation",
+        "checks": [
+          {
+            "code": "price_total",
+            "status": "pass",
+            "message": "方案总价与 5 件所选商品合计一致（¥328）"
+          },
+          {
+            "code": "budget",
+            "status": "pass",
+            "message": "所选商品合计 ¥328，未超过预算 ¥500（剩余 ¥172）"
+          },
+          {
+            "code": "no_drilling",
+            "status": "pass",
+            "message": "已核对 5 件商品，均为免打孔安装方式"
+          },
+          {
+            "code": "preserved_elements",
+            "status": "pass",
+            "message": "方案明确保留：desk、chair"
+          },
+          {
+            "code": "editable_zones",
+            "status": "pass",
+            "message": "全部 5 个摆放位置均位于可编辑区"
+          },
+          {
+            "code": "structure",
+            "status": "pass",
+            "message": "方案未声明改动固定结构，且房间身份一致"
+          },
+          {
+            "code": "dimensions",
+            "status": "warn",
+            "message": "商品尺寸不全：prod-compact-file-rack(depth/height)、prod-compact-underdesk-drawer(width/depth/height)、prod-compact-monitor-riser(depth/height)、prod-compact-magnetic-clips(width/depth/height)、prod-compact-sorting-cups(width/depth/height)；空间尺寸待确认：desk_depth；方案依赖尺寸假设：desk_width_at_least_90cm、product_dimensions_with_null_values_need_remeasurement。购买前需复测"
+          },
+          {
+            "code": "availability",
+            "status": "pass",
+            "message": "全部 5 件商品均标记为可购买"
+          },
+          {
+            "code": "pet_safety",
+            "status": "pass",
+            "message": "本次方案未启用宠物安全硬约束"
+          }
+        ],
+        "warnings": [
+          "confirm_dimensions_before_purchase",
+          "measure_desk_depth_before_purchase"
+        ]
+      },
+      "products": [
+        {
+          "product_id": "prod-compact-file-rack",
+          "name": "立式文件架",
+          "category": "file_storage",
+          "price_cny": 69,
+          "dimensions_cm": {
+            "width": 32,
+            "depth": null,
+            "height": null
+          },
+          "dimensions_label": "3 格 / 32cm；其余尺寸需复测",
+          "installation": "freestanding",
+          "pet_safe": true,
+          "reason": "将文件垂直分区并靠右摆放，避免遮挡左侧自然光。",
+          "availability": {
+            "status": "demo_available",
+            "source_type": "demo",
+            "checked_at": "2026-07-25T00:00:00+08:00"
+          },
+          "source": {
+            "source_type": "demo",
+            "label": "本地结构化演示商品库（非实时）",
+            "updated_at": "2026-07-25T00:00:00+08:00"
+          }
+        },
+        {
+          "product_id": "prod-compact-underdesk-drawer",
+          "name": "抽拉式桌下盒",
+          "category": "underdesk_storage",
+          "price_cny": 79,
+          "dimensions_cm": {
+            "width": null,
+            "depth": null,
+            "height": null
+          },
+          "dimensions_label": "免钉；演示数据未提供尺寸",
+          "installation": "no_drill_slide",
+          "pet_safe": true,
+          "reason": "隐藏充电头和备用文具，以免打孔方式释放桌面空间。",
+          "availability": {
+            "status": "demo_available",
+            "source_type": "demo",
+            "checked_at": "2026-07-25T00:00:00+08:00"
+          },
+          "source": {
+            "source_type": "demo",
+            "label": "本地结构化演示商品库（非实时）",
+            "updated_at": "2026-07-25T00:00:00+08:00"
+          }
+        },
+        {
+          "product_id": "prod-compact-monitor-riser",
+          "name": "屏幕增高架",
+          "category": "monitor_riser",
+          "price_cny": 88,
+          "dimensions_cm": {
+            "width": 52,
+            "depth": null,
+            "height": null
+          },
+          "dimensions_label": "宽 52cm；深度和高度需复测",
+          "installation": "freestanding",
+          "pet_safe": true,
+          "reason": "建立单一视觉中心，并为键盘或文件留出下方收纳空间。",
+          "availability": {
+            "status": "demo_available",
+            "source_type": "demo",
+            "checked_at": "2026-07-25T00:00:00+08:00"
+          },
+          "source": {
+            "source_type": "demo",
+            "label": "本地结构化演示商品库（非实时）",
+            "updated_at": "2026-07-25T00:00:00+08:00"
+          }
+        },
+        {
+          "product_id": "prod-compact-magnetic-clips",
+          "name": "磁吸理线扣 × 6",
+          "category": "cable_management",
+          "price_cny": 39,
+          "dimensions_cm": {
+            "width": null,
+            "depth": null,
+            "height": null
+          },
+          "dimensions_label": "6 枚；演示数据未提供单枚尺寸",
+          "installation": "removable_adhesive",
+          "pet_safe": true,
+          "reason": "固定三条常用线材的出口，可移胶满足租房可恢复要求。",
+          "availability": {
+            "status": "demo_available",
+            "source_type": "demo",
+            "checked_at": "2026-07-25T00:00:00+08:00"
+          },
+          "source": {
+            "source_type": "demo",
+            "label": "本地结构化演示商品库（非实时）",
+            "updated_at": "2026-07-25T00:00:00+08:00"
+          }
+        },
+        {
+          "product_id": "prod-compact-sorting-cups",
+          "name": "桌面分类杯",
+          "category": "desktop_storage",
+          "price_cny": 53,
+          "dimensions_cm": {
+            "width": null,
+            "depth": null,
+            "height": null
+          },
+          "dimensions_label": "2 件套；演示数据未提供尺寸",
+          "installation": "freestanding",
+          "pet_safe": true,
+          "reason": "将每日使用的文具按用途分开，支持快速任务切换。",
+          "availability": {
+            "status": "demo_available",
+            "source_type": "demo",
+            "checked_at": "2026-07-25T00:00:00+08:00"
+          },
+          "source": {
+            "source_type": "demo",
+            "label": "本地结构化演示商品库（非实时）",
+            "updated_at": "2026-07-25T00:00:00+08:00"
+          }
+        }
+      ],
+      "render": {
+        "before_ref": "./assets/desk-before.png",
+        "after_ref": "./assets/desk-after-warm.png",
+        "is_ai_generated": true,
+        "is_demo_asset": true,
+        "disclaimer": "预生成 AI 效果示意；不代表厘米级测量、实时库存或施工结果。"
+      }
+    },
+    {
+      "plan": {
+        "plan_id": "plan-green-req-demo-001-v1",
+        "room_id": "demo-room-001",
+        "inspiration_id": "demo-inspiration-warm",
+        "version": 1,
+        "title": "轻绿治愈版",
+        "summary": "用自然材质和两株低矮绿植缓和工作感，植物避开主操作区并保留左侧采光和桌面留白。",
+        "total_price_cny": 552,
+        "product_ids": [
+          "prod-green-bamboo-riser",
+          "prod-green-mushroom-lamp",
+          "prod-green-linen-mat",
+          "prod-green-peperomia-planter",
+          "prod-green-fern-vase",
+          "prod-green-rattan-baskets",
+          "prod-green-wood-cable-clips"
+        ],
+        "preserved_elements": [
+          "desk",
+          "chair",
+          "wall",
+          "window",
+          "left_natural_light"
+        ],
+        "placements": [
+          {
+            "product_id": "prod-green-bamboo-riser",
+            "zone": "desktop_center_back",
+            "instruction": "竹木桌上架居中，前方保留完整键盘区。"
+          },
+          {
+            "product_id": "prod-green-mushroom-lamp",
+            "zone": "desktop_right_back",
+            "instruction": "蘑菇灯放右后侧，光线不直射屏幕。"
+          },
+          {
+            "product_id": "prod-green-linen-mat",
+            "zone": "desktop_center",
+            "instruction": "桌垫沿键盘区铺平，前方保留至少 25cm 工作空间。"
+          },
+          {
+            "product_id": "prod-green-peperomia-planter",
+            "zone": "desktop_right_back",
+            "instruction": "低矮豆瓣绿放在右后侧，不挡窗边开合。"
+          },
+          {
+            "product_id": "prod-green-fern-vase",
+            "zone": "desktop_right",
+            "instruction": "水培瓶与豆瓣绿形成一高一低组合，并远离桌边。"
+          },
+          {
+            "product_id": "prod-green-rattan-baskets",
+            "zone": "desktop_riser_under",
+            "instruction": "藤编篮放在桌上架下方，收纳低频零碎物。"
+          },
+          {
+            "product_id": "prod-green-wood-cable-clips",
+            "zone": "desktop_back",
+            "instruction": "木质理线器沿桌后缘固定四条线材出口。"
+          }
+        ],
+        "steps": [
+          {
+            "step_id": "step-1",
+            "title": "先确定工作留白",
+            "instruction": "键盘区前方保留至少 25cm 空间。"
+          },
+          {
+            "step_id": "step-2",
+            "title": "绿植一高一低",
+            "instruction": "两株植物均放右侧，避免影响窗边开合。"
+          },
+          {
+            "step_id": "step-3",
+            "title": "收拢材质数量",
+            "instruction": "主视觉只使用浅木、亚麻、陶器三类材质。"
+          },
+          {
+            "step_id": "step-4",
+            "title": "夜间补一处暖光",
+            "instruction": "小灯不直射屏幕，形成背景层次。"
+          }
+        ],
+        "render_ref": "./assets/desk-after-warm.png",
+        "assumptions": [
+          "desk_width_at_least_110cm",
+          "desk_depth_at_least_60cm",
+          "window_opening_clearance_confirmed",
+          "fern_species_and_hydroponic_solution_need_confirmation",
+          "product_dimensions_with_null_values_need_remeasurement"
+        ],
+        "constraint_tags": [
+          "no_drilling",
+          "keep_desk",
+          "keep_chair"
+        ]
+      },
+      "validation": {
+        "report_id": "validation-plan-green-req-demo-001-v1-v1",
+        "plan_id": "plan-green-req-demo-001-v1",
+        "plan_version": 1,
+        "overall_status": "failed",
+        "checks": [
+          {
+            "code": "price_total",
+            "status": "pass",
+            "message": "方案总价与 7 件所选商品合计一致（¥552）"
+          },
+          {
+            "code": "budget",
+            "status": "fail",
+            "message": "所选商品合计 ¥552，超过预算 ¥500（超出 ¥52）"
+          },
+          {
+            "code": "no_drilling",
+            "status": "pass",
+            "message": "已核对 7 件商品，均为免打孔安装方式"
+          },
+          {
+            "code": "preserved_elements",
+            "status": "pass",
+            "message": "方案明确保留：desk、chair"
+          },
+          {
+            "code": "editable_zones",
+            "status": "pass",
+            "message": "全部 7 个摆放位置均位于可编辑区"
+          },
+          {
+            "code": "structure",
+            "status": "pass",
+            "message": "方案未声明改动固定结构，且房间身份一致"
+          },
+          {
+            "code": "dimensions",
+            "status": "warn",
+            "message": "商品尺寸不全：prod-green-bamboo-riser(height)、prod-green-mushroom-lamp(width/depth/height)、prod-green-linen-mat(height)、prod-green-peperomia-planter(width/depth/height)、prod-green-fern-vase(width/depth/height)、prod-green-rattan-baskets(width/depth/height)、prod-green-wood-cable-clips(width/depth/height)；空间尺寸待确认：desk_depth；方案依赖尺寸假设：desk_width_at_least_110cm、desk_depth_at_least_60cm、window_opening_clearance_confirmed、product_dimensions_with_null_values_need_remeasurement。购买前需复测"
+          },
+          {
+            "code": "availability",
+            "status": "pass",
+            "message": "全部 7 件商品均标记为可购买"
+          },
+          {
+            "code": "pet_safety",
+            "status": "pass",
+            "message": "本次方案未启用宠物安全硬约束"
+          }
+        ],
+        "warnings": [
+          "confirm_dimensions_before_purchase",
+          "measure_desk_depth_before_purchase"
+        ]
+      },
+      "products": [
+        {
+          "product_id": "prod-green-bamboo-riser",
+          "name": "竹木桌上架",
+          "category": "desk_riser",
+          "price_cny": 138,
+          "dimensions_cm": {
+            "width": 60,
+            "depth": 22,
+            "height": null
+          },
+          "dimensions_label": "60 × 22cm；高度需复测",
+          "installation": "freestanding",
+          "pet_safe": true,
+          "reason": "用竹木建立轻盈层次，同时将材质数量控制在自然材质范围内。",
+          "availability": {
+            "status": "demo_available",
+            "source_type": "demo",
+            "checked_at": "2026-07-25T00:00:00+08:00"
+          },
+          "source": {
+            "source_type": "demo",
+            "label": "本地结构化演示商品库（非实时）",
+            "updated_at": "2026-07-25T00:00:00+08:00"
+          }
+        },
+        {
+          "product_id": "prod-green-mushroom-lamp",
+          "name": "暖光蘑菇灯",
+          "category": "lighting",
+          "price_cny": 89,
+          "dimensions_cm": {
+            "width": null,
+            "depth": null,
+            "height": null
+          },
+          "dimensions_label": "USB 供电；演示数据未提供外形尺寸",
+          "installation": "freestanding",
+          "pet_safe": true,
+          "reason": "在右后侧形成不直射屏幕的夜间暖光层次。",
+          "availability": {
+            "status": "demo_available",
+            "source_type": "demo",
+            "checked_at": "2026-07-25T00:00:00+08:00"
+          },
+          "source": {
+            "source_type": "demo",
+            "label": "本地结构化演示商品库（非实时）",
+            "updated_at": "2026-07-25T00:00:00+08:00"
+          }
+        },
+        {
+          "product_id": "prod-green-linen-mat",
+          "name": "亚麻桌垫",
+          "category": "desk_mat",
+          "price_cny": 69,
+          "dimensions_cm": {
+            "width": 70,
+            "depth": 35,
+            "height": null
+          },
+          "dimensions_label": "70 × 35cm",
+          "installation": "freestanding",
+          "pet_safe": true,
+          "reason": "用单一亚麻底面收拢键盘区，并保留前方工作留白。",
+          "availability": {
+            "status": "demo_available",
+            "source_type": "demo",
+            "checked_at": "2026-07-25T00:00:00+08:00"
+          },
+          "source": {
+            "source_type": "demo",
+            "label": "本地结构化演示商品库（非实时）",
+            "updated_at": "2026-07-25T00:00:00+08:00"
+          }
+        },
+        {
+          "product_id": "prod-green-peperomia-planter",
+          "name": "豆瓣绿陶盆",
+          "category": "plant",
+          "price_cny": 58,
+          "dimensions_cm": {
+            "width": null,
+            "depth": null,
+            "height": null
+          },
+          "dimensions_label": "低矮耐阴；演示数据未提供尺寸",
+          "installation": "freestanding",
+          "pet_safe": true,
+          "reason": "低矮体量适合放在右侧，不遮挡左侧采光或窗边开合。",
+          "availability": {
+            "status": "demo_available",
+            "source_type": "demo",
+            "checked_at": "2026-07-25T00:00:00+08:00"
+          },
+          "source": {
+            "source_type": "demo",
+            "label": "本地结构化演示商品库（非实时）",
+            "updated_at": "2026-07-25T00:00:00+08:00"
+          }
+        },
+        {
+          "product_id": "prod-green-fern-vase",
+          "name": "蕨类水培瓶",
+          "category": "plant",
+          "price_cny": 66,
+          "dimensions_cm": {
+            "width": null,
+            "depth": null,
+            "height": null
+          },
+          "dimensions_label": "小型；演示数据未提供尺寸",
+          "installation": "freestanding",
+          "pet_safe": null,
+          "reason": "补充一高一低的绿植层次；具体蕨类品种和水培液安全性需要确认。",
+          "availability": {
+            "status": "demo_available",
+            "source_type": "demo",
+            "checked_at": "2026-07-25T00:00:00+08:00"
+          },
+          "source": {
+            "source_type": "demo",
+            "label": "本地结构化演示商品库（非实时）",
+            "updated_at": "2026-07-25T00:00:00+08:00"
+          }
+        },
+        {
+          "product_id": "prod-green-rattan-baskets",
+          "name": "藤编收纳篮",
+          "category": "desktop_storage",
+          "price_cny": 79,
+          "dimensions_cm": {
+            "width": null,
+            "depth": null,
+            "height": null
+          },
+          "dimensions_label": "2 件套；演示数据未提供尺寸",
+          "installation": "freestanding",
+          "pet_safe": true,
+          "reason": "隐藏低频零碎物，同时延续自然材质但不增加新的主色。",
+          "availability": {
+            "status": "demo_available",
+            "source_type": "demo",
+            "checked_at": "2026-07-25T00:00:00+08:00"
+          },
+          "source": {
+            "source_type": "demo",
+            "label": "本地结构化演示商品库（非实时）",
+            "updated_at": "2026-07-25T00:00:00+08:00"
+          }
+        },
+        {
+          "product_id": "prod-green-wood-cable-clips",
+          "name": "木质理线器",
+          "category": "cable_management",
+          "price_cny": 53,
+          "dimensions_cm": {
+            "width": null,
+            "depth": null,
+            "height": null
+          },
+          "dimensions_label": "4 枚；演示数据未提供单枚尺寸",
+          "installation": "removable_adhesive",
+          "pet_safe": true,
+          "reason": "固定常用线材出口，并让理线配件融入浅木材质体系。",
+          "availability": {
+            "status": "demo_available",
+            "source_type": "demo",
+            "checked_at": "2026-07-25T00:00:00+08:00"
+          },
+          "source": {
+            "source_type": "demo",
+            "label": "本地结构化演示商品库（非实时）",
+            "updated_at": "2026-07-25T00:00:00+08:00"
+          }
+        }
+      ],
+      "render": {
+        "before_ref": "./assets/desk-before.png",
+        "after_ref": "./assets/desk-after-warm.png",
+        "is_ai_generated": true,
+        "is_demo_asset": true,
+        "disclaimer": "预生成 AI 效果示意；不代表厘米级测量、实时库存或施工结果。"
+      }
+    }
+  ],
+  "notices": [
+    {
+      "code": "demo_commerce_data",
+      "level": "info",
+      "message": "商品、价格、库存和教程均为比赛 Demo 数据，不代表真实平台接口。"
+    },
+    {
+      "code": "pre_generated_render",
+      "level": "warning",
+      "message": "效果图为预生成 AI 示意，购买前仍需复测尺寸。"
+    }
+  ],
+  "data_sources": [
+    {
+      "kind": "room_analysis",
+      "source_type": "demo",
+      "label": "本地 RoomProfile 演示档案",
+      "updated_at": "2026-07-24T16:00:00.000Z"
+    },
+    {
+      "kind": "inspiration_profiles",
+      "source_type": "demo",
+      "label": "前端三套灵感样例结构化数据",
+      "updated_at": "2026-07-25T00:00:00+08:00"
+    },
+    {
+      "kind": "product_catalog",
+      "source_type": "demo",
+      "label": "本地演示商品目录",
+      "updated_at": "2026-07-25T00:00:00+08:00"
+    },
+    {
+      "kind": "tutorial_catalog",
+      "source_type": "demo",
+      "label": "本地教程条目",
+      "updated_at": "2026-07-25T00:00:00+08:00"
+    },
+    {
+      "kind": "render_asset",
+      "source_type": "demo",
+      "label": "预生成书桌焕新效果素材",
+      "updated_at": "2026-07-25T00:00:00+08:00"
+    }
+  ],
+  "trace": [
+    {
+      "step": 1,
+      "skill": "extract_inspiration_style",
+      "status": "completed",
+      "source_mode": "demo",
+      "summary": "把灵感风格、色彩、材质和可迁移元素整理为 InspirationProfile。"
+    },
+    {
+      "step": 2,
+      "skill": "extract_room_constraints",
+      "status": "completed",
+      "source_mode": "demo",
+      "summary": "使用明确标注的 Demo RoomProfile。"
+    },
+    {
+      "step": 3,
+      "skill": "build_user_constraints",
+      "status": "completed",
+      "source_mode": "demo",
+      "summary": "预算、安装限制和保留家具作为硬约束；软偏好在 v1 中仅记录，不参与自动筛选或排序。"
+    },
+    {
+      "step": 4,
+      "skill": "retrieve_products",
+      "status": "completed",
+      "source_mode": "demo",
+      "summary": "从演示商品目录按安装方式、宠物安全和方案需求组织候选。"
+    },
+    {
+      "step": 5,
+      "skill": "generate_design_plan",
+      "status": "completed",
+      "source_mode": "demo",
+      "summary": "生成可版本化方案；方案只保存 product_id 引用。"
+    },
+    {
+      "step": 6,
+      "skill": "validate_design_plan",
+      "status": "completed",
+      "source_mode": "demo",
+      "summary": "用确定性代码复核合计、预算、不打孔、保留家具、尺寸、库存和宠物安全。"
+    },
+    {
+      "step": 7,
+      "skill": "compose_ai_card",
+      "status": "completed",
+      "source_mode": "demo",
+      "summary": "组合 AICard v1，并保留事实来源、警告和降级状态。"
+    }
+  ],
+  "follow_up": null
+}

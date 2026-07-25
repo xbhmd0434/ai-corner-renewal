@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ai-corner-renewal/revise-request-v1.schema.json",
+  "title": "ReviseRequest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "plan_id",
+    "target_budget_cny"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "plan_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "target_budget_cny": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "room_input": {
+    "room_id": "demo-room-blurry",
+    "image": {
+      "reference": "client://room-upload",
+      "media_type": "image/jpeg"
+    },
+    "reference_width_cm": 120,
+    "quality_hint": "blurry"
+  },
+  "inspiration_input": {
+    "inspiration_id": "demo-inspiration-warm",
+    "source_type": "user_owned",
+    "style_key": "warm"
+  },
+  "constraints": {
+    "budget_cny": 500,
+    "hard_constraints": [
+      "no_drilling",
+      "keep_desk"
+    ],
+    "soft_preferences": [
+      "warm"
+    ],
+    "goals": [
+      "organization"
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "room_input": {
+    "room_id": "demo-room-flexible",
+    "image": {
+      "reference": "./assets/desk-before.png",
+      "media_type": "image/png"
+    },
+    "reference_width_cm": 160,
+    "quality_hint": "clear"
+  },
+  "inspiration_input": {
+    "inspiration_id": "demo-inspiration-compact",
+    "source_type": "demo",
+    "style_key": "compact"
+  },
+  "constraints": {
+    "budget_cny": 600,
+    "hard_constraints": [
+      "no_drilling"
+    ],
+    "soft_preferences": [
+      "easy_to_restore"
+    ],
+    "goals": [
+      "organization",
+      "long_sitting_efficiency"
+    ]
+  }
+}

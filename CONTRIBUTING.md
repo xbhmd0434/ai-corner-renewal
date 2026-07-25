@@ -12,7 +12,9 @@
 
 ```bash
 npm run check
-npm start
+npm run start:web
+npm run start:backend
+npm run demo:backend
 ```
 
 从最新 `main` 创建短分支：

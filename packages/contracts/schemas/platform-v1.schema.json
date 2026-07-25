@@ -1,0 +1,380 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/ai-corner-renewal/platform-v1.schema.json",
+  "title": "AI 一角焕新 /api/v1 资源协议",
+  "description": "P0 资源协议聚合入口。AICard 的完整定义仍由 aicard-v1.schema.json 拥有。",
+  "oneOf": [
+    { "$ref": "#/$defs/MediaObject" },
+    { "$ref": "#/$defs/Asset" },
+    { "$ref": "#/$defs/SpaceVersion" },
+    { "$ref": "#/$defs/DesignRequest" },
+    { "$ref": "#/$defs/GenerationRun" },
+    { "$ref": "#/$defs/PlanVersionEnvelope" },
+    { "$ref": "#/$defs/Preference" },
+    { "$ref": "#/$defs/EventBatchResult" }
+  ],
+  "$defs": {
+    "SchemaVersion": {
+      "const": "1.0"
+    },
+    "Identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "Timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "BBox": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "y": { "type": "number", "minimum": 0, "maximum": 1 },
+        "width": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "height": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+      }
+    },
+    "MediaObject": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "media_id",
+        "media_type",
+        "width_px",
+        "height_px",
+        "byte_size",
+        "sanitized",
+        "retention_expires_at",
+        "access",
+        "created_at"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "media_id": { "$ref": "#/$defs/Identifier" },
+        "media_type": {
+          "enum": ["image/jpeg", "image/png", "image/webp"]
+        },
+        "width_px": { "type": "integer", "minimum": 1, "maximum": 20000 },
+        "height_px": { "type": "integer", "minimum": 1, "maximum": 20000 },
+        "byte_size": { "type": "integer", "minimum": 1 },
+        "sanitized": { "const": true },
+        "retention_expires_at": {
+          "oneOf": [
+            { "$ref": "#/$defs/Timestamp" },
+            { "type": "null" }
+          ]
+        },
+        "access": {
+          "type": "object",
+          "required": ["url", "expires_at"],
+          "properties": {
+            "url": { "type": "string", "pattern": "^/api/v1/media/" },
+            "expires_at": { "$ref": "#/$defs/Timestamp" }
+          }
+        },
+        "created_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "Asset": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "asset_id",
+        "asset_type",
+        "lifecycle",
+        "parse_state",
+        "name",
+        "tags",
+        "is_default",
+        "resource_version",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "asset_id": { "$ref": "#/$defs/Identifier" },
+        "asset_type": { "enum": ["space", "inspiration", "item"] },
+        "lifecycle": { "enum": ["temporary", "saved", "archived"] },
+        "parse_state": {
+          "enum": ["queued", "parsing", "needs_confirmation", "ready", "failed"]
+        },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "tags": {
+          "type": "array",
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "is_default": { "type": "boolean" },
+        "resource_version": { "type": "integer", "minimum": 1 },
+        "current_space_version_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/Identifier" },
+            { "type": "null" }
+          ]
+        },
+        "expires_at": {
+          "oneOf": [
+            { "$ref": "#/$defs/Timestamp" },
+            { "type": "null" }
+          ]
+        },
+        "created_at": { "$ref": "#/$defs/Timestamp" },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "SpaceVersion": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "space_version_id",
+        "space_asset_id",
+        "state",
+        "resource_version",
+        "parse_state",
+        "media_ids",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "space_version_id": { "$ref": "#/$defs/Identifier" },
+        "space_asset_id": { "$ref": "#/$defs/Identifier" },
+        "parent_space_version_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/Identifier" },
+            { "type": "null" }
+          ]
+        },
+        "state": { "enum": ["draft", "sealed"] },
+        "resource_version": { "type": "integer", "minimum": 1 },
+        "parse_state": {
+          "enum": ["queued", "parsing", "needs_confirmation", "ready", "failed"]
+        },
+        "media_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/Identifier" }
+        },
+        "reference_width_cm": {
+          "oneOf": [
+            { "type": "integer", "minimum": 40, "maximum": 400 },
+            { "type": "null" }
+          ]
+        },
+        "attributes": { "type": "object" },
+        "created_at": { "$ref": "#/$defs/Timestamp" },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "MissingField": {
+      "type": "object",
+      "required": ["path", "code", "message", "blocking"],
+      "properties": {
+        "path": { "type": "string" },
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "blocking": { "type": "boolean" }
+      }
+    },
+    "DesignRequest": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "design_request_id",
+        "validation_state",
+        "can_start_generation",
+        "missing_fields",
+        "input_snapshot_summary",
+        "created_at"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "design_request_id": { "$ref": "#/$defs/Identifier" },
+        "validation_state": { "enum": ["valid", "needs_input"] },
+        "can_start_generation": { "type": "boolean" },
+        "missing_fields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/MissingField" }
+        },
+        "input_snapshot_summary": {
+          "type": "object",
+          "required": [
+            "space_asset_id",
+            "space_version_id",
+            "reference_asset_ids",
+            "resolved_budget_cny",
+            "budget_source"
+          ],
+          "properties": {
+            "space_asset_id": { "$ref": "#/$defs/Identifier" },
+            "space_version_id": { "$ref": "#/$defs/Identifier" },
+            "reference_asset_ids": {
+              "type": "array",
+              "maxItems": 3,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/Identifier" }
+            },
+            "resolved_budget_cny": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000
+            },
+            "budget_source": {
+              "enum": ["request", "space_default", "preference", "system_default"]
+            }
+          }
+        },
+        "created_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "GenerationRun": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "generation_run_id",
+        "design_request_id",
+        "status",
+        "phase",
+        "phase_index",
+        "phase_total",
+        "source_mode",
+        "retryable",
+        "result",
+        "error",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "generation_run_id": { "$ref": "#/$defs/Identifier" },
+        "design_request_id": { "$ref": "#/$defs/Identifier" },
+        "status": {
+          "enum": ["queued", "running", "succeeded", "failed", "cancelled"]
+        },
+        "phase": {
+          "enum": [
+            "input_validation",
+            "space_analysis",
+            "reference_analysis",
+            "constraint_filter",
+            "matching",
+            "planning",
+            "rendering",
+            "validation",
+            "packaging"
+          ]
+        },
+        "phase_index": { "type": "integer", "minimum": 1, "maximum": 9 },
+        "phase_total": { "const": 9 },
+        "source_mode": {
+          "enum": [null, "demo", "live", "fallback"]
+        },
+        "retryable": { "type": "boolean" },
+        "result": { "type": ["object", "null"] },
+        "error": { "type": ["object", "null"] },
+        "created_at": { "$ref": "#/$defs/Timestamp" },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "PlanVersionEnvelope": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "plan_asset_id",
+        "plan_resource_version",
+        "plan_version"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "plan_asset_id": { "$ref": "#/$defs/Identifier" },
+        "plan_resource_version": { "type": "integer", "minimum": 1 },
+        "plan_version": {
+          "type": "object",
+          "required": [
+            "plan_version_id",
+            "version",
+            "parent_plan_version_id",
+            "design_request_id",
+            "generation_run_id",
+            "design_request_snapshot",
+            "redactions",
+            "aicard"
+          ],
+          "properties": {
+            "plan_version_id": { "$ref": "#/$defs/Identifier" },
+            "version": { "type": "integer", "minimum": 1 },
+            "parent_plan_version_id": {
+              "oneOf": [
+                { "$ref": "#/$defs/Identifier" },
+                { "type": "null" }
+              ]
+            },
+            "design_request_id": { "$ref": "#/$defs/Identifier" },
+            "generation_run_id": { "$ref": "#/$defs/Identifier" },
+            "design_request_snapshot": { "type": "object" },
+            "revision_action": { "type": ["object", "null"] },
+            "source_mode": { "enum": ["demo", "live", "fallback"] },
+            "redactions": { "type": "array", "items": { "type": "object" } },
+            "aicard": { "type": "object" }
+          }
+        }
+      }
+    },
+    "Preference": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "styles",
+        "colors",
+        "materials",
+        "default_budget_cny",
+        "stable_constraints",
+        "disliked_elements",
+        "personalization_enabled",
+        "resource_version"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "styles": { "type": "array", "items": { "type": "string" } },
+        "colors": { "type": "array", "items": { "type": "string" } },
+        "materials": { "type": "array", "items": { "type": "string" } },
+        "default_budget_cny": { "type": "integer", "minimum": 1 },
+        "stable_constraints": { "type": "array", "items": { "type": "string" } },
+        "disliked_elements": { "type": "array", "items": { "type": "string" } },
+        "personalization_enabled": { "type": "boolean" },
+        "resource_version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "EventBatchResult": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "batch_id",
+        "accepted_count",
+        "rejected_count",
+        "rejected"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "batch_id": { "$ref": "#/$defs/Identifier" },
+        "accepted_count": { "type": "integer", "minimum": 0 },
+        "rejected_count": { "type": "integer", "minimum": 0 },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["event_id", "code"],
+            "properties": {
+              "event_id": { "type": ["string", "null"] },
+              "code": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

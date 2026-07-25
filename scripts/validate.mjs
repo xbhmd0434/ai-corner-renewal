@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, extname, join, resolve } from "node:path";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -14,12 +14,38 @@ const required = [
   "apps/web/styles.css",
   "apps/web/app.js",
   "apps/web/data/demo-data.js",
+  "apps/web/accessory-studio.html",
+  "apps/web/accessory-studio.css",
+  "apps/web/accessory-studio.js",
+  "apps/web/data/accessory-demo-data.js",
+  "apps/web/assets/models/README.md",
   "apps/web/assets/desk-before.png",
   "apps/web/assets/desk-after-warm.png",
   "docs/product-spec.md",
   "docs/architecture.md",
   "docs/team-roles.md",
-  "docs/public-release.md"
+  "docs/public-release.md",
+  ".env.example",
+  "docs/backend-api.md",
+  "packages/contracts/schemas/aicard-v1.schema.json",
+  "packages/contracts/schemas/generate-request-v1.schema.json",
+  "packages/contracts/schemas/revise-request-v1.schema.json",
+  "packages/contracts/schemas/platform-v1.schema.json",
+  "packages/contracts/src/index.js",
+  "packages/validation/src/index.js",
+  "services/orchestrator/src/index.js",
+  "services/orchestrator/src/local-env.js",
+  "services/orchestrator/src/server.js",
+  "services/orchestrator/src/workflow.js",
+  "services/orchestrator/src/platform.js",
+  "services/orchestrator/src/repository.js",
+  "examples/aicard.demo.json",
+  "examples/requests/generate.main.json",
+  "examples/requests/revise.to-300.json",
+  "examples/run-backend-demo.mjs",
+  "scripts/check-agent-plan.mjs",
+  "scripts/run-hunyuan.mjs",
+  "scripts/generate-hunyuan-shape.py"
 ];
 
 const missing = required.filter((path) => !existsSync(join(root, path)));
@@ -27,14 +53,25 @@ if (missing.length) {
   throw new Error(`缺少必要文件：\n${missing.join("\n")}`);
 }
 
-const html = readFileSync(join(webRoot, "index.html"), "utf8");
-const localReferences = [...html.matchAll(/(?:src|href)="(\.\/[^"#?]+)"/g)].map((match) => match[1]);
-const brokenReferences = localReferences.filter((reference) => {
-  const target = resolve(dirname(join(webRoot, "index.html")), reference);
+const htmlFiles = ["index.html", "accessory-studio.html"];
+const localReferences = htmlFiles.flatMap((name) => {
+  const file = join(webRoot, name);
+  const html = readFileSync(file, "utf8");
+  return [...html.matchAll(/(?:src|href)="(\.\/[^"#?]+)"/g)].map((match) => ({
+    source: name,
+    reference: match[1]
+  }));
+});
+const brokenReferences = localReferences.filter(({ source, reference }) => {
+  const target = resolve(dirname(join(webRoot, source)), reference);
   return !existsSync(target);
 });
 if (brokenReferences.length) {
-  throw new Error(`HTML 存在无效本地引用：\n${brokenReferences.join("\n")}`);
+  throw new Error(
+    `HTML 存在无效本地引用：\n${brokenReferences
+      .map(({ source, reference }) => `${source}: ${reference}`)
+      .join("\n")}`
+  );
 }
 
 const ignoredDirectories = new Set([".git", "node_modules", "dist", "artifacts"]);
@@ -43,7 +80,15 @@ const secretPatterns = [
   ["GitHub token", /gh[oprsu]_[A-Za-z0-9_]{20,}/g],
   ["OpenAI-style key", /sk-[A-Za-z0-9_-]{20,}/g],
   ["Private key", /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g],
-  ["Committed API key", /OPENAI_API_KEY\s*=\s*[^\s<]+/g]
+  ["Committed API key", /OPENAI_API_KEY\s*=\s*[^\s<]+/g],
+  [
+    "Committed room analyzer key",
+    /^ROOM_ANALYZER_API_KEY[ \t]*=[ \t]*(?!$|<)([^\s#]{8,})/gm
+  ],
+  [
+    "Committed Agent Plan key",
+    /^AGENT_PLAN_API_KEY[ \t]*=[ \t]*(?!$|<)([^\s#]{8,})/gm
+  ]
 ];
 
 function walk(directory) {
@@ -56,7 +101,7 @@ function walk(directory) {
 
 const findings = [];
 for (const file of walk(root)) {
-  if (!textExtensions.has(extname(file))) continue;
+  if (!textExtensions.has(extname(file)) && basename(file) !== ".env.example") continue;
   const content = readFileSync(file, "utf8");
   for (const [label, pattern] of secretPatterns) {
     pattern.lastIndex = 0;

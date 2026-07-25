@@ -25,3 +25,12 @@ Thumbs.db
 artifacts/
 playwright-report/
 test-results/
+
+# User-derived / generated 3D binaries stay local or in private object storage.
+apps/web/assets/models/*.glb
+apps/web/assets/models/*.gltf
+!apps/web/assets/models/README.md
+
+# Runtime-private persistence (database, WAL and uploaded media).
+# Anchor this rule to the repository root; nested src/data directories are source.
+/data/

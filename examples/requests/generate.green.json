@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "room_input": {
+    "room_id": "demo-room-green",
+    "image": {
+      "reference": "./assets/desk-before.png",
+      "media_type": "image/png"
+    },
+    "reference_width_cm": 140,
+    "quality_hint": "clear"
+  },
+  "inspiration_input": {
+    "inspiration_id": "demo-inspiration-green",
+    "source_type": "demo",
+    "style_key": "green"
+  },
+  "constraints": {
+    "budget_cny": 700,
+    "hard_constraints": [
+      "no_drilling",
+      "keep_desk",
+      "keep_chair"
+    ],
+    "soft_preferences": [
+      "natural_materials"
+    ],
+    "goals": [
+      "ambient_lighting",
+      "add_greenery"
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "room_input": {
+    "room_id": "demo-room-001",
+    "image": {
+      "reference": "./assets/desk-before.png",
+      "media_type": "image/png"
+    },
+    "reference_width_cm": 120,
+    "quality_hint": "clear"
+  },
+  "inspiration_input": {
+    "inspiration_id": "demo-inspiration-warm",
+    "source_type": "demo",
+    "style_key": "warm"
+  },
+  "constraints": {
+    "budget_cny": 500,
+    "hard_constraints": [
+      "no_drilling",
+      "keep_desk",
+      "keep_chair"
+    ],
+    "soft_preferences": [
+      "clean_but_lived_in"
+    ],
+    "goals": [
+      "organization",
+      "ambient_lighting"
+    ]
+  },
+  "options": {
+    "analysis_mode": "demo",
+    "include_trace": true
+  }
+}
