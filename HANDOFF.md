@@ -5,8 +5,25 @@
 
 ## 1. 当前状态与成熟度
 
-当前源码版本为 `0.5.1`，事实源是本仓库；`apps/douyin-demo` 与后端已经进入
-同一源码树。仓库外同名副本不再是交付或协作事实源。
+当前源码版本为 `0.5.2`，事实源是本仓库；`apps/douyin-demo` 与后端已经进入
+同一源码树。原有 `ai-corner-renewal-mvp` 和“抖音展示 demo”仓库外副本已移除，
+不再存在第二套交付或协作事实源。
+
+当前产品目标已经切换到仓库上级目录
+`一角焕新_新产品流程与Agent方案_V2.md` 的 V2.1：以「搬进我家」卡片为中枢，
+主输入收敛为一个已确认的组件或风格/氛围意图加一个目标场景，效果图生成和相关
+设计独立并发，结果通过私人保存/主动发布和「实施」整套清单形成内容与商业闭环。
+前后端下一阶段必须共同遵守 `docs/v2-parallel-development-contract.md`；独立任务
+分别见 `docs/v2-frontend-tasks.md` 和 `docs/v2-backend-tasks.md`。这些文档区分了
+当前实现和目标接口：未进入 Route Manifest、OpenAPI、Schema、测试及健康能力的
+意图确认、RelatedDesignRun、Publication 和 CartIntent 仍是待实施目标。
+
+当前工作树包含大量尚未提交的前后端 Product Discovery 改动，旧 Commit
+`eb71e849c97aecd8532cfbe40d52123f863cc803` 不能代表完整现状。拆成前后端独立
+worktree 前，必须先形成一个双方可检出的基线 Commit 并记录 SHA；否则新建分支会
+丢失未跟踪文件和未提交实现。并行期间前端只修改 `apps/douyin-demo/**`，后端/契约
+线维护 `services/**`、`packages/contracts/**`、canonical fixtures 和 OpenAPI，
+共享协议变化必须先独立提交，再由双方 rebase。
 
 后端下一阶段的产品优先级、第一链路完成定义以及 Agent / 确定性代码责任边界，
 统一以 `docs/backend-product-handoff.md` 为准。正式 GenerationRun 应从固定方案
@@ -15,12 +32,35 @@ RenderPromptSpec → EvaluationResult`，同时保留现有 `/api/v1` 资产、�
 方案版本接口。家具与建筑保持不能只依赖 Prompt，必须增加保护区域或严格的生成后
 拒绝机制；商品、预算、状态、来源和发布门禁始终由代码拥有。
 
+下一阶段产品重构蓝图见
+`docs/raw-to-refined-rearchitecture-plan.md`。该文档把“毛坯 → 精装”定义为
+局部空间从未经整理和搭配的原貌到完整软装结果，不扩张为硬装、施工或整屋承诺；
+建议默认组合为 `transformation_strength=high` 与
+`visual_density=restrained`，以“变化明显但新增克制”解决强反差与不过度繁复之间
+的张力。计划保留现有 Asset/SpaceVersion/DesignRequest/GenerationRun/
+PlanVersion 底座与 AICard v1 兼容视图，新增 DesignRequest/GenerationRun `1.1`
+和 PlanVersion `renewal_manifest`，并把 Prompt Lab 的动态规划能力迁入持久正式
+链路。以上均为待实施目标；当前运行行为和 API 成熟度仍以本节下表及“仍未实现”
+清单为准。
+
+焕新结果之后的抖音购买承接已冻结为独立 Draft 协议，见
+`docs/product-discovery-api-contract.md`；后端已完成第一阶段：四个
+`/api/v1/product-discovery-*` 接口、`ProductDiscoveryRun` Repository、
+`ProductDiscoveryService` 六阶段状态机、`ProductDiscoveryProvider` Port、
+plan-grounded fallback、Demo Catalog grounding 与共享 fixture/协议测试。
+`GET /api/health` 现在如实标注 `features.product_discovery=true`、
+`features.product_discovery_live_agent=false` 与
+`features.douyin_commerce_catalog=false`：图像 Agent Prompt 与真实抖音商品
+目录/交易能力仍未接入，本轮通过 plan-grounded fallback + Demo Catalog 走通
+「合格 after 图 → ProductDiscoveryRun → 前端购买承接」完整链路，不得描述
+成实时图像识别或真实抖音交易。
+
 | 运行面 | 成熟度 | 当前事实 |
 | --- | --- | --- |
 | `apps/web` | 运行时 Live 集成原型 | 离线样例/灵感读取 `REMIX_DATA`；完整流程调用 `health/generate/revise` 并展示 LIVE/FALLBACK/DEMO |
 | `apps/web/accessory-studio.html` | 运行时静态 3D MVP | Three.js 双模型试搭；本机混元 GLB、程序化降级、挂点/位姿/多视角、浏览器保存恢复 |
 | `apps/web/prompt-lab.html` | 两阶段布置评测原型 | 上传并压缩家居单图、编辑规划 Prompt，后端先规划再调 Seedream；并排预览和下载，实验数据不持久化 |
-| `apps/douyin-demo/douyin-static-demo/renewal.html` | 默认可持久联调集成原型 | 单核心卡片承载灵感、空间、约束、生成进度与结果；资产/历史为底部抽屉；上传、封存、运行、方案与调整已接 `/api/v1` |
+| `apps/douyin-demo/douyin-static-demo/renewal.html` | 默认可持久联调集成原型 | 单核心卡片承载灵感、空间、约束、生成进度与结果；结果后已接“把这一角搬回家”商品发现与抖音购买/搜索承接；资产/历史为底部抽屉 |
 | `/api/generate`、`/api/revise` | 向后兼容 | 请求和 AICard v1 响应不破坏；内部结果已持久化 |
 | `/api/v1` | P0 可持久联调版 | 私有媒体、资产、任务、运行、方案版本、偏好和事件可用 |
 | 真实模型 | Agent Plan + Seedream + 本机 Hunyuan shape 已验收 | 空间识别、主方案 image-to-image 与 Hunyuan3D-2mini shape-only GLB；候选方案/预算调整不重复生图，3D 纹理未接 |
@@ -41,6 +81,21 @@ RenderPromptSpec → EvaluationResult`，同时保留现有 `/api/v1` 资产、�
 - 旧 `generate → revise(300)` 继续返回 486 元与 240 元结果，并写入同一个持久
   PlanAsset 的两个 PlanVersion。
 - AICard v1、旧请求 Schema、`platform-v1.schema.json` 和结构化错误。
+- 25 个 `/api/v1` 操作使用 `packages/contracts/src/v1-route-manifest.js` 作为
+  方法、路径、幂等和 multipart 事实源；`docs/openapi.yaml` 与
+  `GET /api/openapi.json` 提供同源 OpenAPI 3.1，GenerationRun 额外投影
+  `progress` 和结构化 `needs_input`。
+- 焕新结果商品发现后置工作流：`ProductDiscoveryService` 六阶段状态机
+  （`queued → analyzing_render → building_queries → retrieving_products →
+  grounding_matches → packaging → succeeded | failed | cancelled`）、
+  `ProductDiscoveryRun` Repository 持久化与重启恢复、`UnconfiguredProductDiscoveryProvider`
+  与 `PlanGroundedDiscoveryProvider` 两个内建 Provider、复用
+  `demo-catalog.js` 的 `DemoCommerceCatalogAdapter` 与确定性 Grounding
+  校验器；四个 `/api/v1` 接口（`createProductDiscoveryRun`、
+  `listProductDiscoveryRuns`、`getProductDiscoveryRun`、
+  `cancelProductDiscoveryRun`）与 `platform-v1.schema.json` 中
+  `ProductDiscoveryRun`/`GroundedProductMatch`/`DiscoveredSubject`/`ProductDiscoveryProvenance`
+  同源，通过 `packages/contracts/src/openapi.js` 自动生成 OpenAPI。
 - Agent Plan 专属 OpenAI 兼容网关 RoomProfile 适配器、固定官方 Base URL、低消耗
   鉴权脚本和同协议 fallback。
 - Seedream 5.0 Lite 图片编辑适配器：只为首次生成的主方案调用一次，输入原图、
@@ -74,7 +129,7 @@ RenderPromptSpec → EvaluationResult`，同时保留现有 `/api/v1` 资产、�
   `D:\LittleBlueWhale3D\.venv-hunyuan3d` 与离线缓存，不污染项目通用 Python；
   已完成 3.8 GB 权重装载和生成命令 `--dry-run` 验收。
 - Agent Plan 自由文本可见标签到稳定空间/区域代码的保守归一化。
-- 73 项后端/协议/3D 自动测试、54 项抖音前端测试、真实 Seedream 闭环检查与
+- 抖音前端 67 项自动测试、后端/协议/3D 自动测试、真实 Seedream 闭环检查与
   一键可读后端示例。
 - 仓内抖音前端已提供同源静态/API 代理和一键启动；前端正式主链路为
   `video context 或 media upload → Asset → sealed SpaceVersion → DesignRequest
@@ -82,6 +137,14 @@ RenderPromptSpec → EvaluationResult`，同时保留现有 `/api/v1` 资产、�
 - `renewal.html` 已从多 hash 页面重构为 `IDLE / GENERATING / RESULT_READY /
   ADJUSTING` 单页状态流；资产和历史不再抢占主流程，旧 hash 由 `mode.js` 兼容
   解析。结果可创建降预算/换风格的新版本，不覆盖父 PlanVersion。
+- `renewal.html` 的 Product Discovery 前端已经按共享 `1.0` 协议落地：独立 Client、
+  DTO Adapter、PlanVersion/context Store 隔离、刷新 list/get 恢复、800/1500ms
+  可见性轮询、取消/重试、完整状态区和 `shop-the-look` 商品票据。合法 bbox 才显示
+  可键盘操作的数字热点；bbox=null 不显示。四类 CommerceAction 均不根据
+  product_id 拼接链接，Demo/Fallback/Live 按 image analysis 与 catalog provenance
+  分开标注。
+- 后端能力未声明或请求失败时不会静默切 Demo；用户必须点击“使用本地离线 Demo”
+  才读取共享 fixture，页面持续显示“本地离线 Demo”，且不发送商品事件。
 - 抖音推荐流新增独立 `visual-search/**` 体验：手动暂停后定帧、框选、候选选择、
   轻量 2D 资产生成和入库完成页。后端未声明视觉搜索能力时使用固定本地候选并如实
   标注；用户确认后优先调用现有 AssetService 创建 saved ItemAsset。
@@ -101,6 +164,12 @@ RenderPromptSpec → EvaluationResult`，同时保留现有 `/api/v1` 资产、�
   物理适配结论，尚无厘米级尺寸校准、软包形变、碰撞、挂件承重或 AR。
 - 没有真实账号鉴权、限流、公网上传滥用防护、多租户或多人家庭。
 - 没有真实商品、库存、交易、教程或抖音内部接口。
+- 没有 PlanVersion after 图后置真实图像识别 Agent（Prompt 正文由独立负责人
+  实现），也没有真实抖音商品目录、库存或交易接入。本轮已提供接口、Provider
+  Port、plan-grounded fallback 与 Demo Catalog grounding，`features.product_discovery=true`；
+  `features.product_discovery_live_agent` 与 `features.douyin_commerce_catalog`
+  均为 `false`，只有真实图像 Agent 和抖音目录接入并通过健康检查后才能置为
+  `true`。
 - 本机 `.env.local` 已配置 Agent Plan 个人版专属 Key。2026-07-25 运行
   `npm.cmd run check:agent-plan` 成功连接官方专属网关，模型
   `doubao-seed-2-0-lite-260215` 返回有效响应，共消耗 83 tokens；Key 本身不得写入
@@ -140,7 +209,28 @@ MediaObject
           → PlanAsset(稳定谱系)
             → PlanVersion v1 → v2 → ...
               → AICard v1(前端 DTO 快照)
+              → ProductDiscoveryRun(独立后置运行)
+                → DiscoveredSubject[] → GroundedProductMatch[] → CommerceAction
 ```
+
+V2.1 目标在这条底座上增加独立对象，不把新语义继续塞进 AICard：
+
+```text
+InspirationAsset.intent_analysis
+  → confirmed_intent(component | style)
+    + sealed SpaceVersion
+      → immutable DesignRequest
+        ├→ GenerationRun → PlanVersion → PlanAsset(draft | saved)
+        │                               ├→ Publication(indexing | published | withdrawn)
+        │                               └→ ProductDiscoveryRun → implementation_list
+        │                                                         → CartIntent
+        └→ RelatedDesignRun → Douyin content + published Publication
+```
+
+上述 `confirmed_intent`、RelatedDesignRun、Publication、implementation_list v2 和
+CartIntent 均是 `docs/v2-parallel-development-contract.md` 中的待实现目标；只有
+PlanAsset 保存和 ProductDiscoveryRun 底座当前已实现。保存与发布必须分开，相关
+设计与生成必须独立运行，场景切换必须创建新 DesignRequest。
 
 视频框选新增目标对象链：
 
@@ -214,6 +304,16 @@ PromptTemplate（稳定版本 layout-agent-v1.2.0）
 - `generation_run_id`：一次工作流执行；`AICard.request_id` 与它相等。
 - `plan_asset_id`：方案版本谱系。
 - `plan_version_id`：不可变结果版本；`AICard.plan.plan_id` 与它相等。
+- `product_discovery_run_id`：针对一个不可变 PlanVersion after 图的商品发现尝试；
+  retry/refresh 创建新 run，不覆盖旧 run。
+- `subject_id`：效果图中一个可购买元素；只有服务端返回的合法 bbox 可形成前端热点。
+- `match_id`：经目录 grounding 后可展示的商品匹配；商品事实和 CommerceAction
+  始终来自服务端响应。
+- `related_design_run_id`：V2.1 目标中针对一个 DesignRequest 的相关内容召回尝试；
+  不与 GenerationRun 共用状态。
+- `publication_id`：V2.1 目标中用户主动公开的不可变 PlanVersion 快照；不是
+  PlanAsset 的布尔字段。
+- `cart_intent_id`：V2.1 目标中的短时宿主交接身份；不是订单或购买成功凭证。
 - `baseModelId`：试搭基础包模型的稳定引用；当前为前端 fixture ID。
 - `attachmentModelId`：挂件模型的稳定引用；当前为前端 fixture ID。
 - `anchorId`：包模型局部坐标中的推荐连接点；自由拖动后当前值为 `free`。
@@ -254,6 +354,21 @@ draft
   → sealed + ready（终态）
 ```
 
+V2.1 核心卡片采用正交状态，不再用单一页面枚举覆盖全部能力：
+
+```text
+entry: recognizing → needs_confirmation → confirmed
+generation: not_started → active → ready | failed | cancelled
+related: not_started → active → ready | partial | empty | failed
+publication: not_started → saving → saved → publishing → published | failed
+implementation: closed → loading → ready | partial | empty | failed
+```
+
+用户切换场景时，前端增加 context epoch，用同一 confirmed InspirationAsset 和新
+SpaceVersion 创建新 DesignRequest，并行启动 GenerationRun 与 RelatedDesignRun。
+旧请求可保留为历史，但旧响应必须通过 `design_request_id + epoch + run_id` 三重
+校验后才能写 UI。
+
 - sealed 后修改图片、参考尺寸或检测物必须创建新 SpaceVersion。
 - Asset 名称、默认预算、长期约束和是否默认仍可独立 PATCH。
 - DesignRequest 只能引用 sealed SpaceVersion。
@@ -278,6 +393,22 @@ queued
 - succeeded 后不能重复执行；failed/cancelled 可用新 run 重试。
 - `AICard.status=needs_input` 是成功业务结果，不是 500。
 - 模型失败后成功使用 Demo 降级时 run 仍 succeeded，`source_mode=fallback`。
+
+商品发现：
+
+```text
+queued → analyzing_render → building_queries → retrieving_products
+→ grounding_matches → packaging
+→ succeeded(ready | partial | empty) | failed | cancelled
+```
+
+- 前端展示状态由唯一 Adapter 映射为 `not_started | unavailable | queued |
+  analyzing | ready | partial | empty | failed | cancelled`；组件不重复解释协议。
+- 前端进入结果先看 health feature，再 list 最新 run；active 恢复轮询，成功 get 完整
+  run，无历史才 POST initial。PlanVersion 切换和同版本 retry/refresh 都创建新
+  contextId，旧响应写 Store 前会被拒绝。
+- 页面隐藏暂停轮询，恢复可见后立即 GET；连续网络错误停止等待用户重新连接，不能
+  自动创建第二个 run。AbortController 不等于后端 cancel。
 
 方案调整：
 
@@ -313,7 +444,8 @@ dirty preview → restore → last saved
 ### 当前三人协作边界
 
 当前迭代按产品、前端、后端三条线并行，完整执行规则见
-`docs/team-roles.md`：
+`docs/team-roles.md`；V2.1 的目录级边界和契约变更顺序以
+`docs/v2-parallel-development-contract.md` 为准：
 
 - 产品拥有问题优先级、用户承诺和验收口径；每轮最多冻结 3 个 P0，不直接把想法
   当成实现方案。
@@ -327,6 +459,11 @@ dirty preview → restore → last saved
 共同阶段门。纯 Prompt 内部改动若不改变协议可以独立合并，但必须提供固定案例的
 对比评测；需要新增字段时先提交单独 Contract PR。
 
+V2.1 并行期前端只修改 `apps/douyin-demo/**`，后端/契约线维护 `services/**`、
+`packages/contracts/**`、canonical fixtures 和生成 OpenAPI。根依赖、lockfile、
+本文和共享协议由集成负责人收口，避免两个分支同时修改。字段变更必须先形成
+“协议 + Schema + fixture”独立 Commit，双方 rebase 后再改实现。
+
 ### `packages/contracts`
 
 - `schemas/aicard-v1.schema.json`：前端结果 DTO。
@@ -335,6 +472,10 @@ dirty preview → restore → last saved
 - `schemas/platform-v1.schema.json`：Media、Asset、SpaceVersion、DesignRequest、
   GenerationRun、PlanVersionEnvelope、Preference、EventBatchResult 聚合协议。
 - `src/index.js`：旧协议零依赖运行时断言。
+- `src/v1-route-manifest.js`：25 个 `/api/v1` 操作的方法、路径、幂等和请求类型
+  事实源；服务端路由和 OpenAPI 生成器共同消费。
+- `src/openapi.js`：从路由清单与 JSON Schema 组装 OpenAPI 3.1；生成文件由
+  `scripts/generate-openapi.mjs` 写入 `docs/openapi.yaml`。
 
 新增 `/api/v1` 字段时先改 Schema、fixture/测试和交接，再改服务端与前端。
 
@@ -404,6 +545,12 @@ dirty preview → restore → last saved
 - `apps/douyin-demo/douyin-static-demo/renewal/components/**`：单核心界面的灵感、
   空间、约束、结果、资产抽屉和历史抽屉；`renewal/mode.js` 只负责启动入口兼容，
   `renewal/main.js` 负责状态和网络协调。
+- `apps/douyin-demo/douyin-static-demo/api/product-discovery-client.js`：四条冻结
+  Product Discovery 路由、默认 list 参数、创建幂等与显式共享 fixture 读取。
+- `apps/douyin-demo/douyin-static-demo/adapters/product-discovery-view-model.js`：
+  唯一协议映射、来源文案、bbox/HTTPS/CommerceAction 安全归一化。
+- `apps/douyin-demo/douyin-static-demo/renewal/components/shop-the-look.js`：
+  “把这一角搬回家”完整状态、数字热点、横向票据与动作装配，不拥有商品事实。
 - `apps/douyin-demo/douyin-static-demo/visual-search/**`：视频暂停框选、查询状态、
   候选选择、轻量建模与完成页；`api/visual-search-client.js` 负责能力发现和拟议
   `/api/v1/visual-search/**`，未启用时不上传查询图。
@@ -418,6 +565,7 @@ dirty preview → restore → last saved
 
 ```text
 GET  /api/health
+GET  /api/openapi.json
 POST /api/generate
 POST /api/revise
 ```
@@ -448,6 +596,9 @@ GET/PATCH        /api/v1/plans...
 POST             /api/v1/plans/{plan}/revisions
 GET/PATCH        /api/v1/me/preferences
 POST             /api/v1/events/batch
+POST/GET         /api/v1/plans/{plan_asset_id}/versions/{plan_version_id}/product-discovery-runs
+GET              /api/v1/product-discovery-runs/{product_discovery_run_id}
+POST             /api/v1/product-discovery-runs/{product_discovery_run_id}/cancel
 ```
 
 Web 静态服务另有一个只读本机诊断端点：
@@ -465,6 +616,13 @@ Orchestrator `/api/v1` 契约。生产模型生成端点尚未实现。
 `docs/visual-search-api.md`。后端实现前，`/api/v1/visual-search/**` 不属于已实现
 接口列表。
 
+V2.1 目标接口与当前接口的复用/新增边界统一见
+`docs/v2-parallel-development-contract.md`。待新增的是意图确认、
+RelatedDesignRun、Publication 和 CartIntent；它们进入 Route Manifest、Schema、
+OpenAPI、自动测试和 `/api/health.features` 之前均不得调用或描述为已实现。
+ProductDiscoveryRun 继续作为“实施”底座，但目标交互改为用户点击后按需创建，
+且需新增由后端生成的 `implementation_list` 来源排序投影。
+
 通用契约：
 
 - CORS：`GET, POST, PATCH, DELETE, OPTIONS`。
@@ -477,6 +635,10 @@ Orchestrator `/api/v1` 契约。生产模型生成端点尚未实现。
   access URL。
 - Asset、draft SpaceVersion、PlanAsset、Preference PATCH 使用 `resource_version`。
 - 错误统一为 `schema_version + request_id + error`，未知 5xx 不返回堆栈。
+- GenerationRun 统一返回 0～100 的 `progress` 和对象/null 形态的
+  `needs_input`；待补对象从终态 AICard `follow_up` 投影，并明确是否已有预览。
+- `npm.cmd run openapi:generate` 更新可导入契约；`openapi:check` 及根检查验证生成
+  文件、25 个操作、幂等 Header、Schema 引用和示例不漂移。
 
 旧接口内部持久化：
 
@@ -542,6 +704,11 @@ Three.js 是当前唯一前端运行依赖，固定为 `three@0.180.0`。`serve.
 - 日志只记录 HTTP request ID、方法、无 query 路径、状态、来源和耗时。
 - 原图、Base64、token、Cookie、Authorization、用户自由文本和供应商正文不得进入
   日志、事件、Trace 或 AICard。
+- 浏览器不分析 after 图，也不持久化 ProductDiscoveryRun 正文、search query、
+  bbox、商品 URL 或短时媒体地址；刷新恢复只保存 plan/run 业务 ID。
+- 商品发现事件仅允许共享协议列出的稳定 ID、`commerce_action_type` 与
+  `source_type`，不得发送 query、bbox、URL、自由文本或 after 图；本地离线 Demo
+  不发送事件。
 - Prompt 实验台的请求图片、编辑 Prompt 和结果 Base64 也不得进入日志、事件、
   Trace、AICard、SQLite 或 `data/private-media`；服务端只记录无 query 的固定路由、
   状态、来源和耗时。结果通过同步 JSON 返回后由浏览器持有。
@@ -582,7 +749,7 @@ npm.cmd run demo:backend
 当前预期：
 
 ```text
-127 项唯一自动测试（73 项后端/协议/3D + 54 项抖音前端）
+163 项唯一自动测试（96 项后端/协议/3D + 67 项抖音前端）
 生成：原木呼吸感，6 件，¥486
 调整：高效收纳版 v2，4 件，¥240
 持久方案历史：1 个谱系、2 个版本
@@ -677,11 +844,13 @@ npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\mo
 
 ## 9. 自动测试覆盖
 
-`npm.cmd run check` 当前覆盖 127 项唯一自动测试：73 项后端/协议/3D 测试与
-54 项抖音前端 Builder、Adapter、视觉框选和状态语义测试。根检查随后调用前端专用检查，
+`npm.cmd run check` 当前覆盖 163 项唯一自动测试：96 项后端/协议/3D 测试与
+67 项抖音前端 Builder、Adapter、视觉框选、商品发现和状态语义测试。根检查随后调用前端专用检查，
 额外完成全部前端脚本语法校验。
 
 - 4 个 JSON Schema 可解析与内部 `$ref`。
+- OpenAPI 3.1 覆盖共享清单中的 25 个 `/api/v1` 操作，幂等 Header 和所有本地
+  `$ref` 可解析，生成文件与路由/Schema 一致。
 - 旧 45 项 AICard、规则、Live/Fallback、HTTP 和内存 Store 回归。
 - Agent Plan 官方主机约束、模型名配置、本地环境优先级、OpenAI 兼容多模态请求、
   稳定 `room_id` 所有权、自由标签到受控区域代码的归一化、本地图片拒绝、401
@@ -697,9 +866,14 @@ npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\mo
 - Demo seed、创建幂等重放和 key 冲突。
 - 私有 PNG 上传、签名访问、空间解析、draft 封存和删除级联。
 - DesignRequest、九阶段 run、首次方案、300→200 预算调整。
+- GenerationRun queued 进度、成功 100%、结构化低预算 `needs_input` 与无空方案
+  谱系语义。
 - 600 元方案换成 `green` 风格、新 PlanVersion 与空间硬约束继承。
 - PlanVersion ID/AICard ID 一致、父版本不变、总价不超预算。
 - SQLite 关闭重开后方案谱系与两个版本可读。
+- Product Discovery 四路 Client、共享 fixture Adapter、ready/partial/empty/failed/
+  unavailable/cancelled、四类 CommerceAction、bbox 热点边界和 PlanVersion/context
+  迟到响应隔离。
 - 3D Composition 默认结构只保存双资产引用和变换，不含合并网格。
 - 3D 资产/挂点稳定 ID 唯一、默认视角存在、推荐挂点坐标处于编辑范围。
 
@@ -746,7 +920,8 @@ npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\mo
 
 仓内抖音前端另有：
 
-- `npm.cmd run check:douyin`：54 项 Builder、Asset/Plan Adapter、视觉框选、启动模式和状态语义测试；
+- `npm.cmd run check:douyin`：67 项 Builder、Asset/Plan/Product Discovery Adapter、
+  四路 Client、商品状态/热点/动作、Store 隔离、视觉框选、启动模式和状态语义测试；
 - `npm.cmd run check:douyin-integration`：用临时 SQLite 跑通真实图片上传、资产解析封存、
   DesignRequest、GenerationRun 和 PlanVersion，不读写本目录正式 `data`；
 - 430×900 Chrome 浏览器实测视频入口、真实 PNG、私有媒体、生成和方案详情均无
@@ -758,20 +933,28 @@ npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\mo
   建模和完成状态；页面无横向溢出或控制台错误，流程关闭后会清理外层主题 class。
 - 根目录 `npm.cmd start` 单仓烟雾测试已验证实际自动选择端口后，推荐流、健康
   代理和 `/vendor/three/` 均返回 200。
+- 商品发现购买承接已在 390×844、430×900、1440×900 Chrome 验收：三档均无
+  横向溢出和控制台错误；真实 plan-grounded + Demo Catalog partial 结果显示
+  “方案关联 · Demo 商品”，bbox=null 无热点。共享 ready fixture 注入合法 bbox 后
+  显示可键盘聚焦的数字热点并能把焦点送到对应商品元素；reduced motion 生效；
+  search_query 可复制且 Toast 正常。
+- 成功 ProductDiscoveryRun 刷新只执行 list + get，没有重复 POST；health feature=false
+  时不会请求未实现接口或自动切 Demo，用户点击后才进入“本地离线 Demo”。
 
 ## 10. 已知限制与下一步
 
-当前一轮优先按 `docs/team-roles.md` 执行：
+当前一轮优先按 V2.1 并行协议执行：
 
-1. 产品在同一运行 Commit 上完成主链路走查，只冻结最多 3 个 P0，写明证据、影响
-   状态、范围外事项和验收标准。
-2. 前端基于状态矩阵实现已确认的 P0，保持 Adapter 边界，覆盖 390px/1440px、
-   Live/Fallback/Demo、失败和刷新恢复。
-3. 后端把生图指令收敛为单一可版本化 Prompt Builder，先以 fixture/报告建立
-   `PromptVersion`、`EvaluationCase`、`EvaluationRun` 概念，不急于扩张数据库；
-   至少覆盖 8 个正常/约束/失败案例。
-4. 三人最后在同一 `main` Commit 上回归生成、`needs_input`、Provider 失败、
-   预算/风格调整、重启恢复和 3D 试搭，再记录候选 Commit 与回滚点。
+1. 先把当前未提交 Product Discovery 前后端纳入一个双方可检出的基线 Commit，
+   记录 SHA；没有这一步不创建独立 worktree。
+2. 契约/后端线先完成 `docs/v2-backend-tasks.md` 的 BE-00：Route Manifest、
+   Schema、OpenAPI 和 canonical fixtures；前端只消费这个契约 Commit。
+3. 前端按 `docs/v2-frontend-tasks.md` 实现意图确认、默认收起的“我的”、双 run
+   正交状态、保存/发布和按需“实施”；不再把预算与补充约束放入 V2.1 P0 主界面。
+4. 后端实现 confirmed intent、RelatedDesignRun、Publication、
+   `implementation_list` 和 CartIntent；生成与相关设计独立，保存与发布分离。
+5. 两线最后在同一候选 Commit 回归组件/风格、示例/真实场景、换场景迟到响应、
+   发布前后召回、实施排序、购物车不可用、Provider 失败和重启恢复，并记录回滚点。
 
 3D 试搭下一阶段（继续本方向时按顺序）：
 

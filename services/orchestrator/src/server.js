@@ -1,8 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
+import { createOpenApiDocument } from "../../../packages/contracts/src/openapi.js";
 import { ApiError } from "./errors.js";
+import { v1Route } from "../../../packages/contracts/src/v1-route-manifest.js";
 
 const makeRequestId = () => `http-request-${randomUUID()}`;
+const OPENAPI_DOCUMENT = createOpenApiDocument();
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9._:-]{8,200}$/;
 const LOG_ROUTE_TEMPLATES = [
   [/^\/api\/v1\/media\/[^/]+\/content$/, "/api/v1/media/{media_id}/content"],
@@ -44,7 +47,19 @@ const LOG_ROUTE_TEMPLATES = [
     /^\/api\/v1\/plans\/[^/]+\/revisions$/,
     "/api/v1/plans/{plan_asset_id}/revisions"
   ],
-  [/^\/api\/v1\/plans\/[^/]+$/, "/api/v1/plans/{plan_asset_id}"]
+  [/^\/api\/v1\/plans\/[^/]+$/, "/api/v1/plans/{plan_asset_id}"],
+  [
+    /^\/api\/v1\/plans\/[^/]+\/versions\/[^/]+\/product-discovery-runs$/,
+    "/api/v1/plans/{plan_asset_id}/versions/{plan_version_id}/product-discovery-runs"
+  ],
+  [
+    /^\/api\/v1\/product-discovery-runs\/[^/]+$/,
+    "/api/v1/product-discovery-runs/{product_discovery_run_id}"
+  ],
+  [
+    /^\/api\/v1\/product-discovery-runs\/[^/]+\/cancel$/,
+    "/api/v1/product-discovery-runs/{product_discovery_run_id}/cancel"
+  ]
 ];
 
 function logRoute(pathname) {
@@ -52,6 +67,17 @@ function logRoute(pathname) {
     LOG_ROUTE_TEMPLATES.find(([pattern]) => pattern.test(pathname))?.[1] ||
     pathname
   );
+}
+
+function methodNotAllowed(allowedMethods) {
+  const error = new ApiError(
+    "method_not_allowed",
+    "该接口不支持当前 HTTP 方法",
+    405,
+    { allowed_methods: [...allowedMethods] }
+  );
+  error.allowedMethods = [...allowedMethods];
+  return error;
 }
 
 function setSecurityHeaders(response) {
@@ -303,6 +329,10 @@ function errorPayload(error, requestId) {
   const statusCode = isPublic ? error.statusCode : 500;
   return {
     statusCode,
+    headers:
+      statusCode === 405 && Array.isArray(error.allowedMethods)
+        ? { Allow: [...new Set(error.allowedMethods)].sort().join(", ") }
+        : {},
     body: {
       schema_version: "1.0",
       request_id: requestId,
@@ -351,16 +381,12 @@ async function dispatchV1({
   const method = request.method || "GET";
   const routes = [
     {
-      method: "POST",
-      template: "/api/v1/media",
+      ...v1Route("createMedia"),
       regex: /^\/api\/v1\/media$/,
-      idempotent: true,
-      multipart: true,
       run: ({ body }) => response(201, platform.mediaService.create(actorId, body))
     },
     {
-      method: "GET",
-      template: "/api/v1/media/{media_id}/content",
+      ...v1Route("getMediaContent"),
       regex: /^\/api\/v1\/media\/([^/]+)\/content$/,
       run: ({ params }) => ({
         media: platform.mediaService.getContent(
@@ -371,8 +397,7 @@ async function dispatchV1({
       })
     },
     {
-      method: "DELETE",
-      template: "/api/v1/media/{media_id}",
+      ...v1Route("deleteMedia"),
       regex: /^\/api\/v1\/media\/([^/]+)$/,
       run: ({ params }) => {
         platform.mediaService.deleteUnbound(actorId, decodeURIComponent(params[0]));
@@ -380,18 +405,15 @@ async function dispatchV1({
       }
     },
     {
-      method: "POST",
-      template: "/api/v1/assets",
+      ...v1Route("createAsset"),
       regex: /^\/api\/v1\/assets$/,
-      idempotent: true,
       run: ({ body }) => {
         const result = platform.assetService.create(actorId, body);
         return response(result.status, result.value, etag(result.value));
       }
     },
     {
-      method: "GET",
-      template: "/api/v1/assets",
+      ...v1Route("listAssets"),
       regex: /^\/api\/v1\/assets$/,
       run: () =>
         response(
@@ -403,10 +425,8 @@ async function dispatchV1({
         )
     },
     {
-      method: "POST",
-      template: "/api/v1/assets/{asset_id}/parse-runs",
+      ...v1Route("createAssetParseRun"),
       regex: /^\/api\/v1\/assets\/([^/]+)\/parse-runs$/,
-      idempotent: true,
       run: ({ params, body }) =>
         response(
           202,
@@ -418,10 +438,8 @@ async function dispatchV1({
         )
     },
     {
-      method: "POST",
-      template: "/api/v1/assets/{asset_id}/versions",
+      ...v1Route("createSpaceVersion"),
       regex: /^\/api\/v1\/assets\/([^/]+)\/versions$/,
-      idempotent: true,
       run: ({ params, body }) =>
         response(
           201,
@@ -433,8 +451,7 @@ async function dispatchV1({
         )
     },
     {
-      method: "GET",
-      template: "/api/v1/assets/{asset_id}/versions",
+      ...v1Route("listSpaceVersions"),
       regex: /^\/api\/v1\/assets\/([^/]+)\/versions$/,
       run: ({ params }) =>
         response(
@@ -446,8 +463,7 @@ async function dispatchV1({
         )
     },
     {
-      method: "PATCH",
-      template: "/api/v1/assets/{asset_id}/versions/{space_version_id}",
+      ...v1Route("sealSpaceVersion"),
       regex: /^\/api\/v1\/assets\/([^/]+)\/versions\/([^/]+)$/,
       run: ({ params, body }) => {
         const value = platform.assetService.patchSpaceVersion(
@@ -460,8 +476,7 @@ async function dispatchV1({
       }
     },
     {
-      method: "GET",
-      template: "/api/v1/assets/{asset_id}",
+      ...v1Route("getAsset"),
       regex: /^\/api\/v1\/assets\/([^/]+)$/,
       run: ({ params }) => {
         const value = platform.assetService.detail(
@@ -472,8 +487,7 @@ async function dispatchV1({
       }
     },
     {
-      method: "PATCH",
-      template: "/api/v1/assets/{asset_id}",
+      ...v1Route("updateAsset"),
       regex: /^\/api\/v1\/assets\/([^/]+)$/,
       run: ({ params, body }) => {
         const value = platform.assetService.patch(
@@ -485,8 +499,7 @@ async function dispatchV1({
       }
     },
     {
-      method: "DELETE",
-      template: "/api/v1/assets/{asset_id}",
+      ...v1Route("deleteAsset"),
       regex: /^\/api\/v1\/assets\/([^/]+)$/,
       run: ({ params }) => {
         platform.assetService.delete(actorId, decodeURIComponent(params[0]));
@@ -494,16 +507,13 @@ async function dispatchV1({
       }
     },
     {
-      method: "POST",
-      template: "/api/v1/design-requests",
+      ...v1Route("createDesignRequest"),
       regex: /^\/api\/v1\/design-requests$/,
-      idempotent: true,
       run: ({ body }) =>
         response(201, platform.designRequestService.create(actorId, body))
     },
     {
-      method: "GET",
-      template: "/api/v1/design-requests/{design_request_id}",
+      ...v1Route("getDesignRequest"),
       regex: /^\/api\/v1\/design-requests\/([^/]+)$/,
       run: ({ params }) =>
         response(
@@ -515,10 +525,8 @@ async function dispatchV1({
         )
     },
     {
-      method: "POST",
-      template: "/api/v1/design-requests/{design_request_id}/runs",
+      ...v1Route("createGenerationRun"),
       regex: /^\/api\/v1\/design-requests\/([^/]+)\/runs$/,
-      idempotent: true,
       run: ({ params, body }) =>
         response(
           202,
@@ -530,8 +538,7 @@ async function dispatchV1({
         )
     },
     {
-      method: "GET",
-      template: "/api/v1/generation-runs/{generation_run_id}",
+      ...v1Route("getGenerationRun"),
       regex: /^\/api\/v1\/generation-runs\/([^/]+)$/,
       run: ({ params }) =>
         response(
@@ -540,8 +547,7 @@ async function dispatchV1({
         )
     },
     {
-      method: "POST",
-      template: "/api/v1/generation-runs/{generation_run_id}/cancel",
+      ...v1Route("cancelGenerationRun"),
       regex: /^\/api\/v1\/generation-runs\/([^/]+)\/cancel$/,
       run: ({ params }) =>
         response(
@@ -550,8 +556,7 @@ async function dispatchV1({
         )
     },
     {
-      method: "GET",
-      template: "/api/v1/plans",
+      ...v1Route("listPlans"),
       regex: /^\/api\/v1\/plans$/,
       run: () =>
         response(
@@ -563,8 +568,7 @@ async function dispatchV1({
         )
     },
     {
-      method: "GET",
-      template: "/api/v1/plans/{plan_asset_id}/versions/{plan_version_id}",
+      ...v1Route("getPlanVersion"),
       regex: /^\/api\/v1\/plans\/([^/]+)\/versions\/([^/]+)$/,
       run: ({ params }) =>
         response(
@@ -577,10 +581,8 @@ async function dispatchV1({
         )
     },
     {
-      method: "POST",
-      template: "/api/v1/plans/{plan_asset_id}/revisions",
+      ...v1Route("createPlanRevision"),
       regex: /^\/api\/v1\/plans\/([^/]+)\/revisions$/,
-      idempotent: true,
       run: ({ params, body }) =>
         response(
           202,
@@ -592,18 +594,18 @@ async function dispatchV1({
         )
     },
     {
-      method: "GET",
-      template: "/api/v1/plans/{plan_asset_id}",
+      ...v1Route("getPlan"),
       regex: /^\/api\/v1\/plans\/([^/]+)$/,
-      run: ({ params }) =>
-        response(
-          200,
-          platform.planService.getPlan(actorId, decodeURIComponent(params[0]))
-        )
+      run: ({ params }) => {
+        const value = platform.planService.getPlan(
+          actorId,
+          decodeURIComponent(params[0])
+        );
+        return response(200, value, etag(value));
+      }
     },
     {
-      method: "PATCH",
-      template: "/api/v1/plans/{plan_asset_id}",
+      ...v1Route("updatePlan"),
       regex: /^\/api\/v1\/plans\/([^/]+)$/,
       run: ({ params, body }) => {
         const value = platform.planService.patchPlan(
@@ -615,8 +617,7 @@ async function dispatchV1({
       }
     },
     {
-      method: "GET",
-      template: "/api/v1/me/preferences",
+      ...v1Route("getPreferences"),
       regex: /^\/api\/v1\/me\/preferences$/,
       run: () => {
         const value = platform.preferenceService.get(actorId);
@@ -624,8 +625,7 @@ async function dispatchV1({
       }
     },
     {
-      method: "PATCH",
-      template: "/api/v1/me/preferences",
+      ...v1Route("updatePreferences"),
       regex: /^\/api\/v1\/me\/preferences$/,
       run: ({ body }) => {
         const value = platform.preferenceService.patch(actorId, body);
@@ -633,12 +633,62 @@ async function dispatchV1({
       }
     },
     {
-      method: "POST",
-      template: "/api/v1/events/batch",
+      ...v1Route("createEventBatch"),
       regex: /^\/api\/v1\/events\/batch$/,
-      idempotent: true,
       run: ({ body }) =>
         response(202, platform.eventService.ingest(actorId, body))
+    },
+    {
+      ...v1Route("createProductDiscoveryRun"),
+      regex: /^\/api\/v1\/plans\/([^/]+)\/versions\/([^/]+)\/product-discovery-runs$/,
+      run: ({ params, body }) =>
+        response(
+          202,
+          platform.createProductDiscoveryRun(
+            actorId,
+            decodeURIComponent(params[0]),
+            decodeURIComponent(params[1]),
+            body
+          )
+        )
+    },
+    {
+      ...v1Route("listProductDiscoveryRuns"),
+      regex: /^\/api\/v1\/plans\/([^/]+)\/versions\/([^/]+)\/product-discovery-runs$/,
+      run: ({ params }) =>
+        response(
+          200,
+          platform.listProductDiscoveryRuns(
+            actorId,
+            decodeURIComponent(params[0]),
+            decodeURIComponent(params[1]),
+            Object.fromEntries(url.searchParams.entries())
+          )
+        )
+    },
+    {
+      ...v1Route("getProductDiscoveryRun"),
+      regex: /^\/api\/v1\/product-discovery-runs\/([^/]+)$/,
+      run: ({ params }) =>
+        response(
+          200,
+          platform.getProductDiscoveryRun(
+            actorId,
+            decodeURIComponent(params[0])
+          )
+        )
+    },
+    {
+      ...v1Route("cancelProductDiscoveryRun"),
+      regex: /^\/api\/v1\/product-discovery-runs\/([^/]+)\/cancel$/,
+      run: ({ params }) =>
+        response(
+          200,
+          platform.cancelProductDiscoveryRun(
+            actorId,
+            decodeURIComponent(params[0])
+          )
+        )
     }
   ];
 
@@ -646,7 +696,7 @@ async function dispatchV1({
   const route = pathMatches.find((candidate) => candidate.method === method);
   if (!route) {
     if (pathMatches.length) {
-      throw new ApiError("method_not_allowed", "该接口不支持当前 HTTP 方法", 405);
+      throw methodNotAllowed(pathMatches.map((candidate) => candidate.method));
     }
     return null;
   }
@@ -778,6 +828,11 @@ export function createApiServer({
         });
         return;
       }
+      if (method === "GET" && pathname === "/api/openapi.json") {
+        statusCode = 200;
+        sendJson(responseObject, statusCode, OPENAPI_DOCUMENT);
+        return;
+      }
       if (method === "GET" && pathname === "/api/prompt-lab") {
         statusCode = 200;
         sendJson(responseObject, statusCode, {
@@ -816,6 +871,7 @@ export function createApiServer({
       if (
         [
           "/api/health",
+          "/api/openapi.json",
           "/api/generate",
           "/api/revise",
           "/api/prompt-lab",
@@ -823,6 +879,7 @@ export function createApiServer({
         ].includes(pathname) &&
         !(
           (method === "GET" && pathname === "/api/health") ||
+          (method === "GET" && pathname === "/api/openapi.json") ||
           (method === "GET" && pathname === "/api/prompt-lab") ||
           (method === "POST" &&
             [
@@ -832,7 +889,14 @@ export function createApiServer({
             ].includes(pathname))
         )
       ) {
-        throw new ApiError("method_not_allowed", "该接口不支持当前 HTTP 方法", 405);
+        const allowedMethod = [
+          "/api/health",
+          "/api/openapi.json",
+          "/api/prompt-lab"
+        ].includes(pathname)
+          ? "GET"
+          : "POST";
+        throw methodNotAllowed([allowedMethod]);
       }
 
       const result = pathname.startsWith("/api/v1/")
@@ -857,7 +921,7 @@ export function createApiServer({
     } catch (error) {
       const payload = errorPayload(error, requestId);
       statusCode = payload.statusCode;
-      sendJson(responseObject, statusCode, payload.body);
+      sendJson(responseObject, statusCode, payload.body, payload.headers);
       if (statusCode >= 500) {
         logger.error({
           event: "api_request_failed",

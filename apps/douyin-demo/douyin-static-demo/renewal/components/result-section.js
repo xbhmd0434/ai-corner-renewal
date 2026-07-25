@@ -1,12 +1,14 @@
 import { escapeHtml, formatMoney, resolveImage } from "./ui-utils.js";
+import { renderProductHotspots, ShopTheLook } from "./shop-the-look.js";
 
 export class ResultSection {
   constructor(element, actions) {
     this.element = element;
     this.actions = actions;
+    this.shopTheLook = new ShopTheLook(actions);
   }
 
-  render(viewModel) {
+  render(viewModel, productDiscoveryViewModel = null) {
     if (!viewModel) {
       this.element.innerHTML = '<div class="inline-error">方案数据为空</div>';
       return;
@@ -24,7 +26,7 @@ export class ResultSection {
           before || after
             ? `<div class="compare-stage">
                 ${before ? `<img src="${escapeHtml(before)}" alt="焕新前" />` : ""}
-                ${after ? `<div class="compare-stage__after" style="width:55%"><img src="${escapeHtml(after)}" alt="AI 焕新示意" /></div>` : ""}
+                ${after ? `<div class="compare-stage__after" style="width:55%"><img src="${escapeHtml(after)}" alt="AI 焕新示意" />${renderProductHotspots(productDiscoveryViewModel)}</div>` : ""}
                 <span class="compare-label compare-label--before">BEFORE</span><span class="compare-label compare-label--after">AFTER</span>
                 ${before && after ? `<input type="range" min="0" max="100" value="55" aria-label="拖动查看焕新前后" data-compare /><i class="compare-handle" style="left:55%"><svg viewBox="0 0 20 20"><path d="m7 6-3 4 3 4m6-8 3 4-3 4"/></svg></i>` : ""}
               </div>`
@@ -33,6 +35,7 @@ export class ResultSection {
         <div class="result-body">
           <div class="result-summary"><span>预计商品合计</span><strong>${formatMoney(viewModel.totalPriceCny)}</strong><p>${escapeHtml(viewModel.summary || "基于你的空间、预算与生活限制生成。")}</p></div>
           <div class="result-facts"><span>${viewModel.products?.length || 0} 件商品</span><span>${viewModel.steps?.length || 0} 个步骤</span><span>${viewModel.appliedConstraints?.noDrilling ? "免打孔" : "按需安装"}</span></div>
+          <div data-shop-root>${this.shopTheLook.render(productDiscoveryViewModel)}</div>
           <div class="result-actions">
             <button class="primary-action" type="button" data-action="details">查看落地清单</button>
             <button class="secondary-action" type="button" data-action="budget">再省一点</button>
@@ -65,6 +68,8 @@ export class ResultSection {
       event.preventDefault();
       this.actions.onTryOn?.(viewModel);
     });
+    this.shopTheLook.bind(this.element.querySelector("[data-shop-root]"), productDiscoveryViewModel);
+    this.shopTheLook.bindHotspots(this.element);
   }
 
   renderProducts(products = []) {

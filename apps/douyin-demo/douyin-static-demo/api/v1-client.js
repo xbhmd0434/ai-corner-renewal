@@ -465,7 +465,7 @@ export async function sendEventsBatch(events, options = {}) {
   createPendingOperation(idempotencyKey, { type: "sendEvents", count: events.length });
 
   try {
-    await post("/api/v1/events/batch", { events }, {
+    await post("/api/v1/events/batch", { schema_version: "1.0", events }, {
       ...options,
       idempotencyKey
     });

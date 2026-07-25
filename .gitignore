@@ -20,6 +20,7 @@ server.err.log
 Thumbs.db
 .idea/
 .vscode/
+.claude/
 
 # Generated validation artifacts
 artifacts/

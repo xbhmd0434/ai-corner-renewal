@@ -33,6 +33,11 @@ const backendAssetRoot = resolve(
   "web",
   "assets"
 );
+const productDiscoveryFixtureRoot = resolve(
+  backendRoot,
+  "examples",
+  "responses"
+);
 const threeCandidates = [
   resolve(projectRoot, "node_modules", "three"),
   resolve(backendRoot, "node_modules", "three")
@@ -50,6 +55,7 @@ const backendPort = Number(process.env.API_PORT || 8787);
 const backendAssetPrefix =
   "/ai-corner-renewal/apps/web/assets/";
 const threePrefix = "/vendor/three/";
+const productDiscoveryFixturePrefix = "/__product-discovery-fixtures/";
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -89,6 +95,13 @@ function resolveStaticPath(requestUrl) {
         threeRoot,
         pathname.slice(threePrefix.length)
       );
+    }
+    if (pathname.startsWith(productDiscoveryFixturePrefix)) {
+      const fileName = pathname.slice(productDiscoveryFixturePrefix.length);
+      if (!/^product-discovery\.run\.(running|ready|empty)\.json$/.test(fileName)) {
+        return null;
+      }
+      return safeResolve(productDiscoveryFixtureRoot, fileName);
     }
     const relative =
       pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");

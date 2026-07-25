@@ -122,18 +122,23 @@ GenerationRun、PlanAsset/PlanVersion、预算/换风格调整、偏好和受控
 300 元生成会得到 240 元可执行组合；刷新和重启后仍能读取任务与版本。真实灵感
 解析、真实商品接口、候选方案按需生图和预算调整后重绘尚未接入。
 
+完整 `/api/v1` 契约可从 `docs/openapi.yaml` 导入 Apifox/Postman，服务运行后也可
+读取 `GET /api/openapi.json`。修改路由或 Schema 后运行
+`npm run openapi:generate`，根检查会拒绝未同步的契约。
+
 ## 项目结构
 
 ```text
 apps/douyin-demo/         默认产品前端、同源代理、前端测试与视频素材
 apps/web/                 兼容 AICard、Prompt 实验台与独立 Three.js 3D 试搭页
-packages/contracts/       AICard v1、/api/v1 聚合 Schema 与运行时协议校验
+packages/contracts/       AICard v1、/api/v1 Schema、共享路由清单与 OpenAPI 生成器
 packages/validation/      预算、安装、结构、尺寸、库存和安全规则
 services/orchestrator/    SQLite Repository、领域服务、Workflow、HTTP API 与适配器
 examples/                 固定 AICard、8 个输入夹具和一键示例
 docs/product-spec.md      产品方案与比赛口径
 docs/architecture.md      数据对象、模块边界与演进架构
 docs/backend-api.md       后端接口、状态、配置和验证方式
+docs/openapi.yaml         可导入 Apifox/Postman 的 OpenAPI 3.1 契约
 docs/visual-search-api.md 视频框选、视觉搜索、商品确认、资产与模型版本拟议契约
 docs/model-integration.md 模型/Agent/精细图像 API 接入边界
 docs/team-roles.md        当前三人团队分工、Prompt/前端/产品并行规则

@@ -50,6 +50,16 @@ test("health → generate → revise(300) HTTP 主链路", async () => {
     assert.equal(health.status, "ok");
     assert.match(health.request_id, /^req-/);
 
+    const openApiResponse = await fetch(`${baseUrl}/api/openapi.json`);
+    const openApi = await openApiResponse.json();
+    assert.equal(openApiResponse.status, 200);
+    assert.equal(openApi.openapi, "3.1.0");
+    assert.equal(
+      openApi.paths["/api/v1/generation-runs/{generation_run_id}"].get
+        .operationId,
+      "getGenerationRun"
+    );
+
     const generateResponse = await fetch(`${baseUrl}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -213,6 +223,10 @@ test("Prompt Lab 提供模板并把改图请求路由到独立实验服务", asy
       { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }
     );
     assert.equal(wrongMethod.status, 405);
+    assert.equal(wrongMethod.headers.get("allow"), "GET");
+    assert.deepEqual((await wrongMethod.json()).error.details.allowed_methods, [
+      "GET"
+    ]);
   } finally {
     await new Promise((resolveClose, rejectClose) =>
       server.close((error) => (error ? rejectClose(error) : resolveClose()))

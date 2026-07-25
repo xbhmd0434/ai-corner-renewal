@@ -4,6 +4,27 @@
  * 符合 HANDOFF.md 3.1 前端对象边界
  */
 
+const PRODUCT_DISCOVERY_RESUME_KEY = "renewal-product-discovery-resume-v1";
+
+function initialProductDiscoveryState() {
+  return {
+    contextId: null,
+    planAssetId: null,
+    planVersionId: null,
+    runId: null,
+    status: "not_started",
+    stage: null,
+    progress: 0,
+    resultState: null,
+    result: null,
+    viewModel: null,
+    error: null,
+    polling: false,
+    deliveryMode: "api",
+    reconnectRequired: false
+  };
+}
+
 const INITIAL_STATE = {
   // 单页核心流程：IDLE / GENERATING / RESULT_READY / ADJUSTING
   mode: "space_to_inspiration",
@@ -50,6 +71,9 @@ const INITIAL_STATE = {
   // 当前方案版本
   currentPlanVersion: null,
 
+  // 当前 PlanVersion 独立拥有的商品发现运行。
+  productDiscovery: initialProductDiscoveryState(),
+
   // 用户偏好
   preferences: null,
 
@@ -87,12 +111,14 @@ function freshInitialState() {
     inspirations: [],
     items: [],
     plans: [],
-    editHistory: []
+    editHistory: [],
+    productDiscovery: initialProductDiscoveryState()
   };
 }
 
 let state = freshInitialState();
 let listeners = new Set();
+let productDiscoveryContextSequence = 0;
 
 /**
  * 获取完整状态
@@ -483,4 +509,94 @@ export function updatePlans(plans) {
 export function setCurrentPlanVersion(planVersion) {
   state.currentPlanVersion = planVersion;
   notifyListeners();
+}
+
+/**
+ * 为一个不可变 PlanVersion 开始新的商品发现上下文。
+ * 即使 planVersionId 相同，显式刷新/重试也会获得新 contextId，旧请求无法写回。
+ */
+export function beginProductDiscoveryContext(
+  planAssetId,
+  planVersionId,
+  { deliveryMode = "api" } = {}
+) {
+  productDiscoveryContextSequence += 1;
+  const contextId = `${planVersionId}:${productDiscoveryContextSequence}`;
+  state.productDiscovery = {
+    ...initialProductDiscoveryState(),
+    contextId,
+    planAssetId,
+    planVersionId,
+    deliveryMode
+  };
+  notifyListeners();
+  return contextId;
+}
+
+export function isCurrentProductDiscoveryContext(contextId, planVersionId) {
+  const current = state.productDiscovery;
+  return (
+    Boolean(contextId) &&
+    current.contextId === contextId &&
+    (!planVersionId || current.planVersionId === planVersionId)
+  );
+}
+
+/**
+ * 只在上下文仍属于当前 PlanVersion 时写入。返回 false 表示响应已迟到。
+ */
+export function updateProductDiscoveryForContext(contextId, patch) {
+  if (!isCurrentProductDiscoveryContext(contextId, patch?.planVersionId)) {
+    return false;
+  }
+  state.productDiscovery = {
+    ...state.productDiscovery,
+    ...patch,
+    contextId
+  };
+  notifyListeners();
+  return true;
+}
+
+export function applyProductDiscoveryViewModel(contextId, viewModel) {
+  if (!viewModel || !isCurrentProductDiscoveryContext(contextId, viewModel.planVersionId)) {
+    return false;
+  }
+  return updateProductDiscoveryForContext(contextId, {
+    runId: viewModel.runId,
+    status: viewModel.status,
+    stage: viewModel.stage,
+    progress: viewModel.progress,
+    resultState: ["ready", "partial", "empty"].includes(viewModel.status)
+      ? viewModel.status
+      : null,
+    result: viewModel.subjects,
+    viewModel,
+    error: viewModel.errorMessage,
+    deliveryMode: viewModel.deliveryMode,
+    reconnectRequired: false
+  });
+}
+
+export function persistProductDiscoveryResume(value) {
+  const safeValue = {
+    planAssetId: value?.planAssetId || null,
+    planVersionId: value?.planVersionId || null,
+    runId: value?.runId || null
+  };
+  try {
+    sessionStorage.setItem(PRODUCT_DISCOVERY_RESUME_KEY, JSON.stringify(safeValue));
+  } catch (error) {
+    console.warn("Failed to persist product discovery resume IDs:", error);
+  }
+}
+
+export function loadProductDiscoveryResume() {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(PRODUCT_DISCOVERY_RESUME_KEY) || "null");
+    if (value?.planAssetId && value?.planVersionId) return value;
+  } catch (error) {
+    console.warn("Failed to load product discovery resume IDs:", error);
+  }
+  return null;
 }

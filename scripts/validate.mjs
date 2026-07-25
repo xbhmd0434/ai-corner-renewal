@@ -30,11 +30,14 @@ const required = [
   "docs/public-release.md",
   ".env.example",
   "docs/backend-api.md",
+  "docs/openapi.yaml",
   "packages/contracts/schemas/aicard-v1.schema.json",
   "packages/contracts/schemas/generate-request-v1.schema.json",
   "packages/contracts/schemas/revise-request-v1.schema.json",
   "packages/contracts/schemas/platform-v1.schema.json",
   "packages/contracts/src/index.js",
+  "packages/contracts/src/openapi.js",
+  "packages/contracts/src/v1-route-manifest.js",
   "packages/validation/src/index.js",
   "services/orchestrator/src/index.js",
   "services/orchestrator/src/local-env.js",
@@ -50,6 +53,7 @@ const required = [
   "examples/requests/revise.to-300.json",
   "examples/run-backend-demo.mjs",
   "scripts/check-agent-plan.mjs",
+  "scripts/generate-openapi.mjs",
   "scripts/run-hunyuan.mjs",
   "scripts/generate-hunyuan-shape.py"
 ];

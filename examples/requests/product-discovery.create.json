@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "reason": "initial",
+  "options": {
+    "discovery_mode": "auto",
+    "max_subjects": 6,
+    "matches_per_subject": 3
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "product_discovery_run_id": "product-discovery-run-example",
+  "plan_asset_id": "plan-example",
+  "plan_version_id": "plan-version-example",
+  "render_fingerprint": "sha256:example-render-fingerprint",
+  "status": "running",
+  "stage": "retrieving_products",
+  "stage_index": 4,
+  "stage_total": 6,
+  "progress": 62,
+  "source_mode": null,
+  "result_state": null,
+  "retryable": false,
+  "result": null,
+  "error": null,
+  "created_at": "2026-07-25T12:00:00.000Z",
+  "updated_at": "2026-07-25T12:00:03.000Z"
+}

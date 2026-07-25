@@ -651,6 +651,14 @@ Prompt。
 完成标准：前端可以解释等待、失败、来源和版本变化；后端同学之外的人可以只根据
 接口文档完成联调。
 
+当前接口面已完成：25 个 `/api/v1` 操作由共享路由清单约束；`docs/openapi.yaml`
+与 `GET /api/openapi.json` 提供同一 OpenAPI 3.1 契约；GenerationRun 已稳定返回
+`progress` 和结构化 `needs_input`；自动测试会校验操作覆盖、幂等 Header、本地
+`$ref`、正常/needs_input/fallback/cancelled/failed 示例以及生成文件漂移。
+P0-D 尚未整体完成：正式链路仍未持久化 SceneAssessment、LayoutPlan、
+ProductSlot、SelectedProduct 和 EvaluationResult 阶段快照，Provider 成本指标也
+仍需随 P0-A～P0-C 一并落地。
+
 ### P1：视频视觉搜索
 
 实现 `VisualSearchQuery → Candidate → 用户确认 → ItemAsset → 2D/3D ModelVersion`。

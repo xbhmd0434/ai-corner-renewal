@@ -53,6 +53,32 @@ function rejectUnknownKeys(value, allowed, code, label) {
   if (unknown) throw invalid(code, `${label} 不支持字段 ${unknown}`);
 }
 
+function runProgress(run) {
+  if (run.status === "succeeded") return 100;
+  if (run.status === "queued") return 0;
+  const phaseIndex = Number.isInteger(run.phase_index) ? run.phase_index : 1;
+  const phaseTotal = Number.isInteger(run.phase_total)
+    ? run.phase_total
+    : GENERATION_PHASES.length;
+  return Math.min(99, Math.max(0, Math.round((phaseIndex / phaseTotal) * 100)));
+}
+
+function runNeedsInput(run) {
+  const card =
+    run.result?.plan_version?.aicard ||
+    run.result?.aicard ||
+    null;
+  if (card?.status !== "needs_input" || !card.follow_up) return null;
+  return {
+    reason_code: card.follow_up.reason_code,
+    question: card.follow_up.question,
+    required_fields: [...card.follow_up.required_fields],
+    can_continue_with_assumptions:
+      card.follow_up.can_continue_with_assumptions,
+    has_preview: Boolean(card.plan)
+  };
+}
+
 function runSummary(run) {
   return {
     schema_version: "1.0",
@@ -62,8 +88,10 @@ function runSummary(run) {
     phase: run.phase,
     phase_index: run.phase_index,
     phase_total: GENERATION_PHASES.length,
+    progress: runProgress(run),
     source_mode: run.source_mode,
     retryable: run.retryable,
+    needs_input: runNeedsInput(run),
     result: run.result,
     error: run.error,
     created_at: run.created_at,

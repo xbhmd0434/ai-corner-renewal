@@ -47,6 +47,11 @@ const TABLES = Object.freeze({
     table: "plan_versions",
     id: "plan_version_id",
     status: () => "immutable"
+  },
+  productDiscoveryRuns: {
+    table: "product_discovery_runs",
+    id: "product_discovery_run_id",
+    status: (value) => value.status
   }
 });
 

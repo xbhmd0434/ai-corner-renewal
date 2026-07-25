@@ -22,6 +22,12 @@ import {
 import { PlanService } from "./services/plan-service.js";
 import { EventService } from "./services/event-service.js";
 import { PromptLabService } from "./services/prompt-lab-service.js";
+import { ProductDiscoveryService } from "./services/product-discovery-service.js";
+import {
+  UnconfiguredProductDiscoveryProvider,
+  PlanGroundedDiscoveryProvider
+} from "./adapters/product-discovery-agent.js";
+import { DemoCommerceCatalogAdapter } from "./adapters/commerce-catalog.js";
 
 export function createPlatform({
   config,
@@ -94,6 +100,18 @@ export function createPlatform({
     })
   });
 
+  const discoveryProvider = new UnconfiguredProductDiscoveryProvider();
+  const commerceCatalog = new DemoCommerceCatalogAdapter({ now });
+  const productDiscoveryService = new ProductDiscoveryService({
+    repository: repo,
+    mediaService,
+    config,
+    provider: discoveryProvider,
+    catalogAdapter: commerceCatalog,
+    fetchImpl,
+    now
+  });
+
   assetService.seed(DEMO_ACTOR_ID);
   preferenceService.get(DEMO_ACTOR_ID);
   let maintenanceError = null;
@@ -111,6 +129,7 @@ export function createPlatform({
   maintenanceTimer.unref();
   parseService.recover(DEMO_ACTOR_ID);
   planService.recover(DEMO_ACTOR_ID);
+  productDiscoveryService.recover(DEMO_ACTOR_ID);
 
   return {
     actorId: DEMO_ACTOR_ID,
@@ -123,13 +142,15 @@ export function createPlatform({
     planService,
     eventService,
     promptLabService,
+    productDiscoveryService,
     health() {
       return {
         status: "ok",
         service: "ai-corner-renewal-orchestrator",
-        service_version: "0.5.1",
+        service_version: "0.5.2",
         contract_version: "1.0",
         api_versions: ["legacy", "v1"],
+        openapi_url: "/api/openapi.json",
         backend_mode: config.backendMode,
         auth_mode: "demo_fixed_actor",
         actor_id: DEMO_ACTOR_ID,
@@ -156,7 +177,9 @@ export function createPlatform({
           upload_file_bytes: config.maxUploadBytes,
           temporary_retention_hours: config.temporaryRetentionHours,
           media_access_ttl_seconds: config.mediaAccessTtlSeconds,
-          list_limit_max: config.listLimitMax
+          list_limit_max: config.listLimitMax,
+          product_discovery_max_subjects: 8,
+          product_discovery_matches_per_subject: 5
         },
         model_capabilities: {
           room_analysis:
@@ -176,6 +199,11 @@ export function createPlatform({
           available: promptLabService.template().available,
           prompt_version: promptLabService.template().prompt_version,
           persistence: "none"
+        },
+        features: {
+          product_discovery: true,
+          product_discovery_live_agent: false,
+          douyin_commerce_catalog: false
         },
         repository_counts: repo.stats,
         maintenance: {
@@ -197,9 +225,21 @@ export function createPlatform({
     async renderPromptLab(request) {
       return promptLabService.render(request);
     },
+    createProductDiscoveryRun(actorId, planAssetId, planVersionId, body) {
+      return productDiscoveryService.create(actorId, planAssetId, planVersionId, body);
+    },
+    listProductDiscoveryRuns(actorId, planAssetId, planVersionId, query) {
+      return productDiscoveryService.list(actorId, planAssetId, planVersionId, query);
+    },
+    getProductDiscoveryRun(actorId, runId) {
+      return productDiscoveryService.get(actorId, runId);
+    },
+    cancelProductDiscoveryRun(actorId, runId) {
+      return productDiscoveryService.cancel(actorId, runId);
+    },
     async close() {
       clearInterval(maintenanceTimer);
-      await Promise.all([parseService.stop(), planService.stop()]);
+      await Promise.all([parseService.stop(), planService.stop(), productDiscoveryService.stop()]);
       repo.close();
     }
   };

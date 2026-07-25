@@ -2,7 +2,7 @@
 
 > 更新日期：2026-07-25
 > 读者：前端开发、联调同学、产品验收同学
-> 当前成熟度：抖音壳为“运行时静态 Demo”；`renewal.html` 为“可持久联调集成原型”；旧 `me.js` 空间层为“已退出主路径的视觉 Mock”
+> 当前成熟度：抖音壳为“运行时静态 Demo”；`renewal.html` 为“可持久联调集成原型”；结果后的商品发现购买承接为“协议完成、真实目录待接”；旧 `me.js` 空间层为“已退出主路径的视觉 Mock”
 > 本文用途：说明当前代码事实、已接通边界、剩余范围、状态与验收方式
 > 产品依据：产品同学 2026-07 新版《AI 一角焕新：产品蓝图与全链路功能清单》
 
@@ -33,6 +33,8 @@ flowchart LR
     TASK --> RUN["GenerationRun"]
     RUN --> PLAN["PlanAsset + PlanVersion"]
     PLAN --> RESULT["AICard 结果视图"]
+    RESULT --> DISCOVERY["ProductDiscoveryRun"]
+    DISCOVERY --> COMMERCE["目录商品 + CommerceAction"]
 ```
 
 前端唯一主界面建议以当前 `抖音展示demo` 为基础：
@@ -110,10 +112,11 @@ http://127.0.0.1:8765/douyin-static-demo/index.html
 | `douyin-static-demo/renewal/main.js` | 单页状态协调、请求、轮询与组件装配 | 不拥有商品价格、适配结论或校验规则 |
 | `douyin-static-demo/renewal/mode.js` | 新 query 与旧 hash 入口兼容 | 只解析启动上下文，不承担页面路由 |
 | `douyin-static-demo/renewal/components/**` | 灵感、空间、约束、结果、资产与历史独立视图组件 | 只渲染 ViewModel 并上报用户意图 |
+| `douyin-static-demo/renewal/components/shop-the-look.js` | 结果后的商品发现状态、数字热点、商品票据和购买/搜索动作 | 只消费 ProductDiscovery ViewModel；不识图、不拼商品与链接 |
 | `douyin-static-demo/renewal/styles/renewal.css` | 暖色生活方式视觉系统与响应式手机壳 | 不放业务状态 |
 | `douyin-static-demo/api/**` | 同源 HTTP Client 和 `/api/v1` 方法 | 字段必须跟随后端协议 |
 | `douyin-static-demo/adapters/**` | 后端 DTO → 前端 ViewModel | 兼容展示差异，不发明业务事实 |
-| `scripts/serve.mjs` | 静态服务、API 代理、授权 Demo 图片映射 | 唯一正式本地 Web 入口 |
+| `scripts/serve.mjs` | 静态服务、API 代理、授权 Demo 图片映射、共享商品发现 fixture 的只读开发映射 | 唯一正式本地 Web 入口；fixture 路由不替代 API |
 | `scripts/check-integration.mjs` | 临时库端到端合同验证 | 不读写仓库正式 `data` |
 
 P0 页面落地方式固定为：
@@ -204,6 +207,24 @@ douyin-static-demo/
 - 结果可直接创建“降低预算”或“更换风格”的新 PlanVersion；旧版本不会覆盖。
   历史方案可回填到核心卡片，结果页可展开商品/步骤/校验，并把最小方案上下文
   交给现有 3D 试摆 Demo。
+- before/after 与变化摘要之后已增加“把这一角搬回家”。页面先检查
+  `/api/health.features.product_discovery`，再按当前不可变 PlanVersion 执行
+  `list → 恢复/创建 → get 轮询`；ready、partial、empty、failed、unavailable、
+  cancelled 均有独立视图。前 10 秒每 800ms、之后每 1500ms；页面隐藏暂停，恢复
+  可见后立即续询；连续网络失败停止并要求用户重新连接，不自动 POST 第二个 run。
+- ProductDiscoveryRun 经唯一 Adapter 映射。只有合法归一化 bbox 才生成数字热点；
+  `bbox=null` 或越界值均不显示。`douyin_deeplink` 只交给抖音 Bridge，`web_url`
+  只打开 `https:` 新窗口，`search_query` 只复制后端 query，`unavailable` 固定禁用。
+- 图像分析和商品目录来源分别读取 provenance：Live Agent + 抖音目录、
+  plan-grounded fallback、Demo Catalog 的标题与说明不会互相冒充。Demo 来源显示在
+  行动按钮旁；fallback 固定描述为“根据本次方案关联”，不写成从图片识别。
+- 后端未声明能力或连接失败时，页面不会静默使用 fixture。只有用户点击“使用本地
+  离线 Demo”才读取仓库共享 running/ready fixture，并在标题和行动区持续显示
+  “本地离线 Demo”；离线模式不发送商品事件。
+- 商品发现 Store 以 `planVersionId + contextId` 隔离每次恢复、刷新和重试；同版本
+  新 run 也使用新 contextId，旧 PlanVersion/旧 run 的迟到响应不能覆盖当前结果。
+  `sessionStorage` 只保存 plan/run 业务 ID，刷新后重新 list/get，不保存结果、query、
+  bbox、URL 或商品事实。
 - 新视觉为纸张米色、苔绿和珊瑚色的生活方式编辑风格；桌面是项目叙事与 430px
   手机双栏，`<520px` 移除设备外壳并占满视口；没有 CDN 字体或外部图标依赖。
 - 浏览器 `sessionStorage` 只保存 ID、目标和约束草稿，不保存 File、Base64、短时媒体 URL 或密钥。
@@ -221,7 +242,7 @@ douyin-static-demo/
 | 资产详情只读；保存、重命名、归档、删除和解析失败重试尚无 UI | 后端能力未完整暴露 | 按 `resource_version` 增加 PATCH/DELETE 交互和冲突重拉 |
 | 任务支持一个空间、预算、不打孔、宠物、租房和备注；保留物未开放逐项选择 | 已能生成，但动态约束不完整 | 从 sealed SpaceVersion 的 detected objects 生成保留项 |
 | 结果已支持降预算、换风格和历史版本回填，但未提供谱系版本切换器与 PlanAsset 状态修改 | 能继续调整，但不能完整管理方案谱系 | 增加版本切换与 `PATCH plan` 保存/选定状态 |
-| API 完全不可用时只有明确离线提示，没有用户主动本地 fixture 按钮 | 比赛断网缺少兜底 | 增加明确标为“本地离线 Demo”的只读 fixture |
+| 商品发现前端协议已完成；真实图像 Agent 与真实抖音目录仍由后端能力位决定 | 当前可跑 plan-grounded + Demo Catalog，不能声明真实识图、库存或交易 | 后端接入真实能力后继续复用同一组件协议与 provenance 展示 |
 | 旧 `me.js` Mock 和 `VideoFusionController` 仍在源码 | 容易被误认为另一套已接通产品 | 演示稳定后删除或移入 `legacy/` |
 | `video3.mp4` 体积大，根目录还有重复/乱码图片 | 首开和发布包风险 | 发布前压缩、去重并核对授权 |
 | 当前固定 Demo actor，无真实登录和限流 | 仅适合受控联调 | 上线前补身份、配额、审计和公网安全边界 |
@@ -240,6 +261,8 @@ douyin-static-demo/
 | `editHistory` | 当前画布的即时撤销/重做 | 否 |
 | Sheet、Tab、弹层、对比滑块位置 | 纯 UI 状态 | 否 |
 | `PlanResultViewModel` | PlanVersion 外壳 + AICard + 输入快照的展示适配 | 可重建，不单独保存 |
+| `ProductDiscoveryViewModel` | ProductDiscoveryRun 的一次性展示适配 | 可由后端 run 重建，不保存商品事实 |
+| `productDiscovery.contextId` | 当前页面的响应隔离令牌 | 否；每次 PlanVersion 切换、刷新或重试重新生成 |
 
 ### 3.2 哪些对象只能由后端拥有
 
@@ -254,6 +277,9 @@ douyin-static-demo/
 | 方案快照 | `plan_version_id` | 每次生成/调整创建新版本，不覆盖 |
 | 商品事实 | `product_id` | 价格、尺寸、库存和来源只以后端为准 |
 | 规则校验 | `ValidationReport` | 前端只展示，不自行重算 |
+| 商品发现运行 | `product_discovery_run_id` | 绑定一个不可变 PlanVersion after 图；重试/刷新创建新 run |
+| 画面元素 | `subject_id` | bbox 由后端返回；前端不分析 after 图也不补造位置 |
+| 购买动作 | `CommerceAction` | 类型、URL、query 与不可用原因只读后端字段 |
 
 `owner_id` 由后端从身份上下文写入。P0 可由服务端固定注入
 `demo-user-001`，前端请求体中不得传 `owner_id`。
@@ -515,6 +541,24 @@ PlanAsset
 - 切版本只切展示，不覆盖旧版本；
 - 当前 Canvas 的 `editHistory` 不能显示在“历史方案”页面。
 
+### 5.4 焕新结果商品发现
+
+```text
+not_started | unavailable
+→ queued → analyzing
+→ ready | partial | empty | failed | cancelled
+```
+
+- `status + stage + result_state` 只在 `product-discovery-view-model.js` 映射一次；
+  `shop-the-look.js` 不解释后端枚举。
+- 刷新/打开历史版本先 `list?sort=recent&limit=1`：active run 继续 get 轮询，成功 run
+  get 完整结果后展示，failed/cancelled 展示重试，无 run 才创建 initial。
+- PlanVersion 切换、同版本 retry/refresh 都创建新 Store context；写入前同时校验
+  contextId 和 planVersionId。AbortController 只取消浏览器请求，用户点“取消识别”
+  才调用后端 cancel。
+- `ready/partial` 可以有商品票据；partial 明确保留未匹配元素；empty 是成功业务
+  结果；unavailable 不请求未声明路由；网络错误不自动变成 Demo。
+
 ---
 
 ## 6. 前端要调用的接口
@@ -561,6 +605,10 @@ PlanAsset
 | 读取显式偏好 | `GET /api/v1/me/preferences` | 查看长期偏好 |
 | 修改显式偏好 | `PATCH /api/v1/me/preferences` | 修改、暂停或重置长期偏好 |
 | 漏斗事件 | `POST /api/v1/events/batch` | 批量发送白名单事件 |
+| 创建商品发现运行 | `POST /api/v1/plans/{plan_asset_id}/versions/{plan_version_id}/product-discovery-runs` | initial/retry/refresh 使用新幂等 Key |
+| 恢复商品发现运行 | `GET /api/v1/plans/{plan_asset_id}/versions/{plan_version_id}/product-discovery-runs` | 默认 `sort=recent&limit=1` |
+| 查询商品发现运行 | `GET /api/v1/product-discovery-runs/{run_id}` | 轮询并读取完整 ProductDiscoveryRun |
+| 取消商品发现运行 | `POST /api/v1/product-discovery-runs/{run_id}/cancel` | 仅用户明确取消时调用 |
 
 ### 6.3 HTTP Client 约束
 
@@ -783,6 +831,11 @@ new URL(access.url, API_BASE_URL).toString()
 - 分享不是 P0，当前“分享到抖音”按钮应禁用并标注“演示”；
 - 未来分享默认不带原始空间照片；
 - 浏览器存储不得保存原图、Base64、短时访问 URL 或后端密钥；
+- 商品发现恢复记录只保存 plan/run ID；不得保存 search query、bbox、购买 URL、
+  ProductDiscoveryRun 正文或商品目录响应；
+- 商品事件只允许 `plan_version_id`、`product_discovery_run_id`、`subject_id`、
+  `match_id`、`product_id`、`commerce_action_type` 和 `source_type`；不得发送
+  query、bbox、URL、自由文本或 after 图；本地离线 Demo 不上报事件；
 - 删除资产前说明会删除原图和派生图；删除成功后清理本地缓存；
 - 商品只能标为“品类”“候选”或“已确认”，不把视觉相似称为准确同款。
 
@@ -801,9 +854,10 @@ new URL(access.url, API_BASE_URL).toString()
 | FE-02 | 前端 Demo 完成 | 暂停定帧、框选、候选选择与 ItemAsset 写入已通；真实视觉搜索与 ModelVersion 依赖后端 |
 | FE-03 | 部分完成 | 上传、私有媒体、解析确认、资产列表已通；资产写操作待做 |
 | FE-04 | 已完成核心 | 两入口共用 Builder，空间版本、目标、预算、不打孔、宠物可提交 |
-| FE-05 | 部分完成 | 真实轮询、取消、结果和历史已通；重试、调整和离线 fixture 待做 |
+| FE-05 | 部分完成 | 生成轮询、取消、结果、历史与用户主动离线 fixture 已通；生成失败重试仍待补 |
 | FE-06 | 部分完成 | 持久方案历史和隐私边界已通；偏好、埋点、删除 UI 待做 |
 | FE-07 | 部分完成 | 两条主链路已浏览器验收；预算二次调整和断网兜底待做 |
+| FE-08 商品发现 | 前端协议完成 | Client、Adapter、恢复/轮询、全状态 UI、热点与四类 CommerceAction 已通；真实 Agent/抖音目录依赖后端能力 |
 
 “fixture UI 完成”不能标记为“端到端完成”。
 
@@ -962,6 +1016,24 @@ new URL(access.url, API_BASE_URL).toString()
 4. 后端失败时无需重选全部输入；
 5. 所有 Demo、Live、Fallback 和 AI 示意都有明确标识。
 
+### FE-08：焕新结果商品发现与购买承接
+
+状态：前端协议完成；plan-grounded + Demo Catalog 已与当前后端联调，真实图像 Agent
+和真实抖音目录未开放。
+
+- 四个 Client 方法严格使用冻结路由，创建 run 使用现有 Idempotency-Key；
+- `ProductDiscoveryRun → ProductDiscoveryViewModel` 是组件唯一输入；
+- Store 按 PlanVersion/context 隔离并通过 list/get 完成刷新恢复；
+- `shop-the-look` 位于 before/after 与变化摘要之后，覆盖识别中、ready、partial、
+  empty、failed、unavailable、cancelled；
+- 合法 bbox 显示可聚焦数字热点，null/非法 bbox 不显示；
+- 四类 CommerceAction 不拼接 product_id：deeplink 只进宿主 Bridge，网页只接受
+  HTTPS，搜索只复制后端 query，不可用动作禁用；
+- 共享 fixture 只经用户显式入口加载并持续标为“本地离线 Demo”。
+
+完成标准：后端接真实 Agent/目录时不修改组件协议；页面不分析图片、不创造商品
+事实，且 Live/Fallback/Demo 来源可独立核对。
+
 ### 10.2 最小自动验证
 
 当前 `package.json` 提供：
@@ -995,10 +1067,15 @@ new URL(access.url, API_BASE_URL).toString()
 - `visual-search/model`：反向拖拽与越界收敛、最小框选面积、CSS 百分比和视频
   来源最小化。
 - `renewal/mode`：新 query 入口、旧 hash 兼容、抽屉和指定方案版本恢复。
+- `product-discovery-client`：四条冻结路由、默认 list 参数和 mutation 幂等 Header；
+- `product-discovery-view-model`：running/ready/partial/empty/failed/cancelled/
+  unavailable、Live/Fallback/Demo 文案、四种 CommerceAction、HTTPS 拒绝和 bbox；
+- `renewal-store`：不同 PlanVersion 与同版本新 retry context 的迟到响应隔离；
+- `shop-the-look`：bbox=null 无热点、合法 bbox 数字热点、Demo 标签靠近行动按钮。
 
 当前验证结果：
 
-- `npm.cmd run check`：54 项前端纯逻辑测试通过；
+- `npm.cmd run check:douyin`：67 项前端纯逻辑测试和全部前端脚本语法检查通过；
 - 根目录 `npm.cmd run check:douyin-integration`：使用临时 SQLite 跑通
   `upload → asset → seal → DesignRequest → GenerationRun → PlanVersion`；
 - 浏览器 430×900 验收：视频入口、真实 PNG 上传、私有媒体、空间确认、生成、
@@ -1012,6 +1089,17 @@ new URL(access.url, API_BASE_URL).toString()
   轻量建模和收藏完成页均无横向溢出或控制台错误；进入流程时外层舞台同步变为
   暖米色，关闭后移除 `body.visual-search-mode`，不会污染推荐流常态样式；
 - 根目录 `npm.cmd start` 已用隔离端口验证能同时拉起静态代理和仓内后端。
+- 2026-07-25 商品发现浏览器验收：390×844、430×900、1440×900 的 document、
+  内容区、商品区和商品票据均无横向溢出，控制台无错误；当前后端返回
+  plan-grounded + Demo Catalog partial 结果，页面如实显示“方案关联 · Demo 商品”，
+  bbox=null 时热点数为 0。
+- 使用共享 ready fixture 注入合法 bbox 后，430×900 显示 1 个数字热点，来源为
+  “AI 识别 · 抖音好物”；热点可键盘聚焦，点击后焦点移动到对应 subject。
+- `prefers-reduced-motion: reduce` 实测生效，商品进度 transition 降为静态；搜索动作
+  实测复制后显示“搜索词已复制，打开抖音即可搜索”，页面不输出 query 到事件。
+- 刷新成功 run 只发出 list + get 两次 GET，没有重复 POST；health feature=false 时
+  首屏未请求商品发现 API，只有用户点击后才进入共享 fixture，且持续显示“本地离线
+  Demo”。
 
 ---
 

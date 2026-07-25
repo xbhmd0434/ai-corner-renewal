@@ -11,7 +11,9 @@
     { "$ref": "#/$defs/GenerationRun" },
     { "$ref": "#/$defs/PlanVersionEnvelope" },
     { "$ref": "#/$defs/Preference" },
-    { "$ref": "#/$defs/EventBatchResult" }
+    { "$ref": "#/$defs/EventBatchResult" },
+    { "$ref": "#/$defs/ProductDiscoveryRun" },
+    { "$ref": "#/$defs/ProductDiscoveryRunList" }
   ],
   "$defs": {
     "SchemaVersion": {
@@ -241,8 +243,10 @@
         "phase",
         "phase_index",
         "phase_total",
+        "progress",
         "source_mode",
         "retryable",
+        "needs_input",
         "result",
         "error",
         "created_at",
@@ -270,14 +274,43 @@
         },
         "phase_index": { "type": "integer", "minimum": 1, "maximum": 9 },
         "phase_total": { "const": 9 },
+        "progress": { "type": "integer", "minimum": 0, "maximum": 100 },
         "source_mode": {
           "enum": [null, "demo", "live", "fallback"]
         },
         "retryable": { "type": "boolean" },
+        "needs_input": {
+          "oneOf": [
+            { "$ref": "#/$defs/RunNeedsInput" },
+            { "type": "null" }
+          ]
+        },
         "result": { "type": ["object", "null"] },
         "error": { "type": ["object", "null"] },
         "created_at": { "$ref": "#/$defs/Timestamp" },
         "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "RunNeedsInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason_code",
+        "question",
+        "required_fields",
+        "can_continue_with_assumptions",
+        "has_preview"
+      ],
+      "properties": {
+        "reason_code": { "type": "string", "minLength": 1 },
+        "question": { "type": "string", "minLength": 1 },
+        "required_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "can_continue_with_assumptions": { "type": "boolean" },
+        "has_preview": { "type": "boolean" }
       }
     },
     "PlanVersionEnvelope": {
@@ -347,6 +380,215 @@
         "disliked_elements": { "type": "array", "items": { "type": "string" } },
         "personalization_enabled": { "type": "boolean" },
         "resource_version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "ProductDiscoveryRun": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "product_discovery_run_id",
+        "plan_asset_id",
+        "plan_version_id",
+        "render_fingerprint",
+        "status",
+        "stage",
+        "stage_index",
+        "stage_total",
+        "progress",
+        "source_mode",
+        "result_state",
+        "retryable",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "product_discovery_run_id": { "$ref": "#/$defs/Identifier" },
+        "plan_asset_id": { "$ref": "#/$defs/Identifier" },
+        "plan_version_id": { "$ref": "#/$defs/Identifier" },
+        "render_fingerprint": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["queued", "running", "succeeded", "failed", "cancelled"] },
+        "stage": { "enum": ["queued", "analyzing_render", "building_queries", "retrieving_products", "grounding_matches", "packaging"] },
+        "stage_index": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "stage_total": { "const": 6 },
+        "progress": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "source_mode": { "enum": ["live", "fallback", "demo", null] },
+        "result_state": { "enum": ["ready", "partial", "empty", null] },
+        "retryable": { "type": "boolean" },
+        "result": {
+          "oneOf": [
+            { "$ref": "#/$defs/ProductDiscoveryResult" },
+            { "type": "null" }
+          ]
+        },
+        "error": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["code", "message", "retryable"],
+              "properties": {
+                "code": { "type": "string" },
+                "message": { "type": "string" },
+                "retryable": { "type": "boolean" }
+              }
+            },
+            { "type": "null" }
+          ]
+        },
+        "created_at": { "$ref": "#/$defs/Timestamp" },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "ProductDiscoveryResult": {
+      "type": "object",
+      "required": [
+        "subjects",
+        "subjects_count",
+        "matched_subjects_count",
+        "matches_count",
+        "notices",
+        "provenance"
+      ],
+      "properties": {
+        "subjects": { "type": "array", "items": { "$ref": "#/$defs/DiscoveredSubject" } },
+        "subjects_count": { "type": "integer", "minimum": 0 },
+        "matched_subjects_count": { "type": "integer", "minimum": 0 },
+        "matches_count": { "type": "integer", "minimum": 0 },
+        "notices": { "type": "array", "items": { "type": "object" } },
+        "provenance": { "$ref": "#/$defs/ProductDiscoveryProvenance" }
+      }
+    },
+    "DiscoveredSubject": {
+      "type": "object",
+      "required": [
+        "subject_id",
+        "label",
+        "category_code",
+        "bbox",
+        "appearance",
+        "placement_hint",
+        "confidence",
+        "search_queries",
+        "match_state",
+        "matches"
+      ],
+      "properties": {
+        "subject_id": { "$ref": "#/$defs/Identifier" },
+        "label": { "type": "string", "minLength": 1 },
+        "category_code": { "type": "string", "minLength": 1 },
+        "bbox": {
+          "oneOf": [
+            { "$ref": "#/$defs/BBox" },
+            { "type": "null" }
+          ]
+        },
+        "appearance": {
+          "type": "object",
+          "required": ["colors", "materials", "style_keywords"],
+          "properties": {
+            "colors": { "type": "array", "items": { "type": "string" } },
+            "materials": { "type": "array", "items": { "type": "string" } },
+            "style_keywords": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "placement_hint": { "type": "string" },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "search_queries": { "type": "array", "items": { "type": "string" } },
+        "match_state": { "enum": ["matched", "partial", "unmatched"] },
+        "matches": { "type": "array", "items": { "$ref": "#/$defs/GroundedProductMatch" } }
+      }
+    },
+    "GroundedProductMatch": {
+      "type": "object",
+      "required": [
+        "match_id",
+        "product_id",
+        "title",
+        "category_code",
+        "cover_url",
+        "price_cny",
+        "price_label",
+        "match_type",
+        "match_confidence",
+        "match_reasons",
+        "availability",
+        "commerce_action",
+        "source"
+      ],
+      "properties": {
+        "match_id": { "$ref": "#/$defs/Identifier" },
+        "product_id": { "$ref": "#/$defs/Identifier" },
+        "title": { "type": "string" },
+        "category_code": { "type": "string" },
+        "cover_url": { "type": ["string", "null"] },
+        "price_cny": { "type": ["integer", "null"], "minimum": 0 },
+        "price_label": { "type": "string" },
+        "match_type": { "enum": ["exact_catalog_product", "visual_similar", "category_recommendation"] },
+        "match_confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "match_reasons": { "type": "array", "items": { "type": "string" } },
+        "availability": {
+          "type": "object",
+          "required": ["status", "checked_at"],
+          "properties": {
+            "status": { "type": "string" },
+            "checked_at": { "$ref": "#/$defs/Timestamp" }
+          }
+        },
+        "commerce_action": {
+          "type": "object",
+          "required": ["type", "label", "url", "query"],
+          "properties": {
+            "type": { "enum": ["douyin_deeplink", "web_url", "search_query", "unavailable"] },
+            "label": { "type": "string" },
+            "url": { "type": ["string", "null"] },
+            "query": { "type": ["string", "null"] }
+          }
+        },
+        "source": {
+          "type": "object",
+          "required": ["source_type", "label", "checked_at"],
+          "properties": {
+            "source_type": { "type": "string" },
+            "label": { "type": "string" },
+            "checked_at": { "$ref": "#/$defs/Timestamp" }
+          }
+        }
+      }
+    },
+    "ProductDiscoveryProvenance": {
+      "type": "object",
+      "required": ["image_analysis", "commerce_catalog"],
+      "properties": {
+        "image_analysis": {
+          "type": "object",
+          "required": ["source_type", "strategy"],
+          "properties": {
+            "source_type": { "enum": ["live", "fallback"] },
+            "strategy": { "type": "string" },
+            "provider": { "type": ["string", "null"] },
+            "model": { "type": ["string", "null"] },
+            "prompt_version": { "type": ["string", "null"] }
+          }
+        },
+        "commerce_catalog": {
+          "type": "object",
+          "required": ["source_type", "label", "checked_at"],
+          "properties": {
+            "source_type": { "type": "string" },
+            "label": { "type": "string" },
+            "checked_at": { "$ref": "#/$defs/Timestamp" }
+          }
+        }
+      }
+    },
+    "ProductDiscoveryRunList": {
+      "type": "object",
+      "required": ["schema_version", "items", "next_cursor", "total"],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "items": { "type": "array", "items": { "type": "object" } },
+        "next_cursor": { "type": ["string", "null"] },
+        "total": { "type": "integer", "minimum": 0 }
       }
     },
     "EventBatchResult": {

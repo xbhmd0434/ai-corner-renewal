@@ -13,7 +13,13 @@ import {
   loadVideoEntryContext,
   setBackendHealth,
   setGenerationRun,
-  cancelGeneration
+  cancelGeneration,
+  beginProductDiscoveryContext,
+  applyProductDiscoveryViewModel,
+  updateProductDiscoveryForContext,
+  isCurrentProductDiscoveryContext,
+  persistProductDiscoveryResume,
+  loadProductDiscoveryResume
 } from "./renewal-store.js";
 import {
   uploadMedia,
@@ -28,12 +34,24 @@ import {
   listPlans,
   getPlan,
   getPlanVersion,
-  createPlanRevision
+  createPlanRevision,
+  sendEventsBatch
 } from "../api/v1-client.js";
+import {
+  cancelProductDiscoveryRun,
+  createProductDiscoveryRun,
+  getProductDiscoveryRun,
+  listProductDiscoveryRuns,
+  loadProductDiscoveryFixture
+} from "../api/product-discovery-client.js";
 import { checkHealth } from "../api/legacy-client.js";
 import { mapError } from "../api/http-client.js";
 import { adaptAsset, adaptAssets } from "../adapters/asset-view-model.js";
 import { adaptPlanResult } from "../adapters/plan-version-view-model.js";
+import {
+  adaptProductDiscoveryRun,
+  createUnavailableProductDiscoveryViewModel
+} from "../adapters/product-discovery-view-model.js";
 import {
   buildDesignRequest
 } from "../adapters/design-task-builder.js";
@@ -45,6 +63,7 @@ import { AssetDrawer } from "./components/asset-drawer.js";
 import { HistoryDrawer } from "./components/history-drawer.js";
 import { ResultSection } from "./components/result-section.js";
 import { escapeHtml, formatMoney } from "./components/ui-utils.js";
+import { buildProductDiscoveryEvent } from "./product-discovery-events.js";
 
 const DEFAULT_GOAL = "让空间更整洁，并增加舒适的暖光氛围";
 const DEFAULT_UPLOAD_LIMIT = 6 * 1024 * 1024;
@@ -89,6 +108,11 @@ let pollController = null;
 let pollFailures = 0;
 let videoReferencePromise = null;
 let preferredAssetTab = "inspiration";
+let productDiscoveryPollTimer = null;
+let productDiscoveryPollController = null;
+let productDiscoveryPollStartedAt = 0;
+let productDiscoveryPollFailures = 0;
+const viewedProductDiscoveryRuns = new Set();
 
 const inspirationBar = new InspirationBar(elements.inspiration, {
   onOpenAssets: (tab) => openDrawer("asset", tab)
@@ -113,7 +137,11 @@ const historyDrawer = new HistoryDrawer(elements.historyContent, {
 const resultSection = new ResultSection(elements.result, {
   onBudget: openBudgetDialog,
   onStyle: openStyleDialog,
-  onTryOn: openTryOn
+  onTryOn: openTryOn,
+  onCancel: cancelActiveProductDiscovery,
+  onRetry: retryProductDiscovery,
+  onOfflineDemo: enterOfflineProductDiscoveryDemo,
+  onCommerceAction: handleCommerceAction
 });
 
 function errorMessage(error, fallback = "操作失败，请稍后重试") {
@@ -173,7 +201,12 @@ function render(state = getState()) {
   if (busy) renderProgress(state.currentGenerationRun);
   elements.result.hidden =
     state.coreState !== "RESULT_READY" || !state.currentPlanVersion;
-  if (!elements.result.hidden) resultSection.render(state.currentPlanVersion);
+  if (!elements.result.hidden) {
+    resultSection.render(
+      state.currentPlanVersion,
+      state.productDiscovery.viewModel
+    );
+  }
 
   assetDrawer.render({
     assets: state.assets,
@@ -277,6 +310,7 @@ async function loadAssetsIntoState() {
 
 async function selectSpace(assetId, { quiet = false } = {}) {
   try {
+    stopProductDiscoveryPolling();
     const detail = await getAsset(assetId);
     const selectedSpace = {
       ...adaptAsset(detail),
@@ -532,6 +566,311 @@ function stopPolling() {
   pollController = null;
 }
 
+function stopProductDiscoveryPolling() {
+  if (productDiscoveryPollTimer) clearTimeout(productDiscoveryPollTimer);
+  productDiscoveryPollTimer = null;
+  productDiscoveryPollController?.abort();
+  productDiscoveryPollController = null;
+}
+
+function productDiscoveryFeatureAvailable() {
+  return getState().backendHealth?.features?.product_discovery === true;
+}
+
+function productDiscoveryErrorViewModel(plan, error, runId = null) {
+  return {
+    ...createUnavailableProductDiscoveryViewModel(
+      errorMessage(error, "商品发现连接中断，请重新连接。")
+    ),
+    runId,
+    planAssetId: plan.planAssetId,
+    planVersionId: plan.planVersionId,
+    status: "failed",
+    sourceBadge: "连接中断",
+    description: "没有切换到 Demo；你可以重新连接后继续当前运行。",
+    errorMessage: errorMessage(error, "商品发现连接中断"),
+    canRetry: true
+  };
+}
+
+function applyProductDiscoveryRun(run, contextId, deliveryMode = "api") {
+  const viewModel = adaptProductDiscoveryRun(run, { deliveryMode });
+  const applied = applyProductDiscoveryViewModel(contextId, viewModel);
+  if (!applied) return false;
+  persistProductDiscoveryResume({
+    planAssetId: viewModel.planAssetId,
+    planVersionId: viewModel.planVersionId,
+    runId: viewModel.runId
+  });
+  if (
+    deliveryMode === "api" &&
+    viewModel.runId &&
+    !viewedProductDiscoveryRuns.has(viewModel.runId) &&
+    ["ready", "partial", "empty"].includes(viewModel.status)
+  ) {
+    viewedProductDiscoveryRuns.add(viewModel.runId);
+    emitProductDiscoveryEvent("product_discovery_section_viewed", {
+      plan_version_id: viewModel.planVersionId,
+      product_discovery_run_id: viewModel.runId
+    });
+  }
+  return true;
+}
+
+async function initializeProductDiscovery(plan, { force = false } = {}) {
+  if (!plan?.planAssetId || !plan?.planVersionId) return;
+  const current = getState().productDiscovery;
+  if (!force && current.planVersionId === plan.planVersionId && current.contextId) {
+    return;
+  }
+  stopProductDiscoveryPolling();
+  const contextId = beginProductDiscoveryContext(plan.planAssetId, plan.planVersionId);
+  persistProductDiscoveryResume({
+    planAssetId: plan.planAssetId,
+    planVersionId: plan.planVersionId,
+    runId: null
+  });
+
+  if (!plan.afterImage) {
+    const viewModel = {
+      ...createUnavailableProductDiscoveryViewModel("当前版本没有可用的 after 图，无法发现商品。"),
+      planAssetId: plan.planAssetId,
+      planVersionId: plan.planVersionId,
+      sourceBadge: "效果图不可用"
+    };
+    applyProductDiscoveryViewModel(contextId, viewModel);
+    return;
+  }
+  if (!productDiscoveryFeatureAvailable()) {
+    const viewModel = {
+      ...createUnavailableProductDiscoveryViewModel("后端尚未声明商品发现能力。"),
+      planAssetId: plan.planAssetId,
+      planVersionId: plan.planVersionId
+    };
+    applyProductDiscoveryViewModel(contextId, viewModel);
+    return;
+  }
+
+  updateProductDiscoveryForContext(contextId, { polling: true });
+  try {
+    const response = await listProductDiscoveryRuns(
+      plan.planAssetId,
+      plan.planVersionId,
+      { sort: "recent", limit: 1 }
+    );
+    if (!isCurrentProductDiscoveryContext(contextId, plan.planVersionId)) return;
+    const latest = response.items?.[0] || null;
+    if (!latest) {
+      const run = await createProductDiscoveryRun(plan.planAssetId, plan.planVersionId);
+      if (!applyProductDiscoveryRun(run, contextId)) return;
+      startProductDiscoveryPolling(run.product_discovery_run_id, contextId, plan);
+      return;
+    }
+    const run = await getProductDiscoveryRun(latest.product_discovery_run_id);
+    if (!applyProductDiscoveryRun(run, contextId)) return;
+    if (["queued", "running"].includes(run.status)) {
+      startProductDiscoveryPolling(run.product_discovery_run_id, contextId, plan);
+    } else {
+      updateProductDiscoveryForContext(contextId, { polling: false });
+    }
+  } catch (error) {
+    if (!isCurrentProductDiscoveryContext(contextId, plan.planVersionId)) return;
+    applyProductDiscoveryViewModel(
+      contextId,
+      productDiscoveryErrorViewModel(plan, error, getState().productDiscovery.runId)
+    );
+    updateProductDiscoveryForContext(contextId, {
+      polling: false,
+      reconnectRequired: true
+    });
+  }
+}
+
+function startProductDiscoveryPolling(runId, contextId, plan) {
+  stopProductDiscoveryPolling();
+  productDiscoveryPollController = new AbortController();
+  productDiscoveryPollStartedAt = Date.now();
+  productDiscoveryPollFailures = 0;
+  updateProductDiscoveryForContext(contextId, { runId, polling: true });
+
+  const poll = async () => {
+    if (!isCurrentProductDiscoveryContext(contextId, plan.planVersionId)) return;
+    if (document.hidden) {
+      updateProductDiscoveryForContext(contextId, { polling: false });
+      return;
+    }
+    try {
+      const run = await getProductDiscoveryRun(runId, {
+        signal: productDiscoveryPollController.signal
+      });
+      if (!applyProductDiscoveryRun(run, contextId)) return;
+      productDiscoveryPollFailures = 0;
+      if (!["queued", "running"].includes(run.status)) {
+        stopProductDiscoveryPolling();
+        updateProductDiscoveryForContext(contextId, { polling: false });
+        return;
+      }
+      const elapsed = Date.now() - productDiscoveryPollStartedAt;
+      productDiscoveryPollTimer = setTimeout(poll, elapsed < 10_000 ? 800 : 1500);
+    } catch (error) {
+      if (error.name === "AbortError") return;
+      productDiscoveryPollFailures += 1;
+      if (productDiscoveryPollFailures >= 3) {
+        stopProductDiscoveryPolling();
+        applyProductDiscoveryViewModel(
+          contextId,
+          productDiscoveryErrorViewModel(plan, error, runId)
+        );
+        updateProductDiscoveryForContext(contextId, {
+          polling: false,
+          reconnectRequired: true
+        });
+        return;
+      }
+      productDiscoveryPollTimer = setTimeout(poll, 1500);
+    }
+  };
+  poll();
+}
+
+async function retryProductDiscovery(reason, currentViewModel) {
+  const plan = getState().currentPlanVersion;
+  if (!plan) return;
+  if (getState().productDiscovery.reconnectRequired && currentViewModel?.runId) {
+    const contextId = beginProductDiscoveryContext(plan.planAssetId, plan.planVersionId);
+    startProductDiscoveryPolling(currentViewModel.runId, contextId, plan);
+    return;
+  }
+  if (!productDiscoveryFeatureAvailable()) {
+    await checkBackendHealth();
+    if (!productDiscoveryFeatureAvailable()) {
+      showToast("后端尚未开放商品发现接口，没有切换到 Demo");
+      return;
+    }
+  }
+  stopProductDiscoveryPolling();
+  const contextId = beginProductDiscoveryContext(plan.planAssetId, plan.planVersionId);
+  updateProductDiscoveryForContext(contextId, { polling: true });
+  try {
+    const body = {
+      schema_version: "1.0",
+      reason: reason === "refresh" ? "refresh" : "retry",
+      ...(reason === "refresh" || !currentViewModel?.runId
+        ? {}
+        : { retry_of_product_discovery_run_id: currentViewModel.runId }),
+      options: {
+        discovery_mode: "auto",
+        max_subjects: 6,
+        matches_per_subject: 3
+      }
+    };
+    const run = await createProductDiscoveryRun(
+      plan.planAssetId,
+      plan.planVersionId,
+      body
+    );
+    if (!applyProductDiscoveryRun(run, contextId)) return;
+    emitProductDiscoveryEvent("product_discovery_retry_requested", {
+      plan_version_id: plan.planVersionId,
+      product_discovery_run_id: run.product_discovery_run_id
+    });
+    startProductDiscoveryPolling(run.product_discovery_run_id, contextId, plan);
+  } catch (error) {
+    applyProductDiscoveryViewModel(contextId, productDiscoveryErrorViewModel(plan, error));
+  }
+}
+
+async function cancelActiveProductDiscovery() {
+  const current = getState().productDiscovery;
+  if (!current.runId || current.deliveryMode !== "api") return;
+  try {
+    const run = await cancelProductDiscoveryRun(current.runId);
+    stopProductDiscoveryPolling();
+    applyProductDiscoveryRun(run, current.contextId);
+    updateProductDiscoveryForContext(current.contextId, { polling: false });
+  } catch (error) {
+    showToast(errorMessage(error, "取消商品识别失败"));
+  }
+}
+
+async function enterOfflineProductDiscoveryDemo() {
+  const plan = getState().currentPlanVersion;
+  if (!plan) return;
+  stopProductDiscoveryPolling();
+  const contextId = beginProductDiscoveryContext(plan.planAssetId, plan.planVersionId, {
+    deliveryMode: "offline_fixture"
+  });
+  try {
+    const runningFixture = await loadProductDiscoveryFixture("running");
+    const running = {
+      ...runningFixture,
+      plan_asset_id: plan.planAssetId,
+      plan_version_id: plan.planVersionId
+    };
+    applyProductDiscoveryRun(running, contextId, "offline_fixture");
+    await delay(800);
+    if (!isCurrentProductDiscoveryContext(contextId, plan.planVersionId)) return;
+    const readyFixture = await loadProductDiscoveryFixture("ready");
+    const ready = {
+      ...readyFixture,
+      plan_asset_id: plan.planAssetId,
+      plan_version_id: plan.planVersionId
+    };
+    applyProductDiscoveryRun(ready, contextId, "offline_fixture");
+    updateProductDiscoveryForContext(contextId, { polling: false });
+  } catch (error) {
+    applyProductDiscoveryViewModel(
+      contextId,
+      productDiscoveryErrorViewModel(plan, error)
+    );
+  }
+}
+
+async function handleCommerceAction(action, subject, match, viewModel) {
+  if (!action || action.disabled) return;
+  let eventName = "commerce_match_clicked";
+  if (action.type === "search_query") {
+    try {
+      await navigator.clipboard.writeText(action.query);
+      showToast("搜索词已复制，打开抖音即可搜索");
+      eventName = "commerce_search_copied";
+    } catch {
+      showToast("浏览器无法复制搜索词，请稍后重试");
+      return;
+    }
+  } else if (action.type === "web_url") {
+    const opened = window.open(action.url, "_blank", "noopener,noreferrer");
+    if (opened) opened.opener = null;
+  } else if (action.type === "douyin_deeplink") {
+    const bridge = globalThis.DouyinJSBridge;
+    if (typeof bridge?.invoke !== "function") {
+      showToast("请在抖音内打开后购买");
+      return;
+    }
+    bridge.invoke("openSchema", { schema: action.url });
+  } else {
+    eventName = "commerce_action_unavailable";
+    showToast(action.label || "暂不可购买");
+  }
+  if (viewModel.deliveryMode !== "offline_fixture") {
+    emitProductDiscoveryEvent(eventName, {
+      plan_version_id: viewModel.planVersionId,
+      product_discovery_run_id: viewModel.runId,
+      subject_id: subject.id,
+      match_id: match.id,
+      product_id: match.productId,
+      commerce_action_type: action.type,
+      source_type: match.sourceType
+    });
+  }
+}
+
+function emitProductDiscoveryEvent(eventName, values) {
+  sendEventsBatch([buildProductDiscoveryEvent(eventName, values)]).catch(() => {
+    // 事件失败不影响购买动作；后端尚未接入新事件名时也不降级或重放自由文本。
+  });
+}
+
 function startGenerationPolling(generationRunId, coreState) {
   stopPolling();
   pollController = new AbortController();
@@ -564,10 +903,12 @@ function startGenerationPolling(generationRunId, coreState) {
           showToast("生成完成，但方案版本缺失");
           return;
         }
+        const planViewModel = adaptPlanResult(envelope);
         update({
           coreState: "RESULT_READY",
-          currentPlanVersion: adaptPlanResult(envelope)
+          currentPlanVersion: planViewModel
         });
+        initializeProductDiscovery(planViewModel);
         showToast("方案已生成，并保存到历史方案");
         loadPlansIntoState();
         return;
@@ -633,10 +974,12 @@ async function loadPlanVersionIntoCore(planAssetId, planVersionId) {
       actualVersionId = (await getPlan(planAssetId)).current_plan_version_id;
     }
     const envelope = await getPlanVersion(planAssetId, actualVersionId);
+    const planViewModel = adaptPlanResult(envelope);
     update({
-      currentPlanVersion: adaptPlanResult(envelope),
+      currentPlanVersion: planViewModel,
       coreState: "RESULT_READY"
     });
+    await initializeProductDiscovery(planViewModel, { force: true });
     closeDrawers();
     elements.result.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) {
@@ -795,6 +1138,28 @@ function bindStaticEvents() {
       closeDrawers();
     }
   });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      if (getState().productDiscovery.polling) {
+        stopProductDiscoveryPolling();
+        updateProductDiscoveryForContext(
+          getState().productDiscovery.contextId,
+          { polling: false }
+        );
+      }
+      return;
+    }
+    const current = getState().productDiscovery;
+    const plan = getState().currentPlanVersion;
+    if (
+      plan &&
+      current.runId &&
+      ["queued", "analyzing"].includes(current.status) &&
+      current.deliveryMode === "api"
+    ) {
+      startProductDiscoveryPolling(current.runId, current.contextId, plan);
+    }
+  });
 }
 
 function hydrateStoredDraft(draft) {
@@ -848,6 +1213,11 @@ async function init() {
     openDrawer(startup.drawer);
   } else if (startup.requestUpload) {
     elements.fileInput?.click();
+  } else {
+    const resume = loadProductDiscoveryResume();
+    if (resume?.planAssetId && resume?.planVersionId) {
+      await loadPlanVersionIntoCore(resume.planAssetId, resume.planVersionId);
+    }
   }
   render();
 }
