@@ -3,8 +3,8 @@
 > 目标：给评委一个可直接打开的 HTTPS 链接，移动端优先；评委不需要安装软件、
 > clone 仓库或配置密钥。
 >
-> 当前状态：**代码侧部署改造已完成并通过生产烟测；待整理 Commit、推送 GitHub，
-> 然后购买服务器并由 Zeabur 完成首次 Docker 构建。**
+> 当前状态：**代码侧部署改造已完成并通过生产烟测，实施基线为
+> `51f54c8`；待推送 GitHub，然后购买服务器并由 Zeabur 完成首次 Docker 构建。**
 >
 > 最近核对：2026-07-26
 
@@ -90,7 +90,7 @@ Digital Ocean、Aliyun、Tencent 等供应商选项是正常现象，不是操�
 
 | Gate | 状态 | 证据 |
 | --- | --- | --- |
-| A 开发基线 | 待最终 Commit | `npm.cmd run check` 已通过；需清理并记录部署 SHA |
+| A 开发基线 | 已完成 | 分支 `agent/update-30h-team-plan`，实施基线 `51f54c8`，209 项唯一测试通过 |
 | B 正式入口 | 已完成 | 单端口 `/` 已返回抖音版首页 |
 | C 公网安全 | 已完成 | 口令页、401、Cookie、AI 总开关自动测试与烟测通过 |
 | D 单端口 | 已完成 | 公网配置临时端口健康、登录、首页均通过 |
@@ -152,7 +152,7 @@ Digital Ocean、Aliyun、Tencent 等供应商选项是正常现象，不是操�
 验收：Zeabur 首次构建成功后创建测试数据，重启服务并确认数据仍存在。当前 Windows
 开发机未安装 Docker CLI，不能把“Dockerfile 已存在”误写为“本地镜像已经构建”。
 
-Gate A 形成部署 Commit 后即可进入第 5 节；Gate E 的镜像构建和 Volume 重启验证
+Gate A 已形成部署 Commit，可以进入第 5 节；Gate E 的镜像构建和 Volume 重启验证
 在 Zeabur 首次部署中完成，失败则不绑定最终评审链接。
 
 ## 5. Zeabur 控制台操作
