@@ -187,6 +187,10 @@ Store 均已落地。旧 `me.js` Mock 只作为视觉遗留，不再向其中增
   `PlanVersionEnvelope → PlanResultViewModel`，展示前后图、候选商品、步骤和规则校验。
 - 浏览器 `sessionStorage` 只保存 ID、目标和约束草稿，不保存 File、Base64、短时媒体 URL 或密钥。
 - 旧 `me.js` Canvas/随机商品/Mock 识别仍存在于源码，但入口已退出主路径；不得把它描述成联网能力。
+- 3D 试搭以包和挂件两个独立资产保存 Composition；恢复时校验保存版本、视角、
+  挂点、position/rotation/scale，并把缩放约束在 `0.55–1.65`。若刷新后原本
+  通过文件选择器载入的本地 GLB 已不可用，保留合法摆放信息但明确回退到内置
+  演示模型，不把失效临时模型 ID 留在当前状态。
 
 ### 2.4 当前缺口与重做风险
 

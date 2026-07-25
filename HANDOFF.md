@@ -48,6 +48,9 @@
   X/Y 微调、旋转、缩放、立体/正面/右侧/背面视角和视觉适配提示。
 - 试搭方案通过 `localStorage` 保存 `baseModelId + attachmentModelId + anchorId +
   transform + view`；保存后替换模型仍可恢复，重置不删除上次保存。
+- 恢复 3D 试搭时会校验 schema、视角、挂点、三维变换和缩放范围；保存记录引用
+  的本地 GLB 已不存在时，保留合法摆放状态并明确回退为演示模型，避免空场景或
+  无效变换污染当前状态。
 - 浏览器可直接读取本地 GLB 且不上传，当前视角可导出 PNG。仓库内若存在
   `apps/web/assets/models/little-blue-whale-v1-shape.glb`，页面默认加载本机混元
   样例；缺失或加载失败时明确降级为程序化小蓝鲸。

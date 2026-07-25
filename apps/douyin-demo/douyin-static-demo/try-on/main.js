@@ -591,17 +591,56 @@ function restoreComposition() {
     if (saved.schema_version !== "tryon-composition.v1") {
       throw new Error("schema");
     }
-    Object.assign(state, clone(saved));
+    const restored = clone(saved);
+    const missingLocalBag = !TRYON_LIBRARY.bags.some(
+      ({ id }) => id === restored.base_model_id
+    );
+    const missingLocalCharm = !TRYON_LIBRARY.charms.some(
+      ({ id }) => id === restored.attachment_model_id
+    );
+    if (missingLocalBag) {
+      restored.base_model_id = DEFAULT_TRYON_COMPOSITION.base_model_id;
+    }
+    if (missingLocalCharm) {
+      restored.attachment_model_id =
+        DEFAULT_TRYON_COMPOSITION.attachment_model_id;
+    }
+    if (!TRYON_VIEWS[restored.view]) {
+      restored.view = DEFAULT_TRYON_COMPOSITION.view;
+    }
+    if (
+      !Array.isArray(restored.transform?.position) ||
+      restored.transform.position.length !== 3 ||
+      !restored.transform.position.every(Number.isFinite) ||
+      !Array.isArray(restored.transform?.rotation) ||
+      restored.transform.rotation.length !== 3 ||
+      !restored.transform.rotation.every(Number.isFinite) ||
+      !Number.isFinite(restored.transform.scale)
+    ) {
+      throw new Error("transform");
+    }
+    restored.transform.scale = clamp(restored.transform.scale, 0.55, 1.65);
+    restored.anchor_id =
+      restored.anchor_id === "free" ||
+      TRYON_ANCHORS.some(({ id }) => id === restored.anchor_id)
+        ? restored.anchor_id
+        : DEFAULT_TRYON_COMPOSITION.anchor_id;
+
+    Object.assign(state, restored);
     replaceBag(state.base_model_id);
     replaceCharm(state.attachment_model_id);
-    Object.assign(state, clone(saved));
+    Object.assign(state, restored);
     setView(state.view || "perspective", true);
     applyTransform();
     markSaved(new Date(state.saved_at));
     if (state.attachment_model_id === "charm-whale-01") {
       loadHunyuanSample();
     }
-    showToast("已恢复上次保存的模型和摆放");
+    showToast(
+      missingLocalBag || missingLocalCharm
+        ? "已恢复摆放；本地 GLB 需重新载入，暂用演示模型"
+        : "已恢复上次保存的模型和摆放"
+    );
   } catch {
     showToast("保存版本不兼容，当前试搭没有被覆盖");
   }
