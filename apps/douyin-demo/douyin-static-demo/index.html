@@ -4,7 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>抖音静态刷视频 Demo</title>
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./visual-search/styles.css" />
   </head>
   <body>
     <main class="home-shell">
@@ -55,11 +57,18 @@
           <button class="stack-button" aria-label="收藏"><span>☆</span><small></small></button>
           <button class="stack-button" aria-label="分享"><span>↗</span><small>分享</small></button>
         </div>
+        <button class="visual-search-trigger" type="button" aria-label="框选当前画面搜索商品">
+          <span class="visual-search-trigger__mark" aria-hidden="true">
+            <i></i><i></i><i></i><i></i>
+          </span>
+          <span><b>一角焕新</b><small>框选搜同款</small></span>
+        </button>
         <button class="play-toggle" aria-label="播放或暂停视频">▶</button>
       </article>
     </template>
 
     <script src="./nav.js"></script>
     <script src="./app.js"></script>
+    <script type="module" src="./visual-search/main.js"></script>
   </body>
 </html>

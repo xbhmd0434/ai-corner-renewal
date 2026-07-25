@@ -18,6 +18,9 @@ const required = [
   "apps/web/accessory-studio.css",
   "apps/web/accessory-studio.js",
   "apps/web/data/accessory-demo-data.js",
+  "apps/web/prompt-lab.html",
+  "apps/web/prompt-lab.css",
+  "apps/web/prompt-lab.js",
   "apps/web/assets/models/README.md",
   "apps/web/assets/desk-before.png",
   "apps/web/assets/desk-after-warm.png",
@@ -39,6 +42,9 @@ const required = [
   "services/orchestrator/src/workflow.js",
   "services/orchestrator/src/platform.js",
   "services/orchestrator/src/repository.js",
+  "services/orchestrator/src/adapters/layout-planner.js",
+  "services/orchestrator/src/prompts/prompt-lab-default.js",
+  "services/orchestrator/src/services/prompt-lab-service.js",
   "examples/aicard.demo.json",
   "examples/requests/generate.main.json",
   "examples/requests/revise.to-300.json",
@@ -53,7 +59,7 @@ if (missing.length) {
   throw new Error(`缺少必要文件：\n${missing.join("\n")}`);
 }
 
-const htmlFiles = ["index.html", "accessory-studio.html"];
+const htmlFiles = ["index.html", "accessory-studio.html", "prompt-lab.html"];
 const localReferences = htmlFiles.flatMap((name) => {
   const file = join(webRoot, name);
   const html = readFileSync(file, "utf8");

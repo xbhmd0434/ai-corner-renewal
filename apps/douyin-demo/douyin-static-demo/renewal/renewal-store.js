@@ -5,6 +5,20 @@
  */
 
 const INITIAL_STATE = {
+  // 单页核心流程：IDLE / GENERATING / RESULT_READY / ADJUSTING
+  mode: "space_to_inspiration",
+  coreState: "IDLE",
+  selectedInspiration: null,
+  selectedSpace: null,
+  constraints: {
+    budget_cny: 500,
+    no_drilling: true,
+    pet_context: "none",
+    rental: true,
+    keep_detected_object_ids: [],
+    user_note: ""
+  },
+
   // 当前路由
   currentRoute: "/home",
 
@@ -47,7 +61,8 @@ const INITIAL_STATE = {
   ui: {
     loading: false,
     error: null,
-    toast: null
+    toast: null,
+    drawerOpen: null
   },
 
   // 视频入口上下文
@@ -62,7 +77,21 @@ const INITIAL_STATE = {
   editHistoryIndex: -1
 };
 
-let state = { ...INITIAL_STATE };
+function freshInitialState() {
+  return {
+    ...INITIAL_STATE,
+    constraints: { ...INITIAL_STATE.constraints },
+    ui: { ...INITIAL_STATE.ui },
+    assets: [],
+    spaces: [],
+    inspirations: [],
+    items: [],
+    plans: [],
+    editHistory: []
+  };
+}
+
+let state = freshInitialState();
 let listeners = new Set();
 
 /**
@@ -134,7 +163,7 @@ function notifyListeners() {
  * 重置状态
  */
 export function reset() {
-  state = { ...INITIAL_STATE };
+  state = freshInitialState();
   notifyListeners();
 }
 

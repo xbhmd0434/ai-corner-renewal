@@ -182,35 +182,12 @@ function fallbackReason(error) {
     : "render_unavailable";
 }
 
-export function createRenderGenerator({
+function createSeedreamRequest({
   config,
-  fetchImpl = globalThis.fetch,
-  now = () => Date.now()
+  fetchImpl,
+  now
 }) {
-  return async function generateRender({
-    roomInput,
-    plan,
-    roomProfile,
-    products,
-    requestedMode = "auto"
-  }) {
-    if (config.backendMode === "demo" || requestedMode === "demo") {
-      return {
-        sourceType: "demo",
-        model: config.agentPlanImageModel,
-        latencyMs: 0
-      };
-    }
-    if (!config.agentPlanApiKey) {
-      return {
-        sourceType: "fallback",
-        reason: "render_not_configured",
-        message: "未配置 Agent Plan 专属 Key，效果图已回退为 Demo。",
-        model: config.agentPlanImageModel,
-        latencyMs: 0
-      };
-    }
-
+  return async function requestSeedream({ roomInput, prompt }) {
     const startedAt = now();
     const controller = new AbortController();
     const timeout = setTimeout(
@@ -230,7 +207,7 @@ export function createRenderGenerator({
           signal: controller.signal,
           body: JSON.stringify({
             model: config.agentPlanImageModel,
-            prompt: renderPrompt({ plan, roomProfile, products }),
+            prompt,
             image: [imageForAgentPlan(roomInput)],
             size: "2K",
             sequential_image_generation: "disabled",
@@ -271,6 +248,99 @@ export function createRenderGenerator({
         latencyMs: Math.max(0, now() - startedAt),
         ...image
       };
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+}
+
+export function createPromptLabGenerator({
+  config,
+  fetchImpl = globalThis.fetch,
+  now = () => Date.now()
+}) {
+  const requestSeedream = createSeedreamRequest({ config, fetchImpl, now });
+  return async function generatePromptLabImage({
+    imageDataUrl,
+    prompt,
+    requestedMode = "live"
+  }) {
+    if (config.backendMode === "demo" || requestedMode === "demo") {
+      return {
+        sourceType: "fallback",
+        reason: "render_not_configured",
+        message: "当前 AI_BACKEND_MODE=demo，Prompt 实验台未调用模型。",
+        model: config.agentPlanImageModel,
+        latencyMs: 0
+      };
+    }
+    if (!config.agentPlanApiKey) {
+      return {
+        sourceType: "fallback",
+        reason: "render_not_configured",
+        message: "未配置 Agent Plan 专属 Key，Prompt 实验台无法调用模型。",
+        model: config.agentPlanImageModel,
+        latencyMs: 0
+      };
+    }
+    const startedAt = now();
+    try {
+      return await requestSeedream({
+        roomInput: {
+          image: {
+            data_url: imageDataUrl
+          }
+        },
+        prompt
+      });
+    } catch (error) {
+      return {
+        sourceType: "fallback",
+        reason: fallbackReason(error),
+        message: "Seedream 改图失败，请检查本地配置或稍后重试。",
+        model: config.agentPlanImageModel,
+        latencyMs: Math.max(0, now() - startedAt)
+      };
+    }
+  };
+}
+
+export function createRenderGenerator({
+  config,
+  fetchImpl = globalThis.fetch,
+  now = () => Date.now()
+}) {
+  const requestSeedream = createSeedreamRequest({ config, fetchImpl, now });
+  return async function generateRender({
+    roomInput,
+    plan,
+    roomProfile,
+    products,
+    requestedMode = "auto"
+  }) {
+    if (config.backendMode === "demo" || requestedMode === "demo") {
+      return {
+        sourceType: "demo",
+        model: config.agentPlanImageModel,
+        latencyMs: 0
+      };
+    }
+    if (!config.agentPlanApiKey) {
+      return {
+        sourceType: "fallback",
+        reason: "render_not_configured",
+        message: "未配置 Agent Plan 专属 Key，效果图已回退为 Demo。",
+        model: config.agentPlanImageModel,
+        latencyMs: 0
+      };
+    }
+
+    const startedAt = now();
+    try {
+      return await requestSeedream({
+        roomInput,
+        prompt: renderPrompt({ plan, roomProfile, products })
+      });
     } catch (error) {
       return {
         sourceType: "fallback",
@@ -279,8 +349,6 @@ export function createRenderGenerator({
         model: config.agentPlanImageModel,
         latencyMs: Math.max(0, now() - startedAt)
       };
-    } finally {
-      clearTimeout(timeout);
     }
   };
 }

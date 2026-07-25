@@ -8,11 +8,19 @@
 当前源码版本为 `0.5.1`，事实源是本仓库；`apps/douyin-demo` 与后端已经进入
 同一源码树。仓库外同名副本不再是交付或协作事实源。
 
+后端下一阶段的产品优先级、第一链路完成定义以及 Agent / 确定性代码责任边界，
+统一以 `docs/backend-product-handoff.md` 为准。正式 GenerationRun 应从固定方案
+模板迁移到 `SceneAssessment → LayoutPlan → ProductSlot → SelectedProduct →
+RenderPromptSpec → EvaluationResult`，同时保留现有 `/api/v1` 资产、任务、运行和
+方案版本接口。家具与建筑保持不能只依赖 Prompt，必须增加保护区域或严格的生成后
+拒绝机制；商品、预算、状态、来源和发布门禁始终由代码拥有。
+
 | 运行面 | 成熟度 | 当前事实 |
 | --- | --- | --- |
 | `apps/web` | 运行时 Live 集成原型 | 离线样例/灵感读取 `REMIX_DATA`；完整流程调用 `health/generate/revise` 并展示 LIVE/FALLBACK/DEMO |
 | `apps/web/accessory-studio.html` | 运行时静态 3D MVP | Three.js 双模型试搭；本机混元 GLB、程序化降级、挂点/位姿/多视角、浏览器保存恢复 |
-| `apps/douyin-demo/douyin-static-demo/renewal.html` | 默认可持久联调集成原型 | 视频/上传入口、资产、空间封存、任务、运行、方案历史和结果已接 `/api/v1`；旧 `me.js` Mock 已退出主路径 |
+| `apps/web/prompt-lab.html` | 两阶段布置评测原型 | 上传并压缩家居单图、编辑规划 Prompt，后端先规划再调 Seedream；并排预览和下载，实验数据不持久化 |
+| `apps/douyin-demo/douyin-static-demo/renewal.html` | 默认可持久联调集成原型 | 单核心卡片承载灵感、空间、约束、生成进度与结果；资产/历史为底部抽屉；上传、封存、运行、方案与调整已接 `/api/v1` |
 | `/api/generate`、`/api/revise` | 向后兼容 | 请求和 AICard v1 响应不破坏；内部结果已持久化 |
 | `/api/v1` | P0 可持久联调版 | 私有媒体、资产、任务、运行、方案版本、偏好和事件可用 |
 | 真实模型 | Agent Plan + Seedream + 本机 Hunyuan shape 已验收 | 空间识别、主方案 image-to-image 与 Hunyuan3D-2mini shape-only GLB；候选方案/预算调整不重复生图，3D 纹理未接 |
@@ -38,6 +46,14 @@
 - Seedream 5.0 Lite 图片编辑适配器：只为首次生成的主方案调用一次，输入原图、
   结构保持约束、摆放规则与商品名；输出校验 Base64、MIME、文件签名、大小和真实
   图片结构后写入私有媒体。
+- 独立 Prompt 实验台使用版本化 `layout-agent-v1.2.0` 布置规划模板。模板把
+  所有现有家具设为几何锁定对象，禁止规划移动、替换、删除、缩放或重绘家具，
+  只允许整理松散小物、移除明确垃圾和在现有空位新增物品；默认采用明显焕新
+  强度，以功能、主辅视觉区和氛围三个层次组织通常 3～5 个商品槽位。页面上传
+  PNG/JPEG/WebP 后压缩为受限 JPEG，文本视觉模型先输出经过边界校验的
+  `LayoutPlan + ProductSlot`，服务端 Builder 再编译 Seedream 指令。非家居场景
+  返回 `needs_input`，规划失败不会继续消耗图片调用；成功后返回规划、商品槽位、
+  模型、耗时和图片。该路径不创建媒体、资产、任务或方案版本。
 - 空间识别来源与效果图来源在 Web 分开显示；图片失败只降级效果图，结构化方案
   继续返回。
 - Web 会把后端返回的 `/api/v1/media/...` 私有媒体相对地址解析到 API
@@ -58,11 +74,20 @@
   `D:\LittleBlueWhale3D\.venv-hunyuan3d` 与离线缓存，不污染项目通用 Python；
   已完成 3.8 GB 权重装载和生成命令 `--dry-run` 验收。
 - Agent Plan 自由文本可见标签到稳定空间/区域代码的保守归一化。
-- 62 项后端/协议/3D 自动测试、46 项抖音前端测试、真实 Seedream 闭环检查与
+- 73 项后端/协议/3D 自动测试、54 项抖音前端测试、真实 Seedream 闭环检查与
   一键可读后端示例。
 - 仓内抖音前端已提供同源静态/API 代理和一键启动；前端正式主链路为
   `video context 或 media upload → Asset → sealed SpaceVersion → DesignRequest
   → GenerationRun → PlanVersion`，商品价格和校验结论只读后端字段。
+- `renewal.html` 已从多 hash 页面重构为 `IDLE / GENERATING / RESULT_READY /
+  ADJUSTING` 单页状态流；资产和历史不再抢占主流程，旧 hash 由 `mode.js` 兼容
+  解析。结果可创建降预算/换风格的新版本，不覆盖父 PlanVersion。
+- 抖音推荐流新增独立 `visual-search/**` 体验：手动暂停后定帧、框选、候选选择、
+  轻量 2D 资产生成和入库完成页。后端未声明视觉搜索能力时使用固定本地候选并如实
+  标注；用户确认后优先调用现有 AssetService 创建 saved ItemAsset。
+- 视觉搜索全流程已与焕新核心统一为温馨家居编辑语言：奶油纸、苔绿和陶土橙，
+  框选画面使用相纸式容器，查询、候选、建模和完成页使用“好物/收藏”用户语言；
+  Demo 来源、2D/3D 能力和隐私提示仍明确展示。
 
 仍未实现或未达到生产成熟度：
 
@@ -117,6 +142,22 @@ MediaObject
               → AICard v1(前端 DTO 快照)
 ```
 
+视频框选新增目标对象链：
+
+```text
+QueryMedia（用户确认的裁剪图）
+→ VisualSearchQuery
+  → Candidate[]（仅候选）
+    → 用户确认
+      → ItemAsset（稳定身份）
+        → ModelGenerationRun
+          → ModelVersion（不可变派生物）
+```
+
+当前只实现前端状态与 ItemAsset 兼容写入；VisualSearchQuery、Candidate、
+ModelGenerationRun 和 ModelVersion 的 Repository/API 尚未实现，契约见
+`docs/visual-search-api.md`。
+
 3D 试搭当前是前端 MVP 对象，不应伪装成已持久化后端模型：
 
 ```text
@@ -145,6 +186,22 @@ CaptureSet
 
 上面第二组只是明确的目标模型，当前 Repository、migration 和 `/api/v1` 尚未实现，
 接入时不得直接把大体积 GLB 或图片 Base64 塞进 SQLite JSON。
+
+Prompt 实验台是明确的非持久评测对象，不加入上述方案谱系：
+
+```text
+PromptTemplate（稳定版本 layout-agent-v1.2.0）
++ BrowserSourceImage（一次页面会话）
++ PromptDraft（localStorage，仅文本）
+→ LayoutPlan + ProductSlot（文本视觉模型、仅当前响应）
+→ RenderPromptSpec（确定性 Builder）
+→ PromptLabRun（Seedream 同步调用，不入库）
+→ BrowserResultImage（一次页面会话，可手动下载）
+```
+
+更换原图会清空旧结果；修改 Prompt 后旧结果标为 stale，重新生成成功才成为当前
+结果。刷新后原图与结果清空，Prompt 文本可从浏览器恢复。不存在 Apply/Cancel、
+服务端历史或重启恢复；这与正式 `GenerationRun/PlanVersion` 有意隔离。
 
 身份含义：
 
@@ -253,6 +310,23 @@ dirty preview → restore → last saved
 
 ## 4. 代码与模块所有权
 
+### 当前三人协作边界
+
+当前迭代按产品、前端、后端三条线并行，完整执行规则见
+`docs/team-roles.md`：
+
+- 产品拥有问题优先级、用户承诺和验收口径；每轮最多冻结 3 个 P0，不直接把想法
+  当成实现方案。
+- 前端拥有 `apps/douyin-demo/**`、`apps/web/**`、Adapter 和浏览器状态；不复制
+  价格、预算、安全、尺寸或来源等后端规则。
+- 后端拥有 `services/**`、`packages/**`、生图 Prompt Builder、版本和评测；Prompt
+  只翻译已确认的结构化输入，不能覆盖 Repository、Schema 或确定性校验。
+- 项目发起人 `xbhmd0434` 协调联合回归、PR 合并和候选 Commit。
+
+前后端可以分别实现，但用户主路径、Contract/fixture 和最终集成 Commit 必须经过
+共同阶段门。纯 Prompt 内部改动若不改变协议可以独立合并，但必须提供固定案例的
+对比评测；需要新增字段时先提交单独 Contract PR。
+
 ### `packages/contracts`
 
 - `schemas/aicard-v1.schema.json`：前端结果 DTO。
@@ -282,10 +356,27 @@ dirty preview → restore → last saved
 - `src/services/plan-service.js`：GenerationRun、现有 Workflow、方案谱系、调整和
   旧接口持久兼容。
 - `src/services/event-service.js`：白名单、最小化事件。
+- `src/services/prompt-lab-service.js`：实验请求、Prompt/图片校验、非持久结果和
+  两阶段编排、安全错误映射；规划不是 `ready` 时不能调用图片模型，也不能写
+  Repository 或 MediaService。
 - `src/workflow.js`：已有确定性生成内核；不能再复制第二套工作流。
 - `src/adapters/room-analyzer.js`：RoomProfile Agent Plan 直连与自有 HTTP 网关；
   稳定身份/用户确认尺寸不交给模型，响应必须过同一协议校验。
+- `src/adapters/layout-planner.js`：Prompt 实验台的文本视觉布置规划；限制 1～8
+  个动作和最多 5 个商品槽位，拒绝超大、非法或缺字段的模型 JSON。
 - `src/adapters/asset-understanding.js`：当前确定性解析 adapter。
+- `src/adapters/render-generator.js`：正式主方案与 Prompt 实验台共用 Seedream
+  请求、响应上限、图片签名和供应方错误分类；实验台使用独立包装，不改变 AICard。
+- `src/prompts/prompt-lab-default.js`：布置 Agent 模板、版本与确定性
+  `LayoutPlan → RenderPromptSpec` Builder 的事实源。
+- `docs/first-workflow-prompt-engineering-handoff.md`：第一链路完整 Prompt 工程
+  主交接入口，覆盖场景准入、布置规划、商品槽位、真实商品约束、生图、评测、
+  返修及迁入正式 `/api/generate` 的顺序。
+- `docs/backend-product-handoff.md`：从当前抖音前端和产品闭环出发的后端正式
+  交接，定义本轮 P0、Agent/代码边界、正式 GenerationRun 阶段、接口承诺和产品
+  验收标准；后端排期与联调优先读取本文。
+- `docs/sensitive-bundle-manifest.md`：完整敏感交接包的包含范围、不可恢复响应和
+  Key/用户图片/数据库的传输安全说明。
 - `src/adapters/model-ports.js`：真实模型/精细 API 的空端口和能力说明。
 - `test/v1-platform.test.js`：CORS、幂等、媒体、空间封存、生成、调整和重启。
 
@@ -296,6 +387,9 @@ dirty preview → restore → last saved
 - `apps/web/accessory-studio.html`、`.css`、`.js`：独立 Three.js 3D 编辑器；
   负责场景、双模型、GLB 导入、挂点/位姿、视角、PNG 导出和 Composition
   `localStorage`。
+- `apps/web/prompt-lab.html`、`.css`、`.js`：独立 Prompt 评测页；管理空、图片
+  准备、就绪、生成中、成功、失败和 stale 结果状态。只把 Prompt 文本写入
+  `localStorage`，图片不写入浏览器持久存储。
 - `apps/web/data/accessory-demo-data.js`：3D 演示资产、挂点、视角和默认
   Composition；新增模型身份或挂点先改这里并补测试。
 - `apps/web/assets/models/`：浏览器预览 GLB 的本地交接目录；二进制被 Git 忽略，
@@ -307,6 +401,12 @@ dirty preview → restore → last saved
   适配器；默认 30 steps、guidance 5、octree 192、200000 chunks。
 - `apps/douyin-demo/**`：默认抖音宿主前端，只消费公开 HTTP、Schema
   和授权 Demo 图片；`api/**`、`adapters/**` 和 `renewal/**` 已接通。
+- `apps/douyin-demo/douyin-static-demo/renewal/components/**`：单核心界面的灵感、
+  空间、约束、结果、资产抽屉和历史抽屉；`renewal/mode.js` 只负责启动入口兼容，
+  `renewal/main.js` 负责状态和网络协调。
+- `apps/douyin-demo/douyin-static-demo/visual-search/**`：视频暂停框选、查询状态、
+  候选选择、轻量建模与完成页；`api/visual-search-client.js` 负责能力发现和拟议
+  `/api/v1/visual-search/**`，未启用时不上传查询图。
 - `apps/douyin-demo/HANDOFF.md`：前端对象边界、页面状态、运行方式、
   已实现范围和分阶段验收事实源。
 - `examples/run-backend-demo.mjs`：使用临时 SQLite 验证旧兼容结果进入持久历史。
@@ -321,6 +421,20 @@ GET  /api/health
 POST /api/generate
 POST /api/revise
 ```
+
+本地 Prompt 评测接口：
+
+```text
+GET  /api/prompt-lab
+POST /api/prompt-lab/render
+```
+
+GET 返回布置 Agent Prompt、版本、规划/生图模型、管线、限制和隐私声明。POST
+复核 Prompt、Data URL、Base64、MIME、图片签名和大小后，先调用文本视觉规划；
+只有合法 `ready` 方案才编译并调用 Seedream。成功响应中的 `layout_plan`、
+`product_slots` 和结果 Data URL
+只发回当前浏览器。该接口不是 `/api/v1` 生产契约，不持久化、不幂等、不创建
+领域对象；每次 POST 消耗一次规划调用，且只有规划通过时才消耗图片额度。
 
 已实现 `/api/v1`：
 
@@ -347,7 +461,9 @@ GET /api/runtime/hunyuan
 Orchestrator `/api/v1` 契约。生产模型生成端点尚未实现。
 
 完整路径和字段基线见 `docs/backend-next-phase-handoff.md`；模型边界见
-`docs/model-integration.md`。
+`docs/model-integration.md`；视频视觉搜索拟议契约见
+`docs/visual-search-api.md`。后端实现前，`/api/v1/visual-search/**` 不属于已实现
+接口列表。
 
 通用契约：
 
@@ -385,6 +501,7 @@ Orchestrator `/api/v1` 契约。生产模型生成端点尚未实现。
 | `AGENT_PLAN_TEXT_MODEL` | `doubao-seed-2.0-lite` | RoomProfile 多模态理解 |
 | `AGENT_PLAN_IMAGE_MODEL` | `doubao-seedream-5.0-lite` | 主方案实时图片编辑 |
 | `AGENT_PLAN_TIMEOUT_MS` | `30000` | Agent Plan 调用超时 |
+| `AGENT_PLAN_LAYOUT_TIMEOUT_MS` | `90000` | 两阶段实验台布置规划独立超时 |
 | `AGENT_PLAN_IMAGE_TIMEOUT_MS` | `90000` | Seedream 单次图片请求超时 |
 | `AGENT_PLAN_IMAGE_RESPONSE_LIMIT_BYTES` | `25165824` | Seedream JSON/Base64 响应上限 |
 | `CORS_ORIGINS` | 本机 8765 | 精确允许来源 |
@@ -425,6 +542,9 @@ Three.js 是当前唯一前端运行依赖，固定为 `three@0.180.0`。`serve.
 - 日志只记录 HTTP request ID、方法、无 query 路径、状态、来源和耗时。
 - 原图、Base64、token、Cookie、Authorization、用户自由文本和供应商正文不得进入
   日志、事件、Trace 或 AICard。
+- Prompt 实验台的请求图片、编辑 Prompt 和结果 Base64 也不得进入日志、事件、
+  Trace、AICard、SQLite 或 `data/private-media`；服务端只记录无 query 的固定路由、
+  状态、来源和耗时。结果通过同步 JSON 返回后由浏览器持有。
 - Agent Plan 专属 Base URL 固定到官方主机，禁止改成中转站；只发送请求内 data
   URL 或 HTTPS 图片，本地路径、`client://` 与私有逻辑引用不会外发。
 - Asset 与 Media 使用显式 binding/ref count；删除只物理清理 ref count 归零媒体。
@@ -462,7 +582,7 @@ npm.cmd run demo:backend
 当前预期：
 
 ```text
-108 项唯一自动测试（62 项后端/协议/3D + 46 项抖音前端）
+127 项唯一自动测试（73 项后端/协议/3D + 54 项抖音前端）
 生成：原木呼吸感，6 件，¥486
 调整：高效收纳版 v2，4 件，¥240
 持久方案历史：1 个谱系、2 个版本
@@ -513,6 +633,9 @@ npm.cmd run start:classic
 ```
 
 - 默认抖音前端：`http://127.0.0.1:8765/douyin-static-demo/index.html`
+- 兼容 AICard 页面：`http://127.0.0.1:8765/index.html`
+- Prompt 实验台：`http://127.0.0.1:8765/prompt-lab.html`
+- 3D 试搭：`http://127.0.0.1:8765/accessory-studio.html`
 - API：`http://127.0.0.1:8787`
 - 状态库：`./data/ai-corner-renewal.sqlite`
 - 私有媒体：`./data/private-media`
@@ -554,8 +677,8 @@ npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\mo
 
 ## 9. 自动测试覆盖
 
-`npm.cmd run check` 当前覆盖 108 项唯一自动测试：62 项后端/协议/3D 测试与
-46 项抖音前端 Builder、Adapter 和状态语义测试。根检查随后调用前端专用检查，
+`npm.cmd run check` 当前覆盖 127 项唯一自动测试：73 项后端/协议/3D 测试与
+54 项抖音前端 Builder、Adapter、视觉框选和状态语义测试。根检查随后调用前端专用检查，
 额外完成全部前端脚本语法校验。
 
 - 4 个 JSON Schema 可解析与内部 `$ref`。
@@ -565,6 +688,9 @@ npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\mo
   脱敏和 fallback。
 - Seedream 专属 `/images/generations` 请求体、单图模式、响应上限、Base64/MIME/
   文件签名校验、401 脱敏、失败降级、主方案替换和候选方案不误标 Live。
+- Prompt 实验台布置规划请求、规划 JSON 边界、非家居 `needs_input` 截止、商品
+  槽位到 Seedream 指令编译、非持久声明、输入图片校验、供应方失败安全映射及
+  GET/POST/405 路由。
 - 真实效果图保存后绑定空间资产、AICard 内部逻辑引用到短时私有 URL 的投影，以及
   私有媒体端点读取。
 - `/api/v1` CORS PATCH/DELETE/Idempotency-Key 预检。
@@ -577,8 +703,14 @@ npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\mo
 - 3D Composition 默认结构只保存双资产引用和变换，不含合并网格。
 - 3D 资产/挂点稳定 ID 唯一、默认视角存在、推荐挂点坐标处于编辑范围。
 
-2026-07-25 手工浏览器验收：
+2026-07-25 手工浏览器验收（以下 Prompt 实验台截图证据属于两阶段改造前版本；
+当前两阶段版本以自动测试和本地 HTTP 冒烟为准，尚未消耗真实额度重跑）：
 
+- Prompt 实验台 1440×1000：后端显示
+  `doubao-seedream-5.0-lite · 可调用`，默认 Prompt 1017 字，测试图压缩为
+  1300×882 / 107 KB，按钮进入可用状态；Mock 成功响应显示模型、1.8s 耗时与下载
+  入口，页面无控制台错误。390×844 无横向溢出，上传、Prompt、原图、结果依次
+  排列。浏览器验收拦截了生成 POST，没有额外消耗燃料值。
 - 1440×1000：Three.js/WebGL 初始化成功，本地模块无 CDN，画布 800×678；程序化
   包与本机 5,351,904 字节混元 GLB 同屏，阴影和四个视角正常。
 - 花朵挂件 → 提手挂点 → X=0.31 → 110% → 右侧视角保存；切换星星后恢复，模型、
@@ -603,20 +735,43 @@ npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\mo
 - 媒体共享 ref count、清理失败和 `deletion_pending` 故障注入。
 - 使用 Ajv 2020 对所有响应运行完整 Draft 2020-12 编译。
 - 真实 Seedream 限流、超时和供应方 5xx 的长期故障注入与燃料值统计。
+- Prompt 实验台当前没有服务端 run 历史、取消、并发配额、内容安全或 A/B 评分
+  报告；浏览器中止请求不保证已经发出的供应方调用停止。它只能在回环地址作为
+  人工评测工具使用，不能直接公网发布。
+- 两阶段布置当前只接入非持久 Prompt 实验台；正式 `/api/generate` 仍使用
+  `planTemplates` 与 Demo 商品目录。真实商城检索、SKU 选择及真实商品参考图进入
+  Seedream 尚未实现，不能把 `ProductSlot` 当成已存在商品。
 - 真实 Hunyuan 单图生成的耗时/峰值显存回归、坏图/透明图/多物体输入和 OOM 故障
   注入；当前只自动测 Composition 数据约束，完整 Three.js 交互仍是手工浏览器验收。
 
 仓内抖音前端另有：
 
-- `npm.cmd run check:douyin`：46 项 Builder、Asset/Plan Adapter 和状态语义测试；
+- `npm.cmd run check:douyin`：54 项 Builder、Asset/Plan Adapter、视觉框选、启动模式和状态语义测试；
 - `npm.cmd run check:douyin-integration`：用临时 SQLite 跑通真实图片上传、资产解析封存、
   DesignRequest、GenerationRun 和 PlanVersion，不读写本目录正式 `data`；
 - 430×900 Chrome 浏览器实测视频入口、真实 PNG、私有媒体、生成和方案详情均无
   控制台错误。
+- 新版 `renewal.html` 另在 1440×900 与 390×844 Chrome 验收：桌面叙事/手机双栏、
+  移动端全视口、资产/历史抽屉、方案回填和结果清单展开无横向溢出；占位效果图
+  不遮挡操作。
+- 温馨风视觉搜索在 1440×900 与 390×844 Chrome 逐步验收框选、查询、候选、
+  建模和完成状态；页面无横向溢出或控制台错误，流程关闭后会清理外层主题 class。
 - 根目录 `npm.cmd start` 单仓烟雾测试已验证实际自动选择端口后，推荐流、健康
   代理和 `/vendor/three/` 均返回 200。
 
 ## 10. 已知限制与下一步
+
+当前一轮优先按 `docs/team-roles.md` 执行：
+
+1. 产品在同一运行 Commit 上完成主链路走查，只冻结最多 3 个 P0，写明证据、影响
+   状态、范围外事项和验收标准。
+2. 前端基于状态矩阵实现已确认的 P0，保持 Adapter 边界，覆盖 390px/1440px、
+   Live/Fallback/Demo、失败和刷新恢复。
+3. 后端把生图指令收敛为单一可版本化 Prompt Builder，先以 fixture/报告建立
+   `PromptVersion`、`EvaluationCase`、`EvaluationRun` 概念，不急于扩张数据库；
+   至少覆盖 8 个正常/约束/失败案例。
+4. 三人最后在同一 `main` Commit 上回归生成、`needs_input`、Provider 失败、
+   预算/风格调整、重启恢复和 3D 试搭，再记录候选 Commit 与回滚点。
 
 3D 试搭下一阶段（继续本方向时按顺序）：
 
@@ -637,8 +792,9 @@ npm.cmd run generate:3d -- --input .\path\item.png --output .\apps\web\assets\mo
 1. 在已接通的抖音宿主前端补齐 Asset 重命名/保存/归档/删除/重试，以及
    PlanRevision、版本切换和 PlanAsset 用户状态；继续只消费协议，不读取
    `services/**`。
-2. 为视频入口增加用户确认的代表帧和规范化 bbox；当前只保存视频元数据并创建
-   temporary Inspiration，不能宣称已提取具体物品。
+2. 按 `docs/visual-search-api.md` 实现 VisualSearchQuery、候选确认、2D
+   ModelGenerationRun/ModelVersion、媒体引用与删除闭环；前端框选和规范化 bbox
+   已完成，但当前候选仍是明确标注的本地 Demo。
 3. 继续使用
    已验收的 `auto + agent_plan` RoomProfile，并在界面如实展示
    `source_mode=live/fallback`。

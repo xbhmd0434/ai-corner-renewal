@@ -36,6 +36,15 @@ test("room analyzer response limit defaults to 256 KiB and is configurable", () 
   );
 });
 
+test("layout planning uses an independent 90 second timeout", () => {
+  assert.equal(loadConfig({}).agentPlanLayoutTimeoutMs, 90_000);
+  assert.equal(
+    loadConfig({ AGENT_PLAN_LAYOUT_TIMEOUT_MS: "75000" })
+      .agentPlanLayoutTimeoutMs,
+    75_000
+  );
+});
+
 test("room analyzer URL requires HTTPS outside an uncredentialed loopback", () => {
   assert.equal(
     loadConfig({

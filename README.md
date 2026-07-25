@@ -29,6 +29,10 @@ AI 一角焕新是一个面向年轻租房和家居兴趣用户的空间适配�
 → 从资产和方案历史重新打开
 ```
 
+焕新界面采用单核心卡片：灵感、真实空间、生活约束、生成进度和结果都在同一
+上下文中切换；“我的收藏”和“历史方案”使用底部抽屉，不再把用户带到独立后台页。
+桌面端显示项目叙事与 430px 手机舞台，移动端直接占满视口。
+
 主要特性：
 
 - 三组可切换的家居灵感与结构化提取结果
@@ -36,11 +40,16 @@ AI 一角焕新是一个面向年轻租房和家居兴趣用户的空间适配�
 - 资产、不可变任务快照、异步运行、方案版本与重启后恢复
 - 预算、租房、保留家具和宠物等约束
 - 改造前后对比、商品清单、步骤和可信校验
+- 结果中继续降低预算或更换风格，每次调整创建新的方案版本
 - 推荐流“焕新”入口携带当前视频的最小灵感上下文
+- 视频手动暂停后可进入“一角焕新”定帧框选，选择明确标注的视觉搜索候选，
+  并把用户确认的商品保存为独立单品资产；真实视觉搜索与模型版本接口仍待后端实现
 - 桌面端和移动端响应式体验
 - 独立 3D 橱窗：包/挂件切换、推荐挂点、拖动、旋转、缩放与四个预设视角
 - 浏览器内加载 GLB、导出当前视角 PNG、`localStorage` 保存和恢复组合关系
 - 本机 Hunyuan3D-2mini 离线生成适配器；已生成 GLB 自动载入，失败时明确降级
+- 独立 Prompt 实验台：上传真实家居角落，先由视觉文本 Agent 生成布置方案和
+  商品槽位，再把确定方案编译给 Seedream；并排查看和下载结果，实验数据不入库
 
 ## 本地运行
 
@@ -63,6 +72,13 @@ npm start
 `npm run start:backend`。旧兼容 AICard/Agent Plan 页面使用
 `npm run start:classic`，其 3D 试搭地址为
 `http://127.0.0.1:8765/accessory-studio.html`。
+同一命令还会提供
+`http://127.0.0.1:8765/prompt-lab.html`。Prompt 实验台读取服务端 Key，浏览器
+不会接触密钥；需要 `.env.local` 中启用 `AI_BACKEND_MODE=auto` 或 `live` 并配置
+`AGENT_PLAN_API_KEY`。上传图会在浏览器压缩后只用于本次请求，结果不会保存到
+SQLite 或 `data/private-media`；每次点击“开始改图”会先产生一次文本规划调用，
+规划返回 `ready` 后再产生一次真实图片调用。非家居或不可判断场景返回
+`needs_input`，不会继续消耗图片调用。
 后端可独立验证：
 
 ```bash
@@ -110,7 +126,7 @@ GenerationRun、PlanAsset/PlanVersion、预算/换风格调整、偏好和受控
 
 ```text
 apps/douyin-demo/         默认产品前端、同源代理、前端测试与视频素材
-apps/web/                 兼容 AICard 页面与独立 Three.js 3D 试搭页
+apps/web/                 兼容 AICard、Prompt 实验台与独立 Three.js 3D 试搭页
 packages/contracts/       AICard v1、/api/v1 聚合 Schema 与运行时协议校验
 packages/validation/      预算、安装、结构、尺寸、库存和安全规则
 services/orchestrator/    SQLite Repository、领域服务、Workflow、HTTP API 与适配器
@@ -118,8 +134,9 @@ examples/                 固定 AICard、8 个输入夹具和一键示例
 docs/product-spec.md      产品方案与比赛口径
 docs/architecture.md      数据对象、模块边界与演进架构
 docs/backend-api.md       后端接口、状态、配置和验证方式
+docs/visual-search-api.md 视频框选、视觉搜索、商品确认、资产与模型版本拟议契约
 docs/model-integration.md 模型/Agent/精细图像 API 接入边界
-docs/team-roles.md        三人团队分工与协作方式
+docs/team-roles.md        当前三人团队分工、Prompt/前端/产品并行规则
 docs/ai-github-playbook.md 让 AI 完成日常 GitHub 协作的提示词
 docs/public-release.md    从私有协作到公开发布的检查表
 scripts/                  本地服务器、仓库校验与混元 3D 命令适配器
@@ -130,7 +147,8 @@ HANDOFF.md                可持续维护的工程交接文档
 ## 成熟度
 
 - 抖音产品前端：可持久联调集成原型；上传、空间确认、设计任务、生成运行、资产
-  和方案历史已接 `/api/v1`。
+  和方案历史已接 `/api/v1`；视频框选与候选选择可演示，候选当前为明确标注的
+  本地 Demo，确认后优先写入真实 ItemAsset。
 - 兼容 Web：运行时 Live 集成原型；上传、`generate → revise(300)`、来源状态
   和错误提示已接 AICard API，保存仍只是本地摘要。
 - 3D 试搭：运行时静态 MVP；本机混元样例、双模型组合和浏览器保存已完成，图片到
@@ -142,7 +160,9 @@ HANDOFF.md                可持续维护的工程交接文档
 
 ## 团队协作
 
-项目当前由三人共同维护，按“产品体验、前端工程、AI 数据”划分长期所有权，详见 [`docs/team-roles.md`](docs/team-roles.md)。
+项目当前由三人共同维护，按“产品与验收、前端体验与实现、后端生图 Prompt 与评测”
+划分长期所有权。三条线可以并行，但用户路径、接口协议和发布候选必须共同冻结，
+详见 [`docs/team-roles.md`](docs/team-roles.md)。
 
 所有功能通过 Issue 描述验收标准，通过短分支和 Pull Request 合并。`main` 应始终保持可演示。
 

@@ -1,4 +1,6 @@
 import { createRoomAnalyzer } from "./adapters/room-analyzer.js";
+import { createPromptLabGenerator } from "./adapters/render-generator.js";
+import { createLayoutPlanner } from "./adapters/layout-planner.js";
 import { defaultRoomProfile } from "./data/demo-catalog.js";
 import { DeterministicAssetUnderstandingAdapter } from "./adapters/asset-understanding.js";
 import {
@@ -19,6 +21,7 @@ import {
 } from "./services/design-service.js";
 import { PlanService } from "./services/plan-service.js";
 import { EventService } from "./services/event-service.js";
+import { PromptLabService } from "./services/prompt-lab-service.js";
 
 export function createPlatform({
   config,
@@ -77,6 +80,19 @@ export function createPlatform({
     now
   });
   const eventService = new EventService({ repository: repo, now });
+  const promptLabService = new PromptLabService({
+    config,
+    planner: createLayoutPlanner({
+      config,
+      fetchImpl,
+      now: () => now().getTime()
+    }),
+    generator: createPromptLabGenerator({
+      config,
+      fetchImpl,
+      now: () => now().getTime()
+    })
+  });
 
   assetService.seed(DEMO_ACTOR_ID);
   preferenceService.get(DEMO_ACTOR_ID);
@@ -106,6 +122,7 @@ export function createPlatform({
     designRequestService,
     planService,
     eventService,
+    promptLabService,
     health() {
       return {
         status: "ok",
@@ -155,6 +172,11 @@ export function createPlatform({
             : "demo_fallback",
           agent_planning: "deterministic_workflow"
         },
+        prompt_lab: {
+          available: promptLabService.template().available,
+          prompt_version: promptLabService.template().prompt_version,
+          persistence: "none"
+        },
         repository_counts: repo.stats,
         maintenance: {
           cleanup_interval_seconds: 600,
@@ -168,6 +190,12 @@ export function createPlatform({
     },
     async revise(request) {
       return planService.reviseLegacy(DEMO_ACTOR_ID, request);
+    },
+    promptLabTemplate() {
+      return promptLabService.template();
+    },
+    async renderPromptLab(request) {
+      return promptLabService.render(request);
     },
     async close() {
       clearInterval(maintenanceTimer);

@@ -1112,7 +1112,7 @@ function openAiEntrySheet(item, video) {
           "把视频里的家居氛围适配到我的真实空间"
         )
       );
-      window.location.href = "./renewal.html#/task?source=video";
+      window.location.href = "./renewal.html?source=video";
     });
   layer
     .querySelector('[data-ai-entry="accessory"]')
@@ -1144,6 +1144,9 @@ function renderFeed() {
     const counters = node.querySelectorAll(".stack-button small");
 
     node.dataset.index = String(index);
+    node.dataset.videoId = item.id;
+    node.dataset.author = item.author;
+    node.dataset.caption = item.caption;
     node.querySelector(".author").textContent = item.author;
     node.querySelector(".caption").textContent = item.caption;
     node.querySelector(".tags").textContent = item.tags;
@@ -1205,14 +1208,16 @@ function renderFeed() {
 
 function toggleVideo(video, slide) {
   if (video.paused) {
+    slide.classList.remove("user-paused");
     playWithSound(video, slide);
   } else {
     video.pause();
-    slide.classList.add("paused");
+    slide.classList.add("paused", "user-paused");
   }
 }
 
 function playWithSound(video, slide) {
+  slide.classList.remove("user-paused");
   video.muted = false;
   video.volume = 1;
   video.play()
@@ -1304,7 +1309,7 @@ async function initDemo() {
   const feedShootButton = document.querySelector("#feedShootButton");
   if (feedShootButton) {
     feedShootButton.addEventListener("click", () => {
-      window.location.href = "./renewal.html#/home";
+      window.location.href = "./renewal.html?source=home";
     });
   }
 }

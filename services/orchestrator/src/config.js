@@ -184,6 +184,14 @@ export function loadConfig(env = process.env) {
       min: 1000,
       max: 120_000
     }),
+    agentPlanLayoutTimeoutMs: integerFromEnv(
+      env.AGENT_PLAN_LAYOUT_TIMEOUT_MS,
+      90_000,
+      {
+        min: 5000,
+        max: 180_000
+      }
+    ),
     agentPlanImageTimeoutMs: integerFromEnv(
       env.AGENT_PLAN_IMAGE_TIMEOUT_MS,
       90_000,

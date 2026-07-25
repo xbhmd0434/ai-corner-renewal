@@ -778,6 +778,25 @@ export function createApiServer({
         });
         return;
       }
+      if (method === "GET" && pathname === "/api/prompt-lab") {
+        statusCode = 200;
+        sendJson(responseObject, statusCode, {
+          request_id: requestId,
+          ...orchestrator.promptLabTemplate()
+        });
+        return;
+      }
+      if (method === "POST" && pathname === "/api/prompt-lab/render") {
+        const body = await readJson(request, config.requestBodyLimitBytes, "POST");
+        const result = await orchestrator.renderPromptLab(body);
+        sourceMode = result.source_mode;
+        statusCode = 200;
+        sendJson(responseObject, statusCode, {
+          request_id: requestId,
+          ...result
+        });
+        return;
+      }
       if (method === "POST" && pathname === "/api/generate") {
         const body = await readJson(request, config.requestBodyLimitBytes, "POST");
         const card = await orchestrator.generate(body);
@@ -795,10 +814,22 @@ export function createApiServer({
         return;
       }
       if (
-        ["/api/health", "/api/generate", "/api/revise"].includes(pathname) &&
+        [
+          "/api/health",
+          "/api/generate",
+          "/api/revise",
+          "/api/prompt-lab",
+          "/api/prompt-lab/render"
+        ].includes(pathname) &&
         !(
           (method === "GET" && pathname === "/api/health") ||
-          (method === "POST" && ["/api/generate", "/api/revise"].includes(pathname))
+          (method === "GET" && pathname === "/api/prompt-lab") ||
+          (method === "POST" &&
+            [
+              "/api/generate",
+              "/api/revise",
+              "/api/prompt-lab/render"
+            ].includes(pathname))
         )
       ) {
         throw new ApiError("method_not_allowed", "该接口不支持当前 HTTP 方法", 405);

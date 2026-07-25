@@ -20,7 +20,7 @@
     "check:douyin": "npm --prefix apps/douyin-demo run check",
     "check:douyin-integration": "npm --prefix apps/douyin-demo run check:integration",
     "test": "node --test",
-    "check": "node --check apps/web/app.js && node --check apps/web/accessory-studio.js && node --check apps/web/data/demo-data.js && node --check apps/web/data/accessory-demo-data.js && node --check scripts/start-all.mjs && node --check scripts/run-hunyuan.mjs && node --check scripts/check-agent-plan.mjs && node --check scripts/check-agent-plan-room.mjs && node --check scripts/check-agent-plan-image.mjs && node scripts/validate.mjs && node --test && npm run check:douyin"
+    "check": "node --check apps/web/app.js && node --check apps/web/accessory-studio.js && node --check apps/web/prompt-lab.js && node --check services/orchestrator/src/adapters/layout-planner.js && node --check apps/web/data/demo-data.js && node --check apps/web/data/accessory-demo-data.js && node --check scripts/start-all.mjs && node --check scripts/run-hunyuan.mjs && node --check scripts/check-agent-plan.mjs && node --check scripts/check-agent-plan-room.mjs && node --check scripts/check-agent-plan-image.mjs && node scripts/validate.mjs && node --test && npm run check:douyin"
   },
   "engines": {
     "node": ">=22.5"
