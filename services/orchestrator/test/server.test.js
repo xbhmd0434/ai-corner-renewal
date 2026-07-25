@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { loadConfig } from "../src/config.js";
 import { createApiServer } from "../src/server.js";
 import { createOrchestrator } from "../src/workflow.js";
+import { listenLoopbackSafely } from "./helpers/http-listen.js";
 
 const root = resolve(fileURLToPath(new URL("../../../", import.meta.url)));
 const mainRequest = JSON.parse(
@@ -30,9 +31,7 @@ async function withServer(run, configOverrides = {}) {
     logger: silentLogger,
     requestIdFactory: () => `req-http-${String(++id).padStart(3, "0")}`
   });
-  await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
-  const address = server.address();
-  const baseUrl = `http://127.0.0.1:${address.port}`;
+  const { baseUrl } = await listenLoopbackSafely(server);
   try {
     await run(baseUrl);
   } finally {

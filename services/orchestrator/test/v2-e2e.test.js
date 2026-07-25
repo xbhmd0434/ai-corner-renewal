@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { loadConfig } from "../src/config.js";
 import { createPlatform } from "../src/platform.js";
 import { createApiServer } from "../src/server.js";
+import { listenLoopbackSafely } from "./helpers/http-listen.js";
 
 const V2_OPTIONS = { experience_contract: "renewal-card/2.1", analysis_mode: "demo", include_trace: false };
 const silentLogger = { info() {}, error() {} };
@@ -28,17 +29,10 @@ async function startServer(runtime) {
   const config = runtime.config();
   const platform = createPlatform({ config });
   const server = createApiServer({ orchestrator: platform, config, logger: silentLogger });
-  await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
-  const address = server.address();
-  if (!address || typeof address.port !== "number") {
-    throw new Error("server.address() 未返回有效端口");
-  }
+  const { baseUrl } = await listenLoopbackSafely(server);
   return {
     platform,
-    baseUrl: `http://127.0.0.1:${address.port}`,
+    baseUrl,
     async close() {
       await new Promise((r, rej) => server.close((err) => (err ? rej(err) : r())));
       await platform.close();

@@ -200,6 +200,22 @@ export function loadConfig(env = process.env) {
         max: 180_000
       }
     ),
+    agentPlanDiscoveryTimeoutMs: integerFromEnv(
+      env.AGENT_PLAN_DISCOVERY_TIMEOUT_MS,
+      45_000,
+      {
+        min: 5000,
+        max: 180_000
+      }
+    ),
+    agentPlanDiscoveryResponseLimitBytes: integerFromEnv(
+      env.AGENT_PLAN_DISCOVERY_RESPONSE_LIMIT_BYTES,
+      512 * 1024,
+      {
+        min: 1024,
+        max: 5_000_000
+      }
+    ),
     agentPlanImageResponseLimitBytes: integerFromEnv(
       env.AGENT_PLAN_IMAGE_RESPONSE_LIMIT_BYTES,
       24 * 1024 * 1024,

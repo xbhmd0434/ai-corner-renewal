@@ -1155,6 +1155,45 @@ select:focus-visible {
   border-color: rgba(167, 91, 56, 0.35);
 }
 
+.shop-agent-impact {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 11px 12px;
+  color: #f8f4ea;
+  background:
+    radial-gradient(circle at 90% 10%, rgba(232, 190, 108, 0.3), transparent 34%),
+    #353f32;
+  border: 1px solid rgba(53, 64, 46, 0.55);
+  box-shadow: 0 8px 20px rgba(32, 35, 31, 0.12);
+}
+
+.shop-agent-impact > span {
+  color: var(--yellow);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.shop-agent-impact > strong {
+  font-family: var(--serif);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.shop-agent-impact > p {
+  margin: 0;
+  color: rgba(248, 244, 234, 0.78);
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.shop-agent-impact > small {
+  color: rgba(248, 244, 234, 0.52);
+  font-size: 7px;
+  overflow-wrap: anywhere;
+}
+
 .shop-intro,
 .shop-partial-note {
   margin: 11px 0 0;

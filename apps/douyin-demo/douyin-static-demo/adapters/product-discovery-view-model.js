@@ -143,9 +143,9 @@ function presentationFor(run, deliveryMode) {
   }
   if (imageLive && douyinCatalog) {
     return {
-      sourceBadge: "AI 识别 · 抖音好物",
+      sourceBadge: "视觉 Agent · 抖音好物",
       sourceTone: "live",
-      description: "从焕新图里找到这些抖音好物。"
+      description: "视觉 Agent 已从焕新图中定位可购买元素，商品事实由抖音目录核验。"
     };
   }
   if (planGrounded && demoCatalog) {
@@ -157,9 +157,9 @@ function presentationFor(run, deliveryMode) {
   }
   if (imageLive && demoCatalog) {
     return {
-      sourceBadge: "AI 识别 · Demo 候选",
-      sourceTone: "demo",
-      description: "画面元素由图像分析发现；商品来自 Demo 目录。"
+      sourceBadge: "视觉 Agent · Demo 商品",
+      sourceTone: "live",
+      description: "视觉 Agent 已看图定位并生成检索需求；商品事实来自 Demo 目录。"
     };
   }
   if (planGrounded) {
@@ -173,6 +173,29 @@ function presentationFor(run, deliveryMode) {
     sourceBadge: "来源待确认",
     sourceTone: "neutral",
     description: "商品来源尚未完整标注，暂不作真实目录承诺。"
+  };
+}
+
+function agentImpactFor(run, subjects) {
+  const image = run.result?.provenance?.image_analysis || {};
+  const isLiveAgent =
+    image.source_type === "live" || image.strategy === "image_agent";
+  if (!isLiveAgent) return null;
+
+  const hotspots = subjects.filter((subject) => subject.bbox).length;
+  const queryCount = (run.result?.subjects || []).reduce(
+    (total, subject) =>
+      total +
+      (Array.isArray(subject.search_queries) ? subject.search_queries.length : 0),
+    0
+  );
+  return {
+    eyebrow: "VISUAL AGENT / LIVE",
+    title: `已识别 ${subjects.length} 个可购买元素，定位 ${hotspots} 个画面热点`,
+    description:
+      `Agent 负责看图、定位与生成 ${queryCount} 组检索需求；价格和购买动作由商品目录独立核验。`,
+    model: text(image.model) || null,
+    promptVersion: text(image.prompt_version) || null
   };
 }
 
@@ -204,6 +227,7 @@ export function adaptProductDiscoveryRun(run, options = {}) {
   }
   const status = viewStatus(run);
   const presentation = presentationFor(run, options.deliveryMode);
+  const subjects = adaptSubjects(run.result?.subjects || []);
   return {
     runId: text(run.product_discovery_run_id),
     planAssetId: text(run.plan_asset_id),
@@ -217,7 +241,8 @@ export function adaptProductDiscoveryRun(run, options = {}) {
       ACTIVE_STATUSES.has(run.status)
         ? STAGE_COPY[run.stage] || "正在整理可落地的好物"
         : presentation.description,
-    subjects: adaptSubjects(run.result?.subjects || []),
+    subjects,
+    agentImpact: agentImpactFor(run, subjects),
     notices: Array.isArray(run.result?.notices)
       ? run.result.notices.map((notice) => ({
           code: text(notice.code),
@@ -247,6 +272,7 @@ export function createUnavailableProductDiscoveryViewModel(reason) {
     sourceBadge: "服务尚未开放",
     sourceTone: "neutral",
     subjects: [],
+    agentImpact: null,
     notices: [],
     canRetry: false,
     errorMessage: null,

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { loadConfig } from "../src/config.js";
 import { createApiServer } from "../src/server.js";
 import { createPlatform } from "../src/platform.js";
+import { listenLoopbackSafely } from "./helpers/http-listen.js";
 
 const root = resolve(fileURLToPath(new URL("../../../", import.meta.url)));
 const silentLogger = { info() {}, error() {} };
@@ -41,9 +42,7 @@ async function withServer(run, configOverrides = {}) {
     logger: silentLogger,
     requestIdFactory: () => `req-http-pd-${String(++id).padStart(3, "0")}`
   });
-  await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
-  const address = server.address();
-  const baseUrl = `http://127.0.0.1:${address.port}`;
+  const { baseUrl } = await listenLoopbackSafely(server);
   try {
     await run(baseUrl, platform);
   } finally {
@@ -521,6 +520,23 @@ test("health includes product_discovery features", async () => {
     assert.equal(health.features.douyin_commerce_catalog, false);
     assert.ok(health.limits.product_discovery_max_subjects);
     assert.ok(health.limits.product_discovery_matches_per_subject);
+  });
+});
+
+test("health reports the Agent Plan visual product-discovery capability", async () => {
+  await withServer(async (baseUrl) => {
+    const res = await getJson(`${baseUrl}/api/health`);
+    assert.equal(res.status, 200);
+    const health = await res.json();
+
+    assert.equal(health.features.product_discovery_live_agent, true);
+    assert.equal(
+      health.model_capabilities.product_discovery,
+      "agent_plan_visual_grounding"
+    );
+  }, {
+    backendMode: "live",
+    agentPlanApiKey: "test-agent-plan-key"
   });
 });
 

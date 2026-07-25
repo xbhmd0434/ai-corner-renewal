@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { loadConfig } from "../src/config.js";
 import { createPlatform } from "../src/platform.js";
 import { createApiServer } from "../src/server.js";
+import { listenLoopbackSafely } from "./helpers/http-listen.js";
 
 const silentLogger = { info() {}, error() {} };
 
@@ -25,12 +26,12 @@ async function createTestRuntime(
     config,
     logger: silentLogger
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { baseUrl } = await listenLoopbackSafely(server);
   return {
     config,
     platform,
     server,
-    baseUrl: `http://127.0.0.1:${server.address().port}`,
+    baseUrl,
     async close() {
       await new Promise((resolve, reject) =>
         server.close((error) => (error ? reject(error) : resolve()))

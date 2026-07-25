@@ -1,5 +1,171 @@
 import { randomUUID } from "node:crypto";
 import { products as demoProducts } from "../data/demo-catalog.js";
+import { DEMO_COMMERCE_CATEGORY_CODES } from "./commerce-catalog.js";
+
+const AGENT_PROMPT_VERSION = "product-discovery-agent/1.0";
+
+function providerError(code, message) {
+  const error = new Error(message);
+  error.code = code;
+  error.statusCode = 502;
+  return error;
+}
+
+function productFor(context, productId) {
+  return (context.aicard?.products || []).find(
+    (product) => product.product_id === productId
+  ) || demoProducts[productId] || null;
+}
+
+function plannedItemsForAgent(context) {
+  const planVersion = context.planVersion || {};
+  const roles = planVersion.implementation_source_roles || [];
+  const placements = context.placements || context.aicard?.plan?.placements || [];
+  const placementByProduct = new Map(
+    placements.map((placement) => [placement.product_id, placement])
+  );
+  const productIds = [
+    ...new Set([
+      ...roles.map((item) => item.product_id),
+      ...placements.map((item) => item.product_id)
+    ].filter(Boolean))
+  ];
+
+  return productIds
+    .slice(0, 8)
+    .map((productId) => {
+      const product = productFor(context, productId);
+      if (!product || !DEMO_COMMERCE_CATEGORY_CODES.includes(product.category)) {
+        return null;
+      }
+      const placement = placementByProduct.get(productId);
+      const role = roles.find((item) => item.product_id === productId);
+      return {
+        label: product.name,
+        category_code: product.category,
+        origin_role: role?.role || "ai_supplement",
+        placement_hint: placement?.zone || placement?.instruction || ""
+      };
+    })
+    .filter(Boolean)
+    .map((item, index) => ({
+      subject_ref: `planned-${index + 1}`,
+      ...item
+    }));
+}
+
+function discoveryPrompt(context, limits) {
+  const maxSubjects = Math.max(1, Math.min(Number(limits?.maxSubjects) || 6, 8));
+  const plannedItems = plannedItemsForAgent(context);
+  return [
+    "你是“商品发现视觉 Agent”。你的工作不是设计空间，而是从焕新后的效果图中定位真正需要落地购买的可移动物品。",
+    "优先定位下方 planned_items 中已经由方案确定要新增的物品；只有画面明确出现时才返回。",
+    "可以补充最多 2 个画面清晰、可独立购买的软装小物，但不要把用户原有的桌子、显示器、椅子、墙、窗、门、插座或固定柜体列为购买对象。",
+    "你只拥有视觉识别和搜索意图：绝对不能输出 product_id、SKU、价格、库存、店铺、销量、品牌、购买链接或“同款”结论。",
+    `最多返回 ${maxSubjects} 个 subjects。category_code 只能从以下代码中选择：${DEMO_COMMERCE_CATEGORY_CODES.join(", ")}。`,
+    "bbox 是相对整张效果图的归一化坐标 {x,y,width,height}，各值在 0..1 内且不能超出画面；无法可靠定位时写 null。",
+    "commerce_search_queries 使用中文，每个对象 1～3 条，只描述品类、颜色、材质、风格、用途，不包含平台名、店铺或价格。",
+    "confidence 只表示视觉识别置信度。不要因为 planned_items 存在就伪造图片证据。",
+    "严格输出一个 JSON 对象，不要 Markdown，不要解释，不要增加字段：",
+    '{"schema_version":"1.0","subjects":[{"subject_ref":"planned-1 或 supplement-1","label":"字符串","category_code":"允许的代码","bbox":{"x":0.1,"y":0.1,"width":0.2,"height":0.2},"appearance":{"colors":["字符串"],"materials":["字符串"],"style_keywords":["字符串"]},"placement_hint":"字符串","confidence":0.0,"commerce_search_queries":["字符串"]}]}',
+    `场景类型：${context.sceneType || "desk_corner"}`,
+    `方案标题：${context.planTitle || "未命名方案"}`,
+    `planned_items：${JSON.stringify(plannedItems)}`
+  ].join("\n");
+}
+
+function assistantContent(payload) {
+  const content = payload?.choices?.[0]?.message?.content;
+  if (typeof content === "string" && content.trim()) return content.trim();
+  if (Array.isArray(content)) {
+    const text = content
+      .filter((item) => item?.type === "text" && typeof item.text === "string")
+      .map((item) => item.text)
+      .join("")
+      .trim();
+    if (text) return text;
+  }
+  throw providerError(
+    "product_discovery_contract_invalid",
+    "商品发现 Agent 没有返回可读取的 JSON"
+  );
+}
+
+async function readBoundedPayload(response, limitBytes) {
+  const contentLength = Number(response.headers?.get?.("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > limitBytes) {
+    throw providerError(
+      "product_discovery_response_too_large",
+      "商品发现 Agent 响应超过大小限制"
+    );
+  }
+  if (!response.body || typeof response.body.getReader !== "function") {
+    throw providerError(
+      "product_discovery_contract_invalid",
+      "商品发现 Agent 响应正文不可读取"
+    );
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > limitBytes) {
+        try {
+          await reader.cancel();
+        } catch {
+          // 响应大小错误优先。
+        }
+        throw providerError(
+          "product_discovery_response_too_large",
+          "商品发现 Agent 响应超过大小限制"
+        );
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    throw providerError(
+      "product_discovery_contract_invalid",
+      "商品发现 Agent 上游响应不是有效 JSON"
+    );
+  }
+}
+
+function parseAgentJson(payload) {
+  let parsed;
+  try {
+    parsed = JSON.parse(assistantContent(payload));
+  } catch (error) {
+    if (error?.code) throw error;
+    throw providerError(
+      "product_discovery_contract_invalid",
+      "商品发现 Agent 输出不是有效 JSON"
+    );
+  }
+  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.subjects)) {
+    throw providerError(
+      "product_discovery_contract_invalid",
+      "商品发现 Agent 输出缺少 subjects"
+    );
+  }
+  return parsed;
+}
 
 /**
  * ProductDiscoveryProvider Port
@@ -143,6 +309,124 @@ export class PlanGroundedDiscoveryProvider {
 }
 
 /**
+ * AgentPlanProductDiscoveryProvider
+ *
+ * 复用火山方舟多模态 Chat API：看 after 图、定位方案新增物、生成受限搜索意图。
+ * 商品事实仍由 CommerceCatalogAdapter 和确定性 grounding 拥有。
+ */
+export class AgentPlanProductDiscoveryProvider {
+  constructor({ config, fetchImpl = globalThis.fetch } = {}) {
+    this.config = config;
+    this.fetchImpl = fetchImpl;
+  }
+
+  async discover({ image, context, limits, requestedMode = "auto" }) {
+    if (this.config?.backendMode === "demo" || requestedMode === "demo") {
+      return new PlanGroundedDiscoveryProvider().discover({ context, limits });
+    }
+    if (!this.config?.agentPlanApiKey) {
+      throw providerError(
+        "product_discovery_not_configured",
+        "未配置 AGENT_PLAN_API_KEY"
+      );
+    }
+    if (
+      !image ||
+      typeof image.dataUrl !== "string" ||
+      !image.dataUrl.startsWith("data:image/")
+    ) {
+      throw providerError(
+        "product_discovery_image_unavailable",
+        "效果图无法提供给商品发现 Agent"
+      );
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      this.config.agentPlanDiscoveryTimeoutMs ?? 45_000
+    );
+    try {
+      const response = await this.fetchImpl(
+        `${this.config.agentPlanBaseUrl}/chat/completions`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${this.config.agentPlanApiKey}`,
+            "Content-Type": "application/json"
+          },
+          redirect: "error",
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: this.config.agentPlanTextModel,
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "image_url",
+                    image_url: { url: image.dataUrl }
+                  },
+                  {
+                    type: "text",
+                    text: discoveryPrompt(context || {}, limits)
+                  }
+                ]
+              }
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.1,
+            max_tokens: 1800
+          })
+        }
+      );
+
+      if (!response.ok) {
+        try {
+          await response.body?.cancel();
+        } catch {
+          // HTTP 状态优先。
+        }
+        const code =
+          response.status === 401 || response.status === 403
+            ? "product_discovery_unauthorized"
+            : response.status === 429
+              ? "product_discovery_rate_limited"
+              : "product_discovery_upstream_error";
+        throw providerError(
+          code,
+          `商品发现 Agent 返回 HTTP ${response.status}`
+        );
+      }
+
+      const payload = await readBoundedPayload(
+        response,
+        this.config.agentPlanDiscoveryResponseLimitBytes ?? 512 * 1024
+      );
+      const output = parseAgentJson(payload);
+      return {
+        sourceType: "live",
+        strategy: "image_agent",
+        provider: "volcengine_agent_plan",
+        model: this.config.agentPlanTextModel,
+        promptVersion: AGENT_PROMPT_VERSION,
+        subjects: output.subjects
+      };
+    } catch (error) {
+      if (error?.name === "AbortError" || error?.name === "TimeoutError") {
+        throw providerError(
+          "product_discovery_timeout",
+          "商品发现 Agent 调用超时"
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+}
+
+/**
  * Agent 输出校验器
  *
  * 后端必须：
@@ -154,8 +438,24 @@ export class PlanGroundedDiscoveryProvider {
  */
 const FORBIDDEN_AGENT_FIELDS = [
   "product_id", "sku", "price", "price_cny", "stock", "inventory",
-  "shop", "store", "link", "url", "buy", "purchase"
+  "shop", "store", "seller", "brand", "sales", "sales_volume", "platform",
+  "link", "url", "buy", "purchase"
 ];
+const ALLOWED_SUBJECT_FIELDS = new Set([
+  "subject_ref",
+  "label",
+  "category_code",
+  "bbox",
+  "appearance",
+  "placement_hint",
+  "confidence",
+  "commerce_search_queries"
+]);
+const ALLOWED_APPEARANCE_FIELDS = new Set([
+  "colors",
+  "materials",
+  "style_keywords"
+]);
 
 const MAX_SUBJECTS = 8;
 const MAX_QUERIES_PER_SUBJECT = 3;
@@ -163,6 +463,17 @@ const MAX_LABEL_LENGTH = 200;
 const MAX_QUERY_LENGTH = 200;
 const MAX_APPEARANCE_ITEMS = 10;
 const MAX_APPEARANCE_ITEM_LENGTH = 50;
+const ALLOWED_CATEGORY_CODES = new Set(DEMO_COMMERCE_CATEGORY_CODES);
+
+function containsForbiddenAgentField(value) {
+  if (!value || typeof value !== "object") return null;
+  for (const [key, nested] of Object.entries(value)) {
+    if (FORBIDDEN_AGENT_FIELDS.includes(key.toLowerCase())) return key;
+    const found = containsForbiddenAgentField(nested);
+    if (found) return found;
+  }
+  return null;
+}
 
 export function validateAgentOutput(output, maxSubjects = MAX_SUBJECTS) {
   const issues = [];
@@ -194,9 +505,13 @@ export function validateAgentOutput(output, maxSubjects = MAX_SUBJECTS) {
     }
 
     // 检查禁止字段
-    for (const field of FORBIDDEN_AGENT_FIELDS) {
-      if (subject[field] !== undefined) {
-        issues.push(`${path} 包含禁止字段 ${field}（Agent 不能输出商品事实）`);
+    const forbiddenField = containsForbiddenAgentField(subject);
+    if (forbiddenField) {
+      issues.push(`${path} 包含禁止字段 ${forbiddenField}（Agent 不能输出商品事实）`);
+    }
+    for (const field of Object.keys(subject)) {
+      if (!ALLOWED_SUBJECT_FIELDS.has(field)) {
+        issues.push(`${path} 包含协议外字段 ${field}`);
       }
     }
 
@@ -221,6 +536,8 @@ export function validateAgentOutput(output, maxSubjects = MAX_SUBJECTS) {
     // 校验 category_code
     if (typeof subject.category_code !== "string" || !subject.category_code.trim()) {
       issues.push(`${path}.category_code 必须是非空字符串`);
+    } else if (!ALLOWED_CATEGORY_CODES.has(subject.category_code.trim())) {
+      issues.push(`${path}.category_code 不在商品目录允许范围`);
     }
 
     // 校验 bbox
@@ -239,11 +556,29 @@ export function validateAgentOutput(output, maxSubjects = MAX_SUBJECTS) {
             issues.push(`${path}.bbox.${dim} 必须 > 0 且 ≤ 1`);
           }
         }
+        if (
+          typeof x === "number" &&
+          typeof y === "number" &&
+          typeof width === "number" &&
+          typeof height === "number" &&
+          (x + width > 1 || y + height > 1)
+        ) {
+          issues.push(`${path}.bbox 超出图片边界`);
+        }
       }
     }
 
     // 校验 appearance
     if (subject.appearance) {
+      if (typeof subject.appearance !== "object" || Array.isArray(subject.appearance)) {
+        issues.push(`${path}.appearance 必须是对象`);
+      } else {
+        for (const field of Object.keys(subject.appearance)) {
+          if (!ALLOWED_APPEARANCE_FIELDS.has(field)) {
+            issues.push(`${path}.appearance 包含协议外字段 ${field}`);
+          }
+        }
+      }
       for (const key of ["colors", "materials", "style_keywords"]) {
         if (Array.isArray(subject.appearance[key])) {
           if (subject.appearance[key].length > MAX_APPEARANCE_ITEMS) {

@@ -1,9 +1,9 @@
 # 焕新结果商品发现 API 协议
 
-> 状态：Draft，供前端与后端两个独立实现对话共同遵守
+> 状态：P0 已实现；真实图像 Agent 已接入，真实抖音商品目录仍待授权
 > 协议版本：`product-discovery/1.0`
-> 当前代码状态：尚未实现，不得并入当前 `docs/openapi.yaml` 冒充可用接口
-> Prompt 状态：由独立队友负责；本文只冻结 Agent Port 的输入输出边界
+> 当前代码状态：四个接口、状态机、Live Agent、plan fallback 与 Demo Catalog 已实现
+> Prompt 状态：`product-discovery-agent/1.0` 已冻结并由服务端拥有
 > 更新日期：2026-07-25
 
 ## 1. 产品目标
@@ -528,7 +528,7 @@ AICard.plan.placements + AICard.products
 {
   "features": {
     "product_discovery": true,
-    "product_discovery_live_agent": false,
+    "product_discovery_live_agent": true,
     "douyin_commerce_catalog": false
   },
   "limits": {
@@ -541,7 +541,8 @@ AICard.plan.placements + AICard.products
 含义：
 
 - `product_discovery=true`：本文四个接口已实现；
-- `product_discovery_live_agent=true`：真实图像 Agent 已接入；
+- `product_discovery_live_agent=true`：当前运行配置为非 Demo 且
+  `AGENT_PLAN_API_KEY` 可用，真实图像 Agent 已接入；
 - `douyin_commerce_catalog=true`：真实抖音商品目录已接入。
 
 前端必须分别显示，不得把第一项等同于后两项。

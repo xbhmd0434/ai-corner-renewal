@@ -62,12 +62,53 @@ test("partial preserves unmatched subjects and only numbers valid bboxes", async
   });
   const viewModel = adaptProductDiscoveryRun(run);
   assert.equal(viewModel.status, "partial");
-  assert.equal(viewModel.sourceBadge, "AI 识别 · 抖音好物");
+  assert.equal(viewModel.sourceBadge, "视觉 Agent · 抖音好物");
   assert.equal(viewModel.subjects[0].hotspotNumber, 1);
   assert.equal(viewModel.subjects[1].hotspotNumber, null);
   const markup = renderProductHotspots(viewModel);
   assert.match(markup, /data-product-hotspot="subject-example-lamp"/);
   assert.doesNotMatch(markup, /subject-unmatched/);
+  assert.equal(viewModel.agentImpact.title, "已识别 2 个可购买元素，定位 1 个画面热点");
+  const componentMarkup = new ShopTheLook().render(viewModel);
+  assert.match(componentMarkup, /VISUAL AGENT \/ LIVE/);
+  assert.match(componentMarkup, /Agent 负责看图、定位/);
+});
+
+test("live visual Agent + Demo catalog keeps both source layers explicit", async () => {
+  const ready = await fixture("ready");
+  const run = structuredClone(ready);
+  run.result.provenance = {
+    image_analysis: {
+      source_type: "live",
+      strategy: "image_agent",
+      provider: "volcengine_agent_plan",
+      model: "doubao-seed-2.0-lite",
+      prompt_version: "product-discovery-agent/1.0"
+    },
+    commerce_catalog: {
+      source_type: "demo_catalog",
+      label: "本地 Demo 商品目录"
+    }
+  };
+  run.result.subjects[0].bbox = {
+    x: 0.6,
+    y: 0.2,
+    width: 0.2,
+    height: 0.3
+  };
+  run.result.subjects[0].search_queries = [
+    "奶油白小台灯 暖光",
+    "桌面夹灯 原木风"
+  ];
+
+  const viewModel = adaptProductDiscoveryRun(run);
+  const html = new ShopTheLook().render(viewModel);
+  assert.equal(viewModel.sourceBadge, "视觉 Agent · Demo 商品");
+  assert.equal(viewModel.sourceTone, "live");
+  assert.match(viewModel.description, /商品事实来自 Demo 目录/);
+  assert.match(viewModel.agentImpact.description, /生成 2 组检索需求/);
+  assert.match(html, /doubao-seed-2.0-lite/);
+  assert.match(html, /product-discovery-agent\/1.0/);
 });
 
 test("failed, cancelled and unavailable have distinct component states", async () => {

@@ -24,8 +24,8 @@ import { EventService } from "./services/event-service.js";
 import { PromptLabService } from "./services/prompt-lab-service.js";
 import { ProductDiscoveryService } from "./services/product-discovery-service.js";
 import {
-  UnconfiguredProductDiscoveryProvider,
-  PlanGroundedDiscoveryProvider
+  AgentPlanProductDiscoveryProvider,
+  UnconfiguredProductDiscoveryProvider
 } from "./adapters/product-discovery-agent.js";
 import { DemoCommerceCatalogAdapter } from "./adapters/commerce-catalog.js";
 import { RelatedDesignService } from "./services/related-design-service.js";
@@ -103,7 +103,11 @@ export function createPlatform({
     })
   });
 
-  const discoveryProvider = new UnconfiguredProductDiscoveryProvider();
+  const productDiscoveryLiveAgentConfigured =
+    config.backendMode !== "demo" && Boolean(config.agentPlanApiKey);
+  const discoveryProvider = productDiscoveryLiveAgentConfigured
+    ? new AgentPlanProductDiscoveryProvider({ config, fetchImpl })
+    : new UnconfiguredProductDiscoveryProvider();
   const commerceCatalog = new DemoCommerceCatalogAdapter({ now });
   const productDiscoveryService = new ProductDiscoveryService({
     repository: repo,
@@ -212,7 +216,10 @@ export function createPlatform({
           render_edit: config.agentPlanApiKey
             ? "agent_plan_configured"
             : "demo_fallback",
-          agent_planning: "deterministic_workflow"
+          agent_planning: "deterministic_workflow",
+          product_discovery: productDiscoveryLiveAgentConfigured
+            ? "agent_plan_visual_grounding"
+            : "plan_grounded_fallback"
         },
         prompt_lab: {
           available: promptLabService.template().available,
@@ -221,7 +228,7 @@ export function createPlatform({
         },
         features: {
           product_discovery: true,
-          product_discovery_live_agent: false,
+          product_discovery_live_agent: productDiscoveryLiveAgentConfigured,
           douyin_commerce_catalog: false,
           renewal_intent_v2: true,
           related_designs: true,

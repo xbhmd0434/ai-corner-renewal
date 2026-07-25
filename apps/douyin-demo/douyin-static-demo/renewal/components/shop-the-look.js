@@ -97,6 +97,18 @@ function subjectMarkup(subject, deliveryMode) {
     </section>`;
 }
 
+function agentImpactMarkup(viewModel) {
+  const impact = viewModel.agentImpact;
+  if (!impact) return "";
+  return `
+    <aside class="shop-agent-impact" aria-label="视觉 Agent 工作说明">
+      <span>${escapeHtml(impact.eyebrow)}</span>
+      <strong>${escapeHtml(impact.title)}</strong>
+      <p>${escapeHtml(impact.description)}</p>
+      ${impact.model ? `<small>模型：${escapeHtml(impact.model)}${impact.promptVersion ? ` · ${escapeHtml(impact.promptVersion)}` : ""}</small>` : ""}
+    </aside>`;
+}
+
 export function renderProductHotspots(viewModel) {
   if (!viewModel || !["ready", "partial"].includes(viewModel.status)) return "";
   const subjects = (viewModel.subjects || []).filter(
@@ -127,6 +139,7 @@ export class ShopTheLook {
           <div><span>SHOP THE RESULT</span><h4 id="shopTheLookTitle">把这一角搬回家</h4></div>
           <em>${escapeHtml(viewModel.sourceBadge)}</em>
         </header>
+        ${agentImpactMarkup(viewModel)}
         ${
           working
             ? `${progressMarkup(viewModel)}<button class="shop-text-action" type="button" data-shop-cancel>取消识别</button>`

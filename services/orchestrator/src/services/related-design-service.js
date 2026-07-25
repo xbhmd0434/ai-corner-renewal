@@ -431,6 +431,9 @@ export class RelatedDesignService {
       setImmediate(async () => {
         try {
           if (!this.stopping) await this.process(actorId, runId);
+        } catch {
+          // Single-process P0：process 内部 catch 若在 stop/close 竞态中再次抛错，
+          // 收敛到此，避免污染 node --test 的进程级 unhandledRejection。
         } finally {
           this.scheduled.delete(runId);
           resolve();

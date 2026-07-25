@@ -2,6 +2,25 @@ import { products as demoProducts } from "../data/demo-catalog.js";
 
 const ALLOWED_URL_SCHEMES = new Set(["https:", "douyin:"]);
 
+export const DEMO_COMMERCE_CATEGORY_MAP = Object.freeze({
+  table_lamp: ["prod-warm-clamp-lamp", "prod-green-mushroom-lamp"],
+  desk_riser: ["prod-warm-oak-riser", "prod-green-bamboo-riser", "prod-compact-monitor-riser"],
+  display_board: ["prod-warm-linen-board"],
+  desktop_storage: ["prod-warm-storage-trays", "prod-compact-sorting-cups", "prod-green-rattan-baskets"],
+  cable_management: ["prod-warm-cable-box", "prod-compact-magnetic-clips", "prod-green-wood-cable-clips"],
+  plant: ["prod-warm-pothos-planter", "prod-green-peperomia-planter", "prod-green-fern-vase", "prod-pet-safe-faux-plant"],
+  file_storage: ["prod-compact-file-rack"],
+  underdesk_storage: ["prod-compact-underdesk-drawer"],
+  monitor_riser: ["prod-compact-monitor-riser"],
+  desk_mat: ["prod-green-linen-mat"],
+  lighting: ["prod-warm-clamp-lamp", "prod-green-mushroom-lamp"],
+  plant_alternative: ["prod-pet-safe-faux-plant"]
+});
+
+export const DEMO_COMMERCE_CATEGORY_CODES = Object.freeze(
+  Object.keys(DEMO_COMMERCE_CATEGORY_MAP)
+);
+
 /**
  * CommerceCatalogAdapter — 本轮复用 demo-catalog.js 的商品事实。
  * 不复制第二份商品数据；Demo 商品返回 source_type=demo_catalog；
@@ -25,22 +44,7 @@ export class DemoCommerceCatalogAdapter {
     const candidates = [];
 
     // 按品类代码匹配 Demo 商品
-    const categoryMap = {
-      table_lamp: ["prod-warm-clamp-lamp", "prod-green-mushroom-lamp"],
-      desk_riser: ["prod-warm-oak-riser", "prod-green-bamboo-riser", "prod-compact-monitor-riser"],
-      display_board: ["prod-warm-linen-board"],
-      desktop_storage: ["prod-warm-storage-trays", "prod-compact-sorting-cups", "prod-green-rattan-baskets"],
-      cable_management: ["prod-warm-cable-box", "prod-compact-magnetic-clips", "prod-green-wood-cable-clips"],
-      plant: ["prod-warm-pothos-planter", "prod-green-peperomia-planter", "prod-green-fern-vase", "prod-pet-safe-faux-plant"],
-      file_storage: ["prod-compact-file-rack"],
-      underdesk_storage: ["prod-compact-underdesk-drawer"],
-      monitor_riser: ["prod-compact-monitor-riser"],
-      desk_mat: ["prod-green-linen-mat"],
-      lighting: ["prod-warm-clamp-lamp", "prod-green-mushroom-lamp"],
-      plant_alternative: ["prod-pet-safe-faux-plant"]
-    };
-
-    const matchingIds = categoryMap[subject.category_code] || [];
+    const matchingIds = DEMO_COMMERCE_CATEGORY_MAP[subject.category_code] || [];
     const allIds = subject.product_ids || matchingIds;
 
     for (const productId of allIds) {

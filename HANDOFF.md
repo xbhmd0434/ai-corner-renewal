@@ -51,13 +51,15 @@ PlanVersion 底座与 AICard v1 兼容视图，新增 DesignRequest/GenerationRu
 `docs/product-discovery-api-contract.md`；后端已完成第一阶段：四个
 `/api/v1/product-discovery-*` 接口、`ProductDiscoveryRun` Repository、
 `ProductDiscoveryService` 六阶段状态机、`ProductDiscoveryProvider` Port、
-plan-grounded fallback、Demo Catalog grounding 与共享 fixture/协议测试。
-`GET /api/health` 现在如实标注 `features.product_discovery=true`、
-`features.product_discovery_live_agent=false` 与
-`features.douyin_commerce_catalog=false`：图像 Agent Prompt 与真实抖音商品
-目录/交易能力仍未接入，本轮通过 plan-grounded fallback + Demo Catalog 走通
-「合格 after 图 → ProductDiscoveryRun → 前端购买承接」完整链路，不得描述
-成实时图像识别或真实抖音交易。
+Agent Plan 多模态 `AgentPlanProductDiscoveryProvider`、plan-grounded fallback、
+Demo Catalog grounding 与共享 fixture/协议测试。非 Demo 模式且配置
+`AGENT_PLAN_API_KEY` 时，真实视觉 Agent 读取私有 after 图，结合 PlanVersion
+新增物白名单定位可购买元素、输出归一化 bbox、外观与受限检索词；Agent 不能拥有
+product_id、价格、库存、店铺或链接。`GET /api/health` 此时如实标注
+`features.product_discovery_live_agent=true` 与
+`model_capabilities.product_discovery=agent_plan_visual_grounding`。
+`features.douyin_commerce_catalog=false` 仍保持不变：当前商品事实来自明确标注的
+Demo Catalog，不得描述成真实抖音商品或交易。
 
 | 运行面 | 成熟度 | 当前事实 |
 | --- | --- | --- |
@@ -92,8 +94,9 @@ plan-grounded fallback、Demo Catalog grounding 与共享 fixture/协议测试�
 - 焕新结果商品发现后置工作流：`ProductDiscoveryService` 六阶段状态机
   （`queued → analyzing_render → building_queries → retrieving_products →
   grounding_matches → packaging → succeeded | failed | cancelled`）、
-  `ProductDiscoveryRun` Repository 持久化与重启恢复、`UnconfiguredProductDiscoveryProvider`
-  与 `PlanGroundedDiscoveryProvider` 两个内建 Provider、复用
+  `ProductDiscoveryRun` Repository 持久化与重启恢复、
+  `AgentPlanProductDiscoveryProvider`、`UnconfiguredProductDiscoveryProvider`
+  与 `PlanGroundedDiscoveryProvider` 三个内建 Provider、复用
   `demo-catalog.js` 的 `DemoCommerceCatalogAdapter` 与确定性 Grounding
   校验器；四个 `/api/v1` 接口（`createProductDiscoveryRun`、
   `listProductDiscoveryRuns`、`getProductDiscoveryRun`、
@@ -223,12 +226,12 @@ plan-grounded fallback、Demo Catalog grounding 与共享 fixture/协议测试�
   物理适配结论，尚无厘米级尺寸校准、软包形变、碰撞、挂件承重或 AR。
 - 没有真实账号鉴权、限流、公网上传滥用防护、多租户或多人家庭。
 - 没有真实商品、库存、交易、教程或抖音内部接口。
-- 没有 PlanVersion after 图后置真实图像识别 Agent（Prompt 正文由独立负责人
-  实现），也没有真实抖音商品目录、库存或交易接入。本轮已提供接口、Provider
-  Port、plan-grounded fallback 与 Demo Catalog grounding，`features.product_discovery=true`；
-  `features.product_discovery_live_agent` 与 `features.douyin_commerce_catalog`
-  均为 `false`，只有真实图像 Agent 和抖音目录接入并通过健康检查后才能置为
-  `true`。
+- PlanVersion after 图后置真实视觉 Agent 已接入，但没有真实抖音商品目录、库存
+  或交易接入。Agent 只识别方案新增物和高置信软装补充、生成 bbox 与检索需求；
+  Demo Catalog 和确定性代码独立拥有商品事实。非 Demo 模式且 Key 可用时
+  `features.product_discovery_live_agent=true`；缺 Key、指定 Demo、上游失败或
+  Agent 输出非法时自动回到 bbox=null 的 plan-grounded fallback。
+  `features.douyin_commerce_catalog=false` 在获得真实目录授权前必须保持。
 - 本机 `.env.local` 已配置 Agent Plan 个人版专属 Key。2026-07-25 运行
   `npm.cmd run check:agent-plan` 成功连接官方专属网关，模型
   `doubao-seed-2-0-lite-260215` 返回有效响应，共消耗 83 tokens；Key 本身不得写入
@@ -737,6 +740,8 @@ ProductDiscoveryRun 继续作为“实施”底座，但目标交互改为用户
 | `AGENT_PLAN_TIMEOUT_MS` | `30000` | Agent Plan 调用超时 |
 | `AGENT_PLAN_LAYOUT_TIMEOUT_MS` | `90000` | 两阶段实验台布置规划独立超时 |
 | `AGENT_PLAN_IMAGE_TIMEOUT_MS` | `90000` | Seedream 单次图片请求超时 |
+| `AGENT_PLAN_DISCOVERY_TIMEOUT_MS` | `45000` | 商品发现视觉 Agent 单次多模态请求超时 |
+| `AGENT_PLAN_DISCOVERY_RESPONSE_LIMIT_BYTES` | `524288` | 商品发现 Agent JSON 响应上限 |
 | `AGENT_PLAN_IMAGE_RESPONSE_LIMIT_BYTES` | `25165824` | Seedream JSON/Base64 响应上限 |
 | `CORS_ORIGINS` | 本机 8765 | 精确允许来源 |
 | `DATA_DIRECTORY` | `./data` | 运行时私有数据根 |
@@ -821,7 +826,7 @@ npm.cmd run demo:backend
 当前预期：
 
 ```text
-269 项唯一自动测试（202 项后端/协议/3D + 67 项抖音前端）
+276 项唯一自动测试（208 项后端/协议/3D + 68 项抖音前端）
 生成：原木呼吸感，6 件，¥486
 调整：高效收纳版 v2，4 件，¥240
 持久方案历史：1 个谱系、2 个版本
@@ -856,6 +861,23 @@ npm.cmd run check:agent-plan-image
 该命令使用项目演示书桌图走真实空间识别和一次主方案生图，把结果临时写入隔离的
 私有媒体目录，再通过短时签名 URL 读取并清理临时目录。它会消耗 Agent Plan
 燃料值，只输出来源、模型、媒体类型和字节数。
+
+商品发现视觉 Agent 验收：
+
+```powershell
+npm.cmd run check:agent-plan-products
+```
+
+该命令默认读取 `apps/web/assets/desk-after-warm.png`，调用
+`AgentPlanProductDiscoveryProvider`，只输出 provider/model/prompt 版本、耗时、
+识别数量、热点数量、类别和置信度，不输出 Key、图片字节或供应商原始正文。它会把
+本地效果图与受限方案上下文发送到火山方舟并消耗一次调用，因此必须在图片授权明确后
+执行。2026-07-26 在用户明确授权图片与受限方案上下文外发后完成 Live 验收：
+`source_mode=live`、`strategy=image_agent`、provider 为
+`volcengine_agent_plan`、模型为 `doubao-seed-2.0-lite`、Prompt 版本为
+`product-discovery-agent/1.0`，耗时约 20.4 秒；演示图共识别 5 个可购买元素和
+5 个热点，每个元素生成 3 条搜索意图，置信度为 0.98–0.99。脚本未输出 Key、
+图片字节或供应商原始正文。自动与 Mock 集成测试也已通过。
 
 默认一键启动当前抖音前端、同源代理和后端：
 
@@ -951,15 +973,16 @@ Demo actor 运行、没有真实鉴权和限流，而且 `loadConfig()` 会拒�
   Bridge 未接入，`cart_batch_handoff=false` 与协议 §8 目标一致；接入后
   CommerceHandoffService 的 `hostBridgeAvailable` 与该 flag 才可同时置为
   `true`，此前保持返回 `search_bundle` / `unavailable`。
-- **其余原有 3 个 flag** 保持：`product_discovery=true`、
-  `product_discovery_live_agent=false`、`douyin_commerce_catalog=false`。
+- **其余原有 3 个 flag**：`product_discovery=true`；
+  `product_discovery_live_agent` 按运行配置动态返回（非 Demo + Agent Plan Key
+  为 `true`）；`douyin_commerce_catalog=false`。
 - 本次验证过程使用的临时 `curl` 落盘目录 `/tmp/` 已进入 `.gitignore`，不进入
   仓库；本轮未运行 `npm.cmd run check` 或改动代码/配置。
 
 ## 9. 自动测试覆盖
 
-`npm.cmd run check` 当前覆盖 269 项唯一自动测试：202 项后端/协议/3D 测试与
-67 项抖音前端 Builder、Adapter、视觉框选、商品发现和状态语义测试。根检查随后调用前端专用检查，
+`npm.cmd run check` 当前覆盖 276 项唯一自动测试：208 项后端/协议/3D 测试与
+68 项抖音前端 Builder、Adapter、视觉框选、商品发现和状态语义测试。根检查随后调用前端专用检查，
 额外完成全部前端脚本语法校验。
 
 - 4 个 JSON Schema 可解析与内部 `$ref`；13 个 V2.1 canonical fixture 逐字段通过
@@ -1047,7 +1070,7 @@ Demo actor 运行、没有真实鉴权和限流，而且 `loadConfig()` 会拒�
 
 仓内抖音前端另有：
 
-- `npm.cmd run check:douyin`：67 项 Builder、Asset/Plan/Product Discovery Adapter、
+- `npm.cmd run check:douyin`：68 项 Builder、Asset/Plan/Product Discovery Adapter、
   四路 Client、商品状态/热点/动作、Store 隔离、视觉框选、启动模式和状态语义测试；
 - `npm.cmd run check:douyin-integration`：用临时 SQLite 跑通真实图片上传、资产解析封存、
   DesignRequest、GenerationRun 和 PlanVersion，不读写本目录正式 `data`；
@@ -1064,7 +1087,8 @@ Demo actor 运行、没有真实鉴权和限流，而且 `loadConfig()` 会拒�
   横向溢出和控制台错误；真实 plan-grounded + Demo Catalog partial 结果显示
   “方案关联 · Demo 商品”，bbox=null 无热点。共享 ready fixture 注入合法 bbox 后
   显示可键盘聚焦的数字热点并能把焦点送到对应商品元素；reduced motion 生效；
-  search_query 可复制且 Toast 正常。
+  search_query 可复制且 Toast 正常。新增的 Live 视觉 Agent 证据面板已有自动
+  Markup/来源分层测试，尚待下一次浏览器人工验收。
 - 成功 ProductDiscoveryRun 刷新只执行 list + get，没有重复 POST；health feature=false
   时不会请求未实现接口或自动切 Demo，用户点击后才进入“本地离线 Demo”。
 

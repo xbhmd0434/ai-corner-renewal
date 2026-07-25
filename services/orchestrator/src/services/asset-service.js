@@ -336,6 +336,8 @@ export class AssetParseService {
       setImmediate(async () => {
         try {
           if (!this.stopping) await this.process(actorId, parseRunId);
+        } catch {
+          // stop/close 竞态兜底：避免未处理的 promise rejection 污染进程。
         } finally {
           this.scheduled.delete(parseRunId);
           resolve();

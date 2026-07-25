@@ -5,6 +5,11 @@ import { loadConfig } from "../src/config.js";
 test("room analyzer response limit defaults to 256 KiB and is configurable", () => {
   assert.equal(loadConfig({}).roomAnalyzerResponseLimitBytes, 256 * 1024);
   assert.equal(loadConfig({}).agentPlanImageTimeoutMs, 90_000);
+  assert.equal(loadConfig({}).agentPlanDiscoveryTimeoutMs, 45_000);
+  assert.equal(
+    loadConfig({}).agentPlanDiscoveryResponseLimitBytes,
+    512 * 1024
+  );
   assert.equal(
     loadConfig({}).agentPlanImageResponseLimitBytes,
     24 * 1024 * 1024
@@ -13,6 +18,11 @@ test("room analyzer response limit defaults to 256 KiB and is configurable", () 
     loadConfig({ AGENT_PLAN_IMAGE_TIMEOUT_MS: "120000" })
       .agentPlanImageTimeoutMs,
     120_000
+  );
+  assert.equal(
+    loadConfig({ AGENT_PLAN_DISCOVERY_TIMEOUT_MS: "60000" })
+      .agentPlanDiscoveryTimeoutMs,
+    60_000
   );
   assert.equal(
     loadConfig({ ROOM_ANALYZER_RESPONSE_LIMIT_BYTES: "4096" })
