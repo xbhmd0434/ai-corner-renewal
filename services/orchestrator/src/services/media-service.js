@@ -32,6 +32,7 @@ const MEDIA_TYPES = Object.freeze({
 const ALLOWED_PURPOSES = new Set([
   "space_source",
   "reference_source",
+  "visual_search_query",
   "generated_render"
 ]);
 

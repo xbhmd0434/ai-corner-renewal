@@ -23,6 +23,9 @@
       "name": "Media"
     },
     {
+      "name": "Visual search"
+    },
+    {
       "name": "Assets"
     },
     {
@@ -83,6 +86,7 @@
                     "enum": [
                       "space_source",
                       "reference_source",
+                      "visual_search_query",
                       "generated_render"
                     ]
                   },
@@ -250,6 +254,213 @@
             "headers": {
               "X-Request-Id": {
                 "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/api/v1/visual-search/queries": {
+      "post": {
+        "operationId": "createVisualSearchQuery",
+        "tags": [
+          "Visual search"
+        ],
+        "summary": "识别视频关键帧圈选组件并检索真实目录候选",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVisualSearchQueryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "圈选组件识别已完成或进入终态",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisualSearchQuery"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/api/v1/visual-search/queries/{visual_search_query_id}": {
+      "get": {
+        "operationId": "getVisualSearchQuery",
+        "tags": [
+          "Visual search"
+        ],
+        "summary": "读取圈选组件识别与候选结果",
+        "parameters": [
+          {
+            "name": "visual_search_query_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "视觉搜索查询",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisualSearchQuery"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/api/v1/visual-search/queries/{visual_search_query_id}/selections": {
+      "post": {
+        "operationId": "selectVisualSearchCandidate",
+        "tags": [
+          "Visual search"
+        ],
+        "summary": "确认候选并创建不可替换的 SourceComponent 资产",
+        "parameters": [
+          {
+            "name": "visual_search_query_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Identifier"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectVisualSearchCandidateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "SourceComponent 已保存",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisualSearchSelection"
+                }
               }
             }
           },
@@ -7139,6 +7350,102 @@
           }
         }
       },
+      "CreateVisualSearchQueryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "query_media_id",
+          "source_context"
+        ],
+        "properties": {
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "query_media_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "source_context": {
+            "type": "object",
+            "required": [
+              "provider",
+              "external_content_id",
+              "timestamp_ms",
+              "selection_bbox"
+            ],
+            "properties": {
+              "provider": {
+                "type": "string",
+                "minLength": 1
+              },
+              "external_content_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "author_display": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "string"
+              },
+              "timestamp_ms": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "selection_bbox": {
+                "$ref": "#/components/schemas/BBox"
+              }
+            }
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "max_candidates": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12
+              },
+              "search_scope": {
+                "type": "array",
+                "maxItems": 2,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      },
+      "SelectVisualSearchCandidateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "candidate_id",
+          "asset_lifecycle"
+        ],
+        "properties": {
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "candidate_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "asset_lifecycle": {
+            "enum": [
+              "temporary",
+              "saved"
+            ]
+          },
+          "modeling_mode": {
+            "enum": [
+              "preview_2d"
+            ]
+          }
+        }
+      },
       "AssetList": {
         "type": "object",
         "required": [
@@ -7400,6 +7707,110 @@
           },
           "status": {
             "const": "queued"
+          }
+        }
+      },
+      "VisualSearchQuery": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "visual_search_query_id",
+          "query_media_id",
+          "status",
+          "candidates"
+        ],
+        "properties": {
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "visual_search_query_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "query_media_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "succeeded",
+              "failed"
+            ]
+          },
+          "source_mode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_context": {
+            "type": "object"
+          },
+          "component_identity": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "selected_asset_id": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "VisualSearchSelection": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "visual_search_query_id",
+          "candidate_id",
+          "asset",
+          "source_component"
+        ],
+        "properties": {
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "visual_search_query_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "candidate_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "asset": {
+            "$ref": "#/components/schemas/Asset"
+          },
+          "source_component": {
+            "type": "object"
+          },
+          "modeling_mode": {
+            "const": "preview_2d"
+          },
+          "model_state": {
+            "const": "preview_2d_ready"
           }
         }
       },

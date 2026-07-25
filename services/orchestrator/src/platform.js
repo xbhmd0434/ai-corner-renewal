@@ -1,5 +1,8 @@
 import { createRoomAnalyzer } from "./adapters/room-analyzer.js";
-import { createPromptLabGenerator } from "./adapters/render-generator.js";
+import {
+  createPromptLabGenerator,
+  createRenderGenerator
+} from "./adapters/render-generator.js";
 import { createLayoutPlanner } from "./adapters/layout-planner.js";
 import { defaultRoomProfile } from "./data/demo-catalog.js";
 import { DeterministicAssetUnderstandingAdapter } from "./adapters/asset-understanding.js";
@@ -31,6 +34,10 @@ import { DemoCommerceCatalogAdapter } from "./adapters/commerce-catalog.js";
 import { RelatedDesignService } from "./services/related-design-service.js";
 import { PublicationService } from "./services/publication-service.js";
 import { CommerceHandoffService } from "./services/commerce-handoff-service.js";
+import { VisualSearchService } from "./services/visual-search-service.js";
+import { createComponentUnderstandingProvider } from "./adapters/component-understanding.js";
+import { createRenderEvaluator } from "./adapters/render-evaluator.js";
+import { FormalRenewalPipeline } from "./services/formal-renewal-pipeline.js";
 
 export function createPlatform({
   config,
@@ -66,6 +73,20 @@ export function createPlatform({
     config,
     now
   });
+  const commerceCatalog = new DemoCommerceCatalogAdapter({ now });
+  const visualSearchService = new VisualSearchService({
+    repository: repo,
+    mediaService,
+    assetService,
+    componentProvider: createComponentUnderstandingProvider({
+      config,
+      fetchImpl,
+      now: () => now().getTime()
+    }),
+    catalogAdapter: commerceCatalog,
+    config,
+    now
+  });
   const preferenceService = new PreferenceService({ repository: repo, now });
   const designRequestService = new DesignRequestService({
     repository: repo,
@@ -78,6 +99,27 @@ export function createPlatform({
     defaultRoomProfile,
     fetchImpl
   });
+  const formalLayoutPlanner = createLayoutPlanner({
+    config,
+    fetchImpl,
+    now: () => now().getTime()
+  });
+  const formalRenewalPipeline = new FormalRenewalPipeline({
+    layoutPlanner: formalLayoutPlanner,
+    renderGenerator: createRenderGenerator({
+      config,
+      fetchImpl,
+      now: () => now().getTime()
+    }),
+    renderEvaluator: createRenderEvaluator({
+      config,
+      fetchImpl,
+      now: () => now().getTime()
+    }),
+    mediaService,
+    config,
+    now
+  });
   const planService = new PlanService({
     repository: repo,
     designRequestService,
@@ -85,6 +127,7 @@ export function createPlatform({
     cardStore,
     config,
     roomAnalyzer,
+    formalRenewalPipeline,
     fetchImpl,
     now
   });
@@ -108,7 +151,6 @@ export function createPlatform({
   const discoveryProvider = productDiscoveryLiveAgentConfigured
     ? new AgentPlanProductDiscoveryProvider({ config, fetchImpl })
     : new UnconfiguredProductDiscoveryProvider();
-  const commerceCatalog = new DemoCommerceCatalogAdapter({ now });
   const productDiscoveryService = new ProductDiscoveryService({
     repository: repo,
     mediaService,
@@ -166,6 +208,7 @@ export function createPlatform({
     relatedDesignService,
     publicationService,
     commerceHandoffService,
+    visualSearchService,
     health() {
       return {
         status: "ok",
@@ -211,12 +254,22 @@ export function createPlatform({
               : config.roomAnalyzerProvider === "gateway"
                 ? "gateway_configured"
                 : "deterministic_demo",
-          asset_understanding: "deterministic_demo",
+          asset_understanding: config.agentPlanApiKey
+            ? "agent_plan_component_understanding"
+            : "deterministic_demo",
+          source_component_understanding: config.agentPlanApiKey
+            ? "agent_plan_visual_identity"
+            : "demo_fallback",
           segmentation: "deterministic_demo_bbox",
           render_edit: config.agentPlanApiKey
             ? "agent_plan_configured"
             : "demo_fallback",
-          agent_planning: "deterministic_workflow",
+          agent_planning: config.agentPlanApiKey
+            ? "agent_plan_layout_v2"
+            : "deterministic_layout_fallback",
+          render_evaluation: config.agentPlanApiKey
+            ? "agent_plan_visual_evaluator"
+            : "demo_not_executed",
           product_discovery: productDiscoveryLiveAgentConfigured
             ? "agent_plan_visual_grounding"
             : "plan_grounded_fallback"
@@ -227,6 +280,7 @@ export function createPlatform({
           persistence: "none"
         },
         features: {
+          visual_search: true,
           product_discovery: true,
           product_discovery_live_agent: productDiscoveryLiveAgentConfigured,
           douyin_commerce_catalog: false,
@@ -255,6 +309,15 @@ export function createPlatform({
     },
     async renderPromptLab(request) {
       return promptLabService.render(request);
+    },
+    createVisualSearchQuery(actorId, body) {
+      return visualSearchService.create(actorId, body);
+    },
+    getVisualSearchQuery(actorId, queryId) {
+      return visualSearchService.get(actorId, queryId);
+    },
+    selectVisualSearchCandidate(actorId, queryId, body) {
+      return visualSearchService.select(actorId, queryId, body);
     },
     createProductDiscoveryRun(actorId, planAssetId, planVersionId, body) {
       return productDiscoveryService.create(actorId, planAssetId, planVersionId, body);

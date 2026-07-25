@@ -434,6 +434,50 @@ const REQUEST_SCHEMAS = {
         }
       }
     }
+  },
+  CreateVisualSearchQueryRequest: {
+    type: "object",
+    additionalProperties: false,
+    required: ["schema_version", "query_media_id", "source_context"],
+    properties: {
+      schema_version: schemaRef("SchemaVersion"),
+      query_media_id: schemaRef("Identifier"),
+      source_context: {
+        type: "object",
+        required: [
+          "provider",
+          "external_content_id",
+          "timestamp_ms",
+          "selection_bbox"
+        ],
+        properties: {
+          provider: { type: "string", minLength: 1 },
+          external_content_id: { type: "string", minLength: 1 },
+          author_display: { type: "string" },
+          caption: { type: "string" },
+          timestamp_ms: { type: "integer", minimum: 0 },
+          selection_bbox: schemaRef("BBox")
+        }
+      },
+      options: {
+        type: "object",
+        properties: {
+          max_candidates: { type: "integer", minimum: 1, maximum: 12 },
+          search_scope: stringArray(2)
+        }
+      }
+    }
+  },
+  SelectVisualSearchCandidateRequest: {
+    type: "object",
+    additionalProperties: false,
+    required: ["schema_version", "candidate_id", "asset_lifecycle"],
+    properties: {
+      schema_version: schemaRef("SchemaVersion"),
+      candidate_id: schemaRef("Identifier"),
+      asset_lifecycle: { enum: ["temporary", "saved"] },
+      modeling_mode: { enum: ["preview_2d"] }
+    }
   }
 };
 
@@ -554,6 +598,49 @@ const RESPONSE_SCHEMAS = {
       status: { const: "queued" }
     }
   },
+  VisualSearchQuery: {
+    type: "object",
+    required: [
+      "schema_version",
+      "visual_search_query_id",
+      "query_media_id",
+      "status",
+      "candidates"
+    ],
+    properties: {
+      schema_version: schemaRef("SchemaVersion"),
+      visual_search_query_id: schemaRef("Identifier"),
+      query_media_id: schemaRef("Identifier"),
+      status: { enum: ["running", "succeeded", "failed"] },
+      source_mode: { type: ["string", "null"] },
+      source_context: { type: "object" },
+      component_identity: { type: ["object", "null"] },
+      candidates: { type: "array", items: { type: "object" } },
+      selected_asset_id: nullableIdentifier,
+      error: { type: ["object", "null"] },
+      created_at: schemaRef("Timestamp"),
+      updated_at: schemaRef("Timestamp")
+    }
+  },
+  VisualSearchSelection: {
+    type: "object",
+    required: [
+      "schema_version",
+      "visual_search_query_id",
+      "candidate_id",
+      "asset",
+      "source_component"
+    ],
+    properties: {
+      schema_version: schemaRef("SchemaVersion"),
+      visual_search_query_id: schemaRef("Identifier"),
+      candidate_id: schemaRef("Identifier"),
+      asset: schemaRef("Asset"),
+      source_component: { type: "object" },
+      modeling_mode: { const: "preview_2d" },
+      model_state: { const: "preview_2d_ready" }
+    }
+  },
   ErrorEnvelope: {
     type: "object",
     additionalProperties: false,
@@ -645,6 +732,7 @@ const OPERATIONS = {
                 enum: [
                   "space_source",
                   "reference_source",
+                  "visual_search_query",
                   "generated_render"
                 ]
               },
@@ -674,6 +762,23 @@ const OPERATIONS = {
     tag: "Media",
     summary: "删除尚未绑定资产的媒体",
     noContent: true
+  },
+  createVisualSearchQuery: {
+    tag: "Visual search",
+    summary: "识别视频关键帧圈选组件并检索真实目录候选",
+    body: "CreateVisualSearchQueryRequest",
+    success: ["202", "圈选组件识别已完成或进入终态", "VisualSearchQuery"]
+  },
+  getVisualSearchQuery: {
+    tag: "Visual search",
+    summary: "读取圈选组件识别与候选结果",
+    success: ["200", "视觉搜索查询", "VisualSearchQuery"]
+  },
+  selectVisualSearchCandidate: {
+    tag: "Visual search",
+    summary: "确认候选并创建不可替换的 SourceComponent 资产",
+    body: "SelectVisualSearchCandidateRequest",
+    success: ["201", "SourceComponent 已保存", "VisualSearchSelection"]
   },
   createAsset: {
     tag: "Assets",
@@ -1131,6 +1236,7 @@ export function createOpenApiDocument() {
     tags: [
       { name: "System" },
       { name: "Media" },
+      { name: "Visual search" },
       { name: "Assets" },
       { name: "Space versions" },
       { name: "Design requests" },

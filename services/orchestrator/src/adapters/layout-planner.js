@@ -253,6 +253,7 @@ export function createLayoutPlanner({
 }) {
   return async function planLayout({
     imageDataUrl,
+    imageDataUrls,
     prompt,
     requestedMode = "live"
   }) {
@@ -276,6 +277,13 @@ export function createLayoutPlanner({
       config.agentPlanLayoutTimeoutMs ?? 90_000
     );
     try {
+      const plannerImages = (
+        Array.isArray(imageDataUrls) && imageDataUrls.length
+          ? imageDataUrls
+          : [imageDataUrl]
+      )
+        .slice(0, 4)
+        .map(imageForPlanner);
       const response = await fetchImpl(
         `${config.agentPlanBaseUrl}/chat/completions`,
         {
@@ -292,10 +300,10 @@ export function createLayoutPlanner({
               {
                 role: "user",
                 content: [
-                  {
+                  ...plannerImages.map((url) => ({
                     type: "image_url",
-                    image_url: { url: imageForPlanner(imageDataUrl) }
-                  },
+                    image_url: { url }
+                  })),
                   { type: "text", text: prompt }
                 ]
               }

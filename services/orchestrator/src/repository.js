@@ -5,7 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { ResourceNotFoundError } from "./errors.js";
 
 export const DEMO_ACTOR_ID = "demo-user-001";
-export const DATABASE_MIGRATION_VERSION = 1;
+export const DATABASE_MIGRATION_VERSION = 2;
 
 const TABLES = Object.freeze({
   media: {
@@ -51,6 +51,11 @@ const TABLES = Object.freeze({
   productDiscoveryRuns: {
     table: "product_discovery_runs",
     id: "product_discovery_run_id",
+    status: (value) => value.status
+  },
+  visualSearchQueries: {
+    table: "visual_search_queries",
+    id: "visual_search_query_id",
     status: (value) => value.status
   },
   relatedDesignRuns: {

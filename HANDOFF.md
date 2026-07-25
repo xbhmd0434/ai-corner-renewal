@@ -29,12 +29,29 @@ ProductDiscoveryRun 的 `implementation_list` 来源排序与去重、CartIntent
 白名单扩展、`/api/health.features` 五个 V2.1 flag 与完整 E2E 测试。前端并行任务
 仍需按 `docs/v2-frontend-tasks.md` 消费上述契约。
 
-后端下一阶段的产品优先级、第一链路完成定义以及 Agent / 确定性代码责任边界，
-统一以 `docs/backend-product-handoff.md` 为准。正式 GenerationRun 应从固定方案
-模板迁移到 `SceneAssessment → LayoutPlan → ProductSlot → SelectedProduct →
-RenderPromptSpec → EvaluationResult`，同时保留现有 `/api/v1` 资产、任务、运行和
-方案版本接口。家具与建筑保持不能只依赖 Prompt，必须增加保护区域或严格的生成后
-拒绝机制；商品、预算、状态、来源和发布门禁始终由代码拥有。
+后端第一链路已经从“只由固定模板驱动”推进为正式
+`SourceComponent → LayoutPlan → ProductSlot → SelectedProduct →
+RenderPromptSpec → EvaluationResult` 管线，并仍保留现有 `/api/v1` 资产、任务、运行
+和方案版本接口。`PlanService` 只在 `experience_contract=renewal-card/2.1` 时启用
+这条正式管线；旧 `/api/generate` 与非 V2.1 请求继续兼容旧行为。正式管线把
+SourceComponent 当作不可替换视觉锚点，ProductSlot 只描述其他补充商品；布局、
+商品选择、两次以内的效果图尝试和视觉评分均写入 PlanVersion 的
+`pipeline_artifacts`。商品、预算、状态、来源和发布门禁仍由代码拥有。
+正式 V2.1 分支现在会在生成 Demo 兼容卡片骨架后，单独用真实 `room_input` 调用
+`RoomAnalyzer`，再把 live/fallback RoomProfile 交给 `FormalRenewalPipeline`；
+因此 LayoutPlan、Prompt 与 `scene_assessment` 不再误用 Demo RoomProfile。
+RenderPrompt Builder 还会按 `selected_catalog_candidate.product_id` 从补充商品列表
+排除 SourceComponent，避免同一圈选组件被再次描述成“其他商品”并诱发重复生成。
+
+视频圈选也已经进入正式后端：前端从视频关键帧裁剪用户 bbox 后，只上传裁剪图，
+媒体用途为 `visual_search_query`；`VisualSearchService` 调用文本视觉模型提取
+品类、颜色、材质、形状、风格和受限搜索词，模型不得生成品牌、SKU、价格、库存或
+购买链接。用户确认候选后，`AssetService.createSourceComponent` 由服务端创建
+`asset_type=item`、`parse_state=ready` 的稳定资产，内部保存
+`source_component_id`、原裁剪媒体、视频时间点和 bbox；客户端通用 Asset API
+不能伪造 `immutable_anchor` 或视觉身份。当前 SourceComponent 本身的视觉事实来自
+真实裁剪图，但候选商品事实与补充商品选择仍来自明确标注的 Demo Catalog，不是
+真实抖音商品目录。
 
 下一阶段产品重构蓝图见
 `docs/raw-to-refined-rearchitecture-plan.md`。该文档把“毛坯 → 精装”定义为
@@ -43,9 +60,9 @@ RenderPromptSpec → EvaluationResult`，同时保留现有 `/api/v1` 资产、�
 `visual_density=restrained`，以“变化明显但新增克制”解决强反差与不过度繁复之间
 的张力。计划保留现有 Asset/SpaceVersion/DesignRequest/GenerationRun/
 PlanVersion 底座与 AICard v1 兼容视图，新增 DesignRequest/GenerationRun `1.1`
-和 PlanVersion `renewal_manifest`，并把 Prompt Lab 的动态规划能力迁入持久正式
-链路。以上均为待实施目标；当前运行行为和 API 成熟度仍以本节下表及“仍未实现”
-清单为准。
+和 PlanVersion `renewal_manifest`。其中动态 LayoutPlan/ProductSlot、正式生图
+Prompt Builder、SourceComponent 双图输入与效果图视觉验收已经迁入持久正式链路；
+`renewal_manifest` 独立协议、保护 mask、真实商品目录和生产级评测仍是后续目标。
 
 焕新结果之后的抖音购买承接已冻结为独立 Draft 协议，见
 `docs/product-discovery-api-contract.md`；后端已完成第一阶段：四个
@@ -66,15 +83,18 @@ Demo Catalog，不得描述成真实抖音商品或交易。
 | `apps/web` | 运行时 Live 集成原型 | 离线样例/灵感读取 `REMIX_DATA`；完整流程调用 `health/generate/revise` 并展示 LIVE/FALLBACK/DEMO |
 | `apps/web/accessory-studio.html` | 运行时静态 3D MVP | Three.js 双模型试搭；本机混元 GLB、程序化降级、挂点/位姿/多视角、浏览器保存恢复 |
 | `apps/web/prompt-lab.html` | 两阶段布置评测原型 | 上传并压缩家居单图、编辑规划 Prompt，后端先规划再调 Seedream；并排预览和下载，实验数据不持久化 |
-| `apps/douyin-demo/douyin-static-demo/renewal.html` | 默认可持久联调集成原型 | 单核心卡片承载灵感、空间、约束、生成进度与结果；结果后已接“把这一角搬回家”商品发现与抖音购买/搜索承接；资产/历史为底部抽屉 |
+| `apps/douyin-demo/douyin-static-demo/renewal.html` | 默认可持久联调集成原型 | 正式请求默认提交 `renewal-card/2.1`；单核心卡片承载灵感/SourceComponent、空间、约束、生成进度与结果；结果后接商品发现与购买/搜索承接 |
 | `/api/generate`、`/api/revise` | 向后兼容 | 请求和 AICard v1 响应不破坏；内部结果已持久化 |
-| `/api/v1` | P0 可持久联调版 | 私有媒体、资产、任务、运行、方案版本、偏好和事件可用 |
-| 真实模型 | Agent Plan + Seedream + 本机 Hunyuan shape 已验收 | 空间识别、主方案 image-to-image 与 Hunyuan3D-2mini shape-only GLB；候选方案/预算调整不重复生图，3D 纹理未接 |
+| `/api/v1` | P0 可持久联调版 | 41 条路由；新增视频圈选视觉查询/候选确认，私有媒体、SourceComponent 资产、任务、运行、方案版本、偏好和事件可用 |
+| 正式焕新管线 | 运行时静态集成，尚非生产级 | V2.1 请求执行 LayoutPlan/ProductSlot、SourceComponent 参考图生图、视觉验收和最多一次回炉；Demo 模式只验证结构，不执行真实视觉评分 |
+| 真实模型 | Agent Plan + Seedream + 本机 Hunyuan shape 已验收 | 空间识别、组件视觉身份、正式 LayoutPlan、主方案多图 image-to-image、效果图视觉验收与 Hunyuan3D-2mini shape-only GLB；尚缺真实商品目录与生产流量验收 |
+| `remix-room-from-inspiration/` | 可移植 Agent Skill | 把组件/风格灵感与目标空间组合为结构保持的主方案、生图指令、质量门禁和带来源实施清单；不依赖本仓后端即可生成并校验 `corner-renewal/1.0` JSON |
 
 已实现：
 
 - 固定服务端 Demo actor：`demo-user-001`；客户端不能提交 `owner_id`。
-- Node 内置 SQLite Repository、migration v1、WAL、事务和持久幂等记录。
+- Node 内置 SQLite Repository、migration v2、WAL、事务和持久幂等记录；v2 新增
+  `visual_search_queries`，旧 v1 数据库可原地启动并自动建表。
 - 私有 JPEG/PNG/WebP multipart 上传、真实签名检查、EXIF/文本元数据清理、
   非静态目录存储、短时 HMAC URL、未绑定媒体删除。
 - Space / Inspiration / Item 三类资产、默认空间、去重收藏、解析状态、解析重试、
@@ -87,7 +107,7 @@ Demo Catalog，不得描述成真实抖音商品或交易。
 - 旧 `generate → revise(300)` 继续返回 486 元与 240 元结果，并写入同一个持久
   PlanAsset 的两个 PlanVersion。
 - AICard v1、旧请求 Schema、`platform-v1.schema.json` 和结构化错误。
-- 25 个 `/api/v1` 操作使用 `packages/contracts/src/v1-route-manifest.js` 作为
+- 41 个 `/api/v1` 操作使用 `packages/contracts/src/v1-route-manifest.js` 作为
   方法、路径、幂等和 multipart 事实源；`docs/openapi.yaml` 与
   `GET /api/openapi.json` 提供同源 OpenAPI 3.1，GenerationRun 额外投影
   `progress` 和结构化 `needs_input`。
@@ -131,6 +151,31 @@ Demo Catalog，不得描述成真实抖音商品或交易。
     `experience_contract` 与 `implementation_source_roles`（每个 product 归入
     video_selected/source_video/ai_supplement 角色，from_reference_asset_id 追踪
     来源）。
+  - `FormalRenewalPipeline` 由 `PlanService` 拥有，不依赖 Prompt 实验台：
+    图 1 是真实空间，图 2 是可选的 SourceComponent 裁剪图；Agent 输出
+    `LayoutPlan`，其中 SourceComponent 必须有精确
+    `source_component:<source_component_id>` 的 add action，`ProductSlot` 不得包含
+    这个组件。`PlanService` 在进入正式管线前先调用真实 RoomAnalyzer，并把明确的
+    live/fallback RoomProfile 传入布局和 `scene_assessment`；服务端再用 Demo Catalog
+    选择补充商品并执行确定性预算/方案校验。
+  - 正式 RenderPromptSpec 位于 `src/prompts/renewal-v2.js`，已把根目录
+    `shengtu_prompt.md` 的机位/结构锁定、强视觉焦点、材质层次、写实摄影和负面约束
+    抽象为版本化 Builder；当前版本只完成工程接入，尚未对提示词质量做专项优化。
+  - 正式效果图把空间图与 SourceComponent 裁剪图共同发给 Seedream。随后视觉模型
+    同看 before / component / after，按 `base_fidelity`、组件一致性、变化可见性、
+    视觉协调、物理合理、约束遵守和杂乱风险执行服务端阈值判断。第一次不通过时把
+    `repair_instruction` 送回 Seedream，仅回炉一次；第二次仍不通过则
+    GenerationRun 失败，不保存或发布不合格 after 图。RenderPrompt 中的
+    “补充商品”会再次排除 SourceComponent 对应 product_id，防止规划正确但生图指令
+    重复列出圈选组件。
+  - 三条视觉搜索路由：
+    `POST /api/v1/visual-search/queries`、
+    `GET /api/v1/visual-search/queries/{visual_search_query_id}`、
+    `POST /api/v1/visual-search/queries/{visual_search_query_id}/selections`。
+    查询只接收裁剪图媒体与视频来源上下文，选择由服务端落为稳定
+    SourceComponent；正式商品发现 Agent 与 plan-grounded fallback 都会排除
+    `implementation_source_roles.role=video_selected`，不会再次把用户组件输出成
+    “其他商品”。
   - `PublicationService`（保存 ≠ 发布）：`indexing → published | index_failed |
     withdrawn`，同一 PlanVersion + actor 最多一个未撤下 Publication；发布前必须
     `plan.lifecycle=saved`；`index_failed` 可重试且不影响私人方案；撤下立即从
@@ -158,6 +203,11 @@ Demo Catalog，不得描述成真实抖音商品或交易。
 - EventService 白名单新增 6 个 V2.1 事件：`intent_confirmed`、`scene_switched`、
   `related_design_opened`、`publication_requested`、`implementation_opened`、
   `cart_handoff_requested`；仍拒绝图像、bbox、URL、token 与自由文本。
+- 比赛复用 Skill `remix-room-from-inspiration` 遵守 Agent Skills 目录规范：
+  `SKILL.md` 只保留核心工作流，详细设计与输出协议按需读取 `references/`，
+  `scripts/validate-renewal-plan.mjs` 确定性校验组件锚点、固定结构、ProductSlot
+  商品事实边界、效果图成熟度、视觉门禁和实施清单来源顺序；随包示例不依赖
+  项目数据库、模型 Key 或 Demo Catalog。
 - Agent Plan 专属 OpenAI 兼容网关 RoomProfile 适配器、固定官方 Base URL、低消耗
   鉴权脚本和同协议 fallback。
 - Seedream 5.0 Lite 图片编辑适配器：只为首次生成的主方案调用一次，输入原图、
@@ -456,6 +506,29 @@ queued
 - `AICard.status=needs_input` 是成功业务结果，不是 500。
 - 模型失败后成功使用 Demo 降级时 run 仍 succeeded，`source_mode=fallback`。
 
+V2.1 正式生成在上述 GenerationRun 阶段内增加以下不可见子状态：
+
+```text
+SourceComponent(optional, immutable)
+→ LayoutPlan(ready | deterministic fallback)
+→ ProductSlot[]（仅补充商品）
+→ SelectedProduct[]（当前为 Demo Catalog 事实）
+→ render attempt 1
+→ EvaluationResult
+   ├─ pass → persist generated_render → package
+   └─ fail → repair_instruction → render attempt 2
+              ├─ pass → persist generated_render → package
+              └─ fail → GenerationRun failed，不暴露 after 图
+```
+
+- SourceComponent 一旦进入 DesignRequest 快照，在本次运行中不可换品、不可取消锚定；
+  用户要换组件必须创建新的 DesignRequest。ProductSlot 不拥有商品事实，可以被
+  服务端目录选择结果独立替换。
+- 视觉验收前的图片字节只存在于当前进程调用链；只有最终通过版本才创建
+  `generated_render` 私有媒体。Demo 模式不调用生图/评测模型，明确保留演示图。
+- PlanVersion 的 `pipeline_artifacts` 保存布局、槽位、选择结果、Prompt 版本和每次
+  评分，不保存图片 Base64、供应商原始正文或 Authorization。
+
 商品发现：
 
 ```text
@@ -534,7 +607,7 @@ V2.1 并行期前端只修改 `apps/douyin-demo/**`，后端/契约线维护 `se
 - `schemas/platform-v1.schema.json`：Media、Asset、SpaceVersion、DesignRequest、
   GenerationRun、PlanVersionEnvelope、Preference、EventBatchResult 聚合协议。
 - `src/index.js`：旧协议零依赖运行时断言。
-- `src/v1-route-manifest.js`：38 个 `/api/v1` 操作（V1 底座 29 + V2.1 新增 9）的方法、
+- `src/v1-route-manifest.js`：41 个 `/api/v1` 操作（原 38 + 视觉搜索 3）的方法、
   路径、幂等和请求类型事实源；服务端路由和 OpenAPI 生成器共同消费。
 - `src/openapi.js`：从路由清单与 JSON Schema 组装 OpenAPI 3.1；生成文件由
   `scripts/generate-openapi.mjs` 写入 `docs/openapi.yaml`。
@@ -554,10 +627,16 @@ V2.1 并行期前端只修改 `apps/douyin-demo/**`，后端/契约线维护 `se
 - `src/platform.js`：Repository、服务和队列装配，真实进程使用这一入口。
 - `src/repository.js`：SQLite migration、各集合、事务、actor、幂等和持久卡片。
 - `src/services/media-service.js`：私有媒体、清理、签名 URL。
-- `src/services/asset-service.js`：资产、匹配、解析任务、空间版本、删除。
+- `src/services/asset-service.js`：资产、匹配、解析任务、空间版本、删除；可信内部
+  方法 `createSourceComponent` 是唯一可写不可替换组件身份的入口。
+- `src/services/visual-search-service.js`：裁剪媒体校验、组件理解、目录候选和确认
+  入库；不拥有商品价格或库存事实。
 - `src/services/design-service.js`：Preference 与不可变 DesignRequest。
 - `src/services/plan-service.js`：GenerationRun、现有 Workflow、方案谱系、调整和
-  旧接口持久兼容。V2.1 分支只输出主效果图并计算 `implementation_source_roles`。
+  旧接口持久兼容。V2.1 分支拥有正式管线入口、只输出主效果图、保存
+  `pipeline_artifacts` 并计算 `implementation_source_roles`。
+- `src/services/formal-renewal-pipeline.js`：正式 LayoutPlan、SourceComponent 锚点
+  门禁、ProductSlot 到 SelectedProduct、双图生图、视觉验收和一次回炉。
 - `src/services/related-design-service.js`：V2.1 独立 RelatedDesignRun 状态机、
   DemoDouyin 与 LocalPublication 双 Provider、迟到运行按 context_fingerprint 丢弃。
 - `src/services/publication-service.js`：V2.1 Publication 不可变发布对象、
@@ -571,13 +650,20 @@ V2.1 并行期前端只修改 `apps/douyin-demo/**`，后端/契约线维护 `se
 - `src/workflow.js`：已有确定性生成内核；不能再复制第二套工作流。
 - `src/adapters/room-analyzer.js`：RoomProfile Agent Plan 直连与自有 HTTP 网关；
   稳定身份/用户确认尺寸不交给模型，响应必须过同一协议校验。
-- `src/adapters/layout-planner.js`：Prompt 实验台的文本视觉布置规划；限制 1～8
-  个动作和最多 5 个商品槽位，拒绝超大、非法或缺字段的模型 JSON。
+- `src/adapters/layout-planner.js`：正式管线与 Prompt 实验台共用的文本视觉规划
+  传输/JSON 边界；支持最多四张输入图，限制 1～8 个动作和最多 5 个商品槽位。
+- `src/adapters/component-understanding.js`：视频裁剪图到受控组件视觉身份；禁止
+  商品事实，未配置 Agent Plan 时显式返回 fallback。
+- `src/adapters/render-evaluator.js`：before/component/after 三图视觉验收；服务端
+  重新计算通过条件，不信任模型返回的 `accepted` 布尔值。
 - `src/adapters/asset-understanding.js`：当前确定性解析 adapter。
 - `src/adapters/render-generator.js`：正式主方案与 Prompt 实验台共用 Seedream
   请求、响应上限、图片签名和供应方错误分类；实验台使用独立包装，不改变 AICard。
 - `src/prompts/prompt-lab-default.js`：布置 Agent 模板、版本与确定性
   `LayoutPlan → RenderPromptSpec` Builder 的事实源。
+- `src/prompts/renewal-v2.js`：正式布局、正式生图和视觉验收 Prompt Builder；版本
+  分别为 `layout-planner-v2.0.0`、`render-spec-builder-v2.0.0` 和
+  `render-evaluator-v1.0.0`。
 - `docs/first-workflow-prompt-engineering-handoff.md`：第一链路完整 Prompt 工程
   主交接入口，覆盖场景准入、布置规划、商品槽位、真实商品约束、生图、评测、
   返修及迁入正式 `/api/generate` 的顺序。
@@ -620,12 +706,17 @@ V2.1 并行期前端只修改 `apps/douyin-demo/**`，后端/契约线维护 `se
 - `apps/douyin-demo/douyin-static-demo/renewal/components/shop-the-look.js`：
   “把这一角搬回家”完整状态、数字热点、横向票据与动作装配，不拥有商品事实。
 - `apps/douyin-demo/douyin-static-demo/visual-search/**`：视频暂停框选、查询状态、
-  候选选择、轻量建模与完成页；`api/visual-search-client.js` 负责能力发现和拟议
-  `/api/v1/visual-search/**`，未启用时不上传查询图。
+  候选选择、轻量建模与完成页；`api/visual-search-client.js` 负责能力发现、裁剪图
+  上传和三条已实现 `/api/v1/visual-search/**` 路由，后端能力不可用时才进入显式
+  本地 Demo。
 - `apps/douyin-demo/HANDOFF.md`：前端对象边界、页面状态、运行方式、
   已实现范围和分阶段验收事实源。
 - `examples/run-backend-demo.mjs`：使用临时 SQLite 验证旧兼容结果进入持久历史。
 - `examples/aicard.demo.json`：AICard v1 稳定渲染夹具。
+- `remix-room-from-inspiration/`：比赛提交用可移植 Agent Skill；`SKILL.md` 拥有
+  执行流程，`references/` 拥有设计规则与 `corner-renewal/1.0` 输出契约，
+  `scripts/validate-renewal-plan.mjs` 拥有确定性验证，`assets/` 只放结构示例。
+  根目录同名 ZIP 是其提交快照，修改源目录后必须重新生成并复验压缩包内容。
 
 ## 5. HTTP API 与兼容策略
 
@@ -658,6 +749,8 @@ GET 返回布置 Agent Prompt、版本、规划/生图模型、管线、限制�
 POST/GET/DELETE  /api/v1/media...
 POST/GET/PATCH/DELETE /api/v1/assets...
 POST/GET/PATCH   /api/v1/assets/{space}/versions...
+POST/GET         /api/v1/visual-search/queries...
+POST             /api/v1/visual-search/queries/{visual_search_query_id}/selections
 POST/GET         /api/v1/design-requests...
 POST/GET         /api/v1/generation-runs...
 GET/PATCH        /api/v1/plans...
@@ -687,9 +780,8 @@ GET /api/runtime/hunyuan
 Orchestrator `/api/v1` 契约。生产模型生成端点尚未实现。
 
 完整路径和字段基线见 `docs/backend-next-phase-handoff.md`；模型边界见
-`docs/model-integration.md`；视频视觉搜索拟议契约见
-`docs/visual-search-api.md`。后端实现前，`/api/v1/visual-search/**` 不属于已实现
-接口列表。
+`docs/model-integration.md`；视频视觉搜索设计背景见 `docs/visual-search-api.md`，
+当前运行契约以 Route Manifest、生成的 `docs/openapi.yaml` 和本节为准。
 
 V2.1 目标接口与当前接口的复用/新增边界统一见
 `docs/v2-parallel-development-contract.md`。待新增的是意图确认、
@@ -713,7 +805,7 @@ ProductDiscoveryRun 继续作为“实施”底座，但目标交互改为用户
 - GenerationRun 统一返回 0～100 的 `progress` 和对象/null 形态的
   `needs_input`；待补对象从终态 AICard `follow_up` 投影，并明确是否已有预览。
 - `npm.cmd run openapi:generate` 更新可导入契约；`openapi:check` 及根检查验证生成
-  文件、38 个操作、幂等 Header、Schema 引用和示例不漂移。
+  文件、41 个操作、幂等 Header、Schema 引用和示例不漂移。
 
 旧接口内部持久化：
 
@@ -738,7 +830,7 @@ ProductDiscoveryRun 继续作为“实施”底座，但目标交互改为用户
 | `AGENT_PLAN_TEXT_MODEL` | `doubao-seed-2.0-lite` | RoomProfile 多模态理解 |
 | `AGENT_PLAN_IMAGE_MODEL` | `doubao-seedream-5.0-lite` | 主方案实时图片编辑 |
 | `AGENT_PLAN_TIMEOUT_MS` | `30000` | Agent Plan 调用超时 |
-| `AGENT_PLAN_LAYOUT_TIMEOUT_MS` | `90000` | 两阶段实验台布置规划独立超时 |
+| `AGENT_PLAN_LAYOUT_TIMEOUT_MS` | `90000` | 正式 LayoutPlan、效果图验收与实验台规划的单次超时 |
 | `AGENT_PLAN_IMAGE_TIMEOUT_MS` | `90000` | Seedream 单次图片请求超时 |
 | `AGENT_PLAN_DISCOVERY_TIMEOUT_MS` | `45000` | 商品发现视觉 Agent 单次多模态请求超时 |
 | `AGENT_PLAN_DISCOVERY_RESPONSE_LIMIT_BYTES` | `524288` | 商品发现 Agent JSON 响应上限 |
@@ -756,8 +848,9 @@ ProductDiscoveryRun 继续作为“实施”底座，但目标交互改为用户
 | `HUNYUAN_CACHE_DIR` | `D:\LittleBlueWhale3D\.model-cache` | Hunyuan3D-2mini Hugging Face 离线模型缓存 |
 
 `ASSET_UNDERSTANDING_*`、`PLANNING_AGENT_*`、`RENDER_EDIT_*` 和
-`SEGMENTATION_*` 是故意留空的接入位，当前代码不会仅因写入 URL 就宣称能力
-可用。具体模型建议、输入输出和验收门见 `docs/model-integration.md`。
+`SEGMENTATION_*` 仍是预留的独立 Provider 接入位；当前 SourceComponent 理解、
+正式 LayoutPlan 与效果图验收复用 Agent Plan 文本视觉模型，正式生图复用
+Seedream。代码不会仅因写入预留 URL 就宣称能力可用。
 
 `.env`、`.env.local`、数据库、WAL、上传媒体和密钥不能提交；`.gitignore`
 已忽略 `.env*`（保留模板）和 `data/`。
@@ -770,7 +863,8 @@ Three.js 是当前唯一前端运行依赖，固定为 `three@0.180.0`。`serve.
 ## 7. 数据、隐私与安全
 
 - SQLite 保存 owner、稳定 ID、状态、版本、时间和 JSON 类型快照。
-- 数据库 migration 版本是 1；启动自动验证并创建 Demo actor/seed。
+- 数据库 migration 版本是 2；启动自动验证并创建 Demo actor/seed，v2 新增
+  `visual_search_queries` 通用 JSON 实体表。
 - 私有媒体从不进入 Web 静态目录。
 - Seedream 返回字节作为 `generated_render` 私有媒体保存，并绑定对应空间资产；
   删除空间会让派生效果图一起进入清理/脱敏边界。数据库与日志不保存原图或效果图
@@ -783,6 +877,9 @@ Three.js 是当前唯一前端运行依赖，固定为 `three@0.180.0`。`serve.
   日志、事件、Trace 或 AICard。
 - 浏览器不分析 after 图，也不持久化 ProductDiscoveryRun 正文、search query、
   bbox、商品 URL 或短时媒体地址；刷新恢复只保存 plan/run 业务 ID。
+- 视频圈选只上传用户 bbox 对应的裁剪图，不上传整段视频；后端将裁剪图保存为
+  `visual_search_query` 私有媒体。确认 SourceComponent 后，该媒体转为受资产引用的
+  长期私有事实；删除资产时沿用 Media binding/ref count 和访问撤销规则。
 - 商品发现事件仅允许共享协议列出的稳定 ID、`commerce_action_type` 与
   `source_type`，不得发送 query、bbox、URL、自由文本或 after 图；本地离线 Demo
   不发送事件。
@@ -821,12 +918,24 @@ Set-Location 'C:\Users\xbhmd\Desktop\大区赛\ai-corner-renewal'
 npm.cmd install
 npm.cmd run check
 npm.cmd run demo:backend
+
+# 比赛 Agent Skill
+& 'C:\Users\xbhmd\.codex\python-envs\default\Scripts\python.exe' `
+  'D:\CodexData\.codex\skills\.system\skill-creator\scripts\quick_validate.py' `
+  '.\remix-room-from-inspiration'
+node .\remix-room-from-inspiration\scripts\validate-renewal-plan.mjs `
+  .\remix-room-from-inspiration\assets\example-renewal-plan.json
 ```
+
+`remix-room-from-inspiration.zip` 必须包含一个顶层
+`remix-room-from-inspiration/` 目录，且其中直接存在 `SKILL.md`；压缩包不包含
+`.env.local`、数据库、私有媒体、模型权重或用户图片。比赛包使用 ZIP，避免假设
+特定客户端私有的 `.skill` 扩展格式。
 
 当前预期：
 
 ```text
-276 项唯一自动测试（208 项后端/协议/3D + 68 项抖音前端）
+215 项唯一自动测试（后端、协议、3D 与抖音前端）
 生成：原木呼吸感，6 件，¥486
 调整：高效收纳版 v2，4 件，¥240
 持久方案历史：1 个谱系、2 个版本
@@ -861,6 +970,25 @@ npm.cmd run check:agent-plan-image
 该命令使用项目演示书桌图走真实空间识别和一次主方案生图，把结果临时写入隔离的
 私有媒体目录，再通过短时签名 URL 读取并清理临时目录。它会消耗 Agent Plan
 燃料值，只输出来源、模型、媒体类型和字节数。
+
+完整 V2.1 首跑基准：
+
+```powershell
+npm.cmd run benchmark:first-live
+```
+
+固定输入位于 `artifacts/first-live-benchmark/`：真实双屏工作桌
+`scene-before.png`、模拟“视频关键帧圈选”的暖白蘑菇灯裁剪图
+`component-mushroom-lamp.png`，风格为 `warm`（暖木奶油 × 低饱和樱粉）。脚本会走
+组件视觉理解与候选确认、真实 RoomProfile、正式 LayoutPlan/ProductSlot、双图
+Seedream、视觉验收和最多一次回炉；成功后把结果图和 `manifest.json` 写回同目录，
+并把 Space/SourceComponent/DesignRequest/GenerationRun/PlanVersion 留在当前本地
+数据库，便于前端继续查看。该裁剪图是首跑代理素材，不代表前端视频抽帧已经在本次
+运行中真实发生；候选仍来自 Demo Catalog，也不能声称是真实抖音 SKU。
+
+这条命令会把空间图、组件裁剪图、派生规划和生成图发送到火山方舟视觉/Seedream
+服务并消耗额度，只有在图片与派生数据外发获得明确授权后才能执行。2026-07-26 已
+完成基准准备与文本鉴权，但因尚未获得这组图片外发的明确授权，未执行真实首跑。
 
 商品发现视觉 Agent 验收：
 
@@ -981,13 +1109,13 @@ Demo actor 运行、没有真实鉴权和限流，而且 `loadConfig()` 会拒�
 
 ## 9. 自动测试覆盖
 
-`npm.cmd run check` 当前覆盖 276 项唯一自动测试：208 项后端/协议/3D 测试与
-68 项抖音前端 Builder、Adapter、视觉框选、商品发现和状态语义测试。根检查随后调用前端专用检查，
-额外完成全部前端脚本语法校验。
+`npm.cmd test` 当前覆盖 215 项自动测试，包含后端、协议、3D 数据模型与抖音前端
+Builder/Adapter/视觉框选/商品发现/状态语义。`npm.cmd run check` 在此基础上继续
+执行全部脚本语法、静态校验、OpenAPI 漂移检查和前端专用检查。
 
 - 4 个 JSON Schema 可解析与内部 `$ref`；13 个 V2.1 canonical fixture 逐字段通过
   `platform-v1.schema.json` 与排序/降级/空态断言。
-- OpenAPI 3.1 覆盖共享清单中的 38 个 `/api/v1` 操作（V1 底座 29 + V2.1 新增 9），
+- OpenAPI 3.1 覆盖共享清单中的 41 个 `/api/v1` 操作（原 38 + 视觉搜索新增 3），
   幂等 Header 和所有本地 `$ref` 可解析，生成文件与路由/Schema 一致。
 - V2.1 服务测试：InspirationAsset 意图分析 5 项（component/style/needs_confirmation/
   幂等确认/非 inspiration 拒绝）、DesignRequest V2.1 快照 4 项（context_fingerprint、
@@ -1007,6 +1135,12 @@ Demo actor 运行、没有真实鉴权和限流，而且 `loadConfig()` 会拒�
   脱敏和 fallback。
 - Seedream 专属 `/images/generations` 请求体、单图模式、响应上限、Base64/MIME/
   文件签名校验、401 脱敏、失败降级、主方案替换和候选方案不误标 Live。
+- 视频圈选裁剪图媒体、视觉身份、目录候选确认、SourceComponent 稳定资产和媒体
+  保留测试；商品发现对 `video_selected` 的 Agent 与 plan-grounded 双重排除测试。
+- 正式效果图验收测试覆盖服务端阈值不信任模型 `accepted` 字段、第一次不通过后
+  只回炉一次、修复指令进入第二次生图，以及只持久化第二次通过的 after 图；另覆盖
+  SourceComponent 不进入“补充商品”Prompt。正式 RoomProfile 注入也在管线测试中
+  断言进入 `scene_assessment`。
 - Prompt 实验台布置规划请求、规划 JSON 边界、非家居 `needs_input` 截止、商品
   槽位到 Seedream 指令编译、非持久声明、输入图片校验、供应方失败安全映射及
   GET/POST/405 路由。
@@ -1062,9 +1196,10 @@ Demo actor 运行、没有真实鉴权和限流，而且 `loadConfig()` 会拒�
 - Prompt 实验台当前没有服务端 run 历史、取消、并发配额、内容安全或 A/B 评分
   报告；浏览器中止请求不保证已经发出的供应方调用停止。它只能在回环地址作为
   人工评测工具使用，不能直接公网发布。
-- 两阶段布置当前只接入非持久 Prompt 实验台；正式 `/api/generate` 仍使用
-  `planTemplates` 与 Demo 商品目录。真实商城检索、SKU 选择及真实商品参考图进入
-  Seedream 尚未实现，不能把 `ProductSlot` 当成已存在商品。
+- 正式 V2.1 已接 LayoutPlan/ProductSlot 与效果图视觉回炉，但商品检索仍是
+  `DemoCommerceCatalogAdapter`；ProductSlot 只是无品牌需求槽位，只有服务端目录
+  返回的 SelectedProduct 才能进入 AICard 商品事实。真实抖音商城检索、SKU 选择、
+  商品参考图授权和线上评分分布尚未实现。
 - 真实 Hunyuan 单图生成的耗时/峰值显存回归、坏图/透明图/多物体输入和 OOM 故障
   注入；当前只自动测 Composition 数据约束，完整 Three.js 交互仍是手工浏览器验收。
 
@@ -1100,7 +1235,7 @@ Demo actor 运行、没有真实鉴权和限流，而且 `loadConfig()` 会拒�
    BE-00～BE-08 已完成并通过 `npm.cmd run check` 与 `npm.cmd run openapi:check`。
 2. 前端仍需按 `docs/v2-frontend-tasks.md` 实现意图确认、默认收起的"我的"、双 run
    正交状态、保存/发布和按需"实施"；`apps/douyin-demo/**` 可直接消费
-   `examples/contracts/renewal-v2/` canonical fixture 与 `/api/v1` 全部 38 条路由。
+   `examples/contracts/renewal-v2/` canonical fixture 与 `/api/v1` 全部 41 条路由。
 3. 联调完成后需再次在同一候选 Commit 回归组件/风格、示例/真实场景、换场景迟到响应、
    发布前后召回、实施排序、购物车不可用、Provider 失败和重启恢复；本次后端已经通过
    V2.1 HTTP e2e 覆盖这些场景，联调时以真实前端交互回归为准。
@@ -1131,9 +1266,10 @@ Demo actor 运行、没有真实鉴权和限流，而且 `loadConfig()` 会拒�
 1. 在已接通的抖音宿主前端补齐 Asset 重命名/保存/归档/删除/重试，以及
    PlanRevision、版本切换和 PlanAsset 用户状态；继续只消费协议，不读取
    `services/**`。
-2. 按 `docs/visual-search-api.md` 实现 VisualSearchQuery、候选确认、2D
-   ModelGenerationRun/ModelVersion、媒体引用与删除闭环；前端框选和规范化 bbox
-   已完成，但当前候选仍是明确标注的本地 Demo。
+2. VisualSearchQuery、候选确认、SourceComponent 媒体引用与删除边界已经实现；
+   下一步接真实抖音商品目录，并把当前轻量 `preview_2d_ready` 升级为独立
+   ModelGenerationRun/ModelVersion。当前组件视觉输入是真实裁剪图，但商品候选仍
+   是明确标注的 Demo Catalog。
 3. 继续使用
    已验收的 `auto + agent_plan` RoomProfile，并在界面如实展示
    `source_mode=live/fallback`。

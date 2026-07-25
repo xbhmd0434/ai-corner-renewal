@@ -1,0 +1,4 @@
+interface:
+  display_name: "灵感搬进我家"
+  short_description: "将视觉灵感转成结构保持、可验证且可实施的空间焕新方案"
+  default_prompt: "Use $remix-room-from-inspiration to move this visual inspiration into my room while preserving the room structure."

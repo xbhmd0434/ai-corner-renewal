@@ -72,7 +72,9 @@ export function buildDesignRequest(params) {
     editable_region_id: editable_region_id || "",
     options: {
       analysis_mode: options.analysis_mode || "auto",
-      include_trace: options.include_trace !== false
+      include_trace: options.include_trace !== false,
+      experience_contract:
+        options.experience_contract || "renewal-card/2.1"
     }
   };
 

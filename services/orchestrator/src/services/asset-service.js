@@ -730,6 +730,115 @@ export class AssetService {
     return { status: 201, value: this.summary(asset) };
   }
 
+  /**
+   * Trusted server-side constructor for a component selected from a video frame.
+   * Clients cannot write component identity fields through the generic asset API.
+   */
+  createSourceComponent(
+    actorId,
+    { mediaId, sourceContext, componentIdentity, selectedCandidate, lifecycle = "saved" }
+  ) {
+    const media = this.repository.get("media", actorId, mediaId);
+    if (media.purpose !== "visual_search_query") {
+      throw invalid(
+        "media_purpose_mismatch",
+        `${mediaId} 不是视频圈选组件的视觉查询图片`
+      );
+    }
+    if (!sourceContext || typeof sourceContext !== "object") {
+      throw invalid("source_context_invalid", "缺少视频来源上下文");
+    }
+    validateBbox(sourceContext.selection_bbox, "/source_context/selection_bbox");
+    if (!["temporary", "saved"].includes(lifecycle)) {
+      throw invalid("asset_lifecycle_invalid", "组件资产只能是 temporary 或 saved");
+    }
+
+    const createdAt = this.now();
+    const assetId = `item-${randomUUID()}`;
+    const sourceComponentId = `source-component-${randomUUID()}`;
+    const categoryCode =
+      componentIdentity?.category_code ||
+      selectedCandidate?.category_code ||
+      "unknown_component";
+    const name =
+      selectedCandidate?.name ||
+      componentIdentity?.label ||
+      "视频圈选组件";
+    const asset = {
+      schema_version: "1.0",
+      asset_id: assetId,
+      asset_type: "item",
+      lifecycle,
+      parse_state: "ready",
+      name,
+      tags: ["source_component", categoryCode],
+      is_default: false,
+      resource_version: 1,
+      current_space_version_id: null,
+      expires_at:
+        lifecycle === "temporary"
+          ? new Date(
+              createdAt.getTime() +
+                this.config.temporaryRetentionHours * 60 * 60 * 1000
+            ).toISOString()
+          : null,
+      media_ids: [mediaId],
+      provenance: {
+        kind: "video_context",
+        provider: sourceContext.provider,
+        external_content_id: sourceContext.external_content_id,
+        author_display: sourceContext.author_display || null,
+        timestamp_ms: sourceContext.timestamp_ms,
+        selection_bbox: clone(sourceContext.selection_bbox)
+      },
+      attributes: {
+        user_role: "wanted",
+        identity_level: "visual_component",
+        source_component: {
+          source_component_id: sourceComponentId,
+          immutable_anchor: true,
+          query_media_id: mediaId,
+          category_code: categoryCode,
+          label: componentIdentity?.label || name,
+          colors: clone(componentIdentity?.colors || []),
+          materials: clone(componentIdentity?.materials || []),
+          shape_keywords: clone(componentIdentity?.shape_keywords || []),
+          style_keywords: clone(componentIdentity?.style_keywords || []),
+          search_queries: clone(componentIdentity?.search_queries || []),
+          visual_confidence: componentIdentity?.confidence ?? null,
+          selected_catalog_candidate: selectedCandidate
+            ? {
+                candidate_id: selectedCandidate.candidate_id,
+                product_id: selectedCandidate.product_id || null,
+                name: selectedCandidate.name,
+                category_code: selectedCandidate.category_code,
+                match_type: selectedCandidate.match_type || "visual_similar"
+              }
+            : null
+        }
+      },
+      dedup_key: null,
+      last_used_at: createdAt.toISOString(),
+      deleted_at: null,
+      created_at: createdAt.toISOString(),
+      updated_at: createdAt.toISOString()
+    };
+
+    this.repository.transaction(() => {
+      this.repository.save("assets", actorId, asset);
+      this.repository.bindMedia(actorId, assetId, [mediaId]);
+      if (lifecycle === "saved") {
+        media.retention_expires_at = null;
+        media.updated_at = createdAt.toISOString();
+        this.repository.save("media", actorId, media);
+      }
+    });
+    return {
+      ...this.summary(asset),
+      source_component: clone(asset.attributes.source_component)
+    };
+  }
+
   list(actorId, query = {}) {
     const supportedQuery = new Set([
       "asset_type",

@@ -17,6 +17,23 @@ const ROUTES = [
     template: "/api/v1/media/{media_id}"
   },
   {
+    operationId: "createVisualSearchQuery",
+    method: "POST",
+    template: "/api/v1/visual-search/queries",
+    idempotent: true
+  },
+  {
+    operationId: "getVisualSearchQuery",
+    method: "GET",
+    template: "/api/v1/visual-search/queries/{visual_search_query_id}"
+  },
+  {
+    operationId: "selectVisualSearchCandidate",
+    method: "POST",
+    template: "/api/v1/visual-search/queries/{visual_search_query_id}/selections",
+    idempotent: true
+  },
+  {
     operationId: "createAsset",
     method: "POST",
     template: "/api/v1/assets",

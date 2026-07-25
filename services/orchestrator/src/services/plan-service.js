@@ -176,6 +176,7 @@ export class PlanService {
     cardStore,
     config,
     roomAnalyzer,
+    formalRenewalPipeline = null,
     fetchImpl = globalThis.fetch,
     now = () => new Date()
   }) {
@@ -185,6 +186,7 @@ export class PlanService {
     this.cardStore = cardStore;
     this.config = config;
     this.roomAnalyzer = roomAnalyzer;
+    this.formalRenewalPipeline = formalRenewalPipeline;
     this.fetchImpl = fetchImpl;
     this.now = now;
     this.scheduled = new Set();
@@ -389,6 +391,10 @@ export class PlanService {
             ? error.message
             : "方案生成未完成，可以重试",
         retryable: true
+      };
+      run.failure_diagnostics = {
+        code: error.code || "generation_failed",
+        issues: Array.isArray(error.issues) ? clone(error.issues).slice(0, 30) : []
       };
       run.updated_at = this.now().toISOString();
       this.repository.save("generationRuns", actorId, run);
@@ -1055,9 +1061,46 @@ export class PlanService {
         target_budget_cny: run.revision_action.target_budget_cny
       });
     }
-    return this.#orchestrator(actorId, run.generation_run_id).generate(
-      this.#toLegacyGenerateRequest(actorId, designRequest)
+    const legacyRequest = this.#toLegacyGenerateRequest(actorId, designRequest);
+    const isRenewalV2 =
+      snapshot.options?.experience_contract === "renewal-card/2.1";
+    if (!isRenewalV2 || !this.formalRenewalPipeline) {
+      return this.#orchestrator(actorId, run.generation_run_id).generate(
+        legacyRequest
+      );
+    }
+    const scaffoldRequest = clone(legacyRequest);
+    scaffoldRequest.options.analysis_mode = "demo";
+    const baseCard = await this.#orchestrator(
+      actorId,
+      run.generation_run_id
+    ).generate(scaffoldRequest);
+    const roomAnalysis = await this.roomAnalyzer(
+      legacyRequest.room_input,
+      legacyRequest.options.analysis_mode
     );
+    const output = await this.formalRenewalPipeline.execute({
+      actorId,
+      designRequest,
+      baseCard,
+      roomAnalysis,
+      roomInput: legacyRequest.room_input,
+      persistGeneratedRender: ({ bytes, mediaType }) => {
+        const media = this.mediaService.create(actorId, {
+          file: {
+            filename: generatedRenderFilename(mediaType),
+            contentType: mediaType,
+            bytes
+          },
+          purpose: "generated_render",
+          retention: "temporary"
+        });
+        return `${PRIVATE_MEDIA_PREFIX}${media.media_id}`;
+      }
+    });
+    run.pipeline_artifacts = output.artifacts;
+    this.repository.save("generationRuns", actorId, run);
+    return output.card;
   }
 
   #toLegacyGenerateRequest(actorId, designRequest) {
@@ -1181,6 +1224,10 @@ export class PlanService {
     const inspirationSnapshot = snapshot.reference_snapshots?.find(
       (item) => item.asset_type === "inspiration"
     );
+    const sourceComponentSnapshot = snapshot.reference_snapshots?.find(
+      (item) => item.attributes?.source_component?.immutable_anchor === true
+    );
+    const sourceComponent = sourceComponentSnapshot?.attributes?.source_component || null;
     const confirmed = inspirationSnapshot?.confirmed_intent || null;
     const componentReference = inspirationSnapshot?.attributes?.intent_analysis?.component_reference || null;
     const anchoredCategoryCode = confirmed?.intent_type === "component" ? componentReference?.category_code : null;
@@ -1189,7 +1236,11 @@ export class PlanService {
       for (const productId of card.plan.product_ids) {
         const product = (card.products || []).find((p) => p.product_id === productId) || null;
         let role;
-        if (confirmed?.intent_type === "component") {
+        if (
+          sourceComponent?.selected_catalog_candidate?.product_id === productId
+        ) {
+          role = "video_selected";
+        } else if (confirmed?.intent_type === "component") {
           if (product && anchoredCategoryCode && product.category === anchoredCategoryCode) {
             role = "video_selected";
           } else {
@@ -1203,7 +1254,10 @@ export class PlanService {
         implementationRoles.push({
           product_id: productId,
           role,
-          from_reference_asset_id: inspirationSnapshot?.asset_id || null
+          from_reference_asset_id:
+            role === "video_selected" && sourceComponentSnapshot
+              ? sourceComponentSnapshot.asset_id
+              : inspirationSnapshot?.asset_id || null
         });
       }
     }
@@ -1225,6 +1279,7 @@ export class PlanService {
       source_mode: card.source_mode,
       experience_contract: isRenewalV2 ? "renewal-card/2.1" : null,
       implementation_source_roles: implementationRoles,
+      pipeline_artifacts: clone(run.pipeline_artifacts || null),
       redactions: [],
       aicard: clone(card),
       created_at: createdAt,

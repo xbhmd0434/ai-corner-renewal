@@ -187,7 +187,7 @@ function createSeedreamRequest({
   fetchImpl,
   now
 }) {
-  return async function requestSeedream({ roomInput, prompt }) {
+  return async function requestSeedream({ roomInput, prompt, referenceImages = [] }) {
     const startedAt = now();
     const controller = new AbortController();
     const timeout = setTimeout(
@@ -208,7 +208,16 @@ function createSeedreamRequest({
           body: JSON.stringify({
             model: config.agentPlanImageModel,
             prompt,
-            image: [imageForAgentPlan(roomInput)],
+            image: [
+              imageForAgentPlan(roomInput),
+              ...referenceImages
+                .filter(
+                  (item) =>
+                    typeof item === "string" &&
+                    (item.startsWith("data:image/") || item.startsWith("https://"))
+                )
+                .slice(0, 3)
+            ],
             size: "2K",
             sequential_image_generation: "disabled",
             response_format: "b64_json",
@@ -316,6 +325,8 @@ export function createRenderGenerator({
     plan,
     roomProfile,
     products,
+    promptOverride,
+    referenceImages = [],
     requestedMode = "auto"
   }) {
     if (config.backendMode === "demo" || requestedMode === "demo") {
@@ -339,7 +350,8 @@ export function createRenderGenerator({
     try {
       return await requestSeedream({
         roomInput,
-        prompt: renderPrompt({ plan, roomProfile, products })
+        prompt: promptOverride || renderPrompt({ plan, roomProfile, products }),
+        referenceImages
       });
     } catch (error) {
       return {

@@ -40,6 +40,7 @@ function plannedItemsForAgent(context) {
       }
       const placement = placementByProduct.get(productId);
       const role = roles.find((item) => item.product_id === productId);
+      if (role?.role === "video_selected") return null;
       return {
         label: product.name,
         category_code: product.category,
@@ -57,7 +58,10 @@ function plannedItemsForAgent(context) {
 function discoveryPrompt(context, limits) {
   const maxSubjects = Math.max(1, Math.min(Number(limits?.maxSubjects) || 6, 8));
   const plannedItems = plannedItemsForAgent(context);
+  const sourceComponent =
+    context.planVersion?.pipeline_artifacts?.source_component || null;
   return [
+    "用户亲自从视频圈选的 SourceComponent 已有稳定资产身份，不属于本次识别目标。即使它在效果图中非常醒目，也绝对不要输出它；只输出除此之外的补充商品。",
     "你是“商品发现视觉 Agent”。你的工作不是设计空间，而是从焕新后的效果图中定位真正需要落地购买的可移动物品。",
     "优先定位下方 planned_items 中已经由方案确定要新增的物品；只有画面明确出现时才返回。",
     "可以补充最多 2 个画面清晰、可独立购买的软装小物，但不要把用户原有的桌子、显示器、椅子、墙、窗、门、插座或固定柜体列为购买对象。",
@@ -70,7 +74,18 @@ function discoveryPrompt(context, limits) {
     '{"schema_version":"1.0","subjects":[{"subject_ref":"planned-1 或 supplement-1","label":"字符串","category_code":"允许的代码","bbox":{"x":0.1,"y":0.1,"width":0.2,"height":0.2},"appearance":{"colors":["字符串"],"materials":["字符串"],"style_keywords":["字符串"]},"placement_hint":"字符串","confidence":0.0,"commerce_search_queries":["字符串"]}]}',
     `场景类型：${context.sceneType || "desk_corner"}`,
     `方案标题：${context.planTitle || "未命名方案"}`,
-    `planned_items：${JSON.stringify(plannedItems)}`
+    `planned_items：${JSON.stringify(plannedItems)}`,
+    `excluded_source_component：${JSON.stringify(
+      sourceComponent
+        ? {
+            source_component_id: sourceComponent.source_component_id,
+            label: sourceComponent.label,
+            category_code: sourceComponent.category_code,
+            colors: sourceComponent.colors || [],
+            materials: sourceComponent.materials || []
+          }
+        : null
+    )}`
   ].join("\n");
 }
 
@@ -232,10 +247,16 @@ export class PlanGroundedDiscoveryProvider {
     const planProducts = aicard.products || [];
     const placements = plan.placements || [];
     const productIds = plan.product_ids || [];
+    const excludedProductIds = new Set(
+      (planVersion?.implementation_source_roles || [])
+        .filter((item) => item.role === "video_selected")
+        .map((item) => item.product_id)
+    );
 
     // 为每个 placement 创建 subject
     for (const placement of placements) {
       if (subjects.length >= maxSubjects) break;
+      if (excludedProductIds.has(placement.product_id)) continue;
 
       const product = planProducts.find((p) => p.product_id === placement.product_id)
         || demoProducts[placement.product_id];
@@ -271,6 +292,7 @@ export class PlanGroundedDiscoveryProvider {
     if (subjects.length === 0) {
       for (const productId of productIds) {
         if (subjects.length >= maxSubjects) break;
+        if (excludedProductIds.has(productId)) continue;
 
         const product = planProducts.find((p) => p.product_id === productId)
           || demoProducts[productId];
@@ -404,13 +426,20 @@ export class AgentPlanProductDiscoveryProvider {
         this.config.agentPlanDiscoveryResponseLimitBytes ?? 512 * 1024
       );
       const output = parseAgentJson(payload);
+      const excludedCategory =
+        context?.planVersion?.pipeline_artifacts?.source_component
+          ?.category_code || null;
       return {
         sourceType: "live",
         strategy: "image_agent",
         provider: "volcengine_agent_plan",
         model: this.config.agentPlanTextModel,
         promptVersion: AGENT_PROMPT_VERSION,
-        subjects: output.subjects
+        subjects: excludedCategory
+          ? output.subjects.filter(
+              (subject) => subject.category_code !== excludedCategory
+            )
+          : output.subjects
       };
     } catch (error) {
       if (error?.name === "AbortError" || error?.name === "TimeoutError") {

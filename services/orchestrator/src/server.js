@@ -433,6 +433,34 @@ async function dispatchV1({
       }
     },
     {
+      ...v1Route("createVisualSearchQuery"),
+      regex: /^\/api\/v1\/visual-search\/queries$/,
+      run: async ({ body }) =>
+        response(202, await platform.createVisualSearchQuery(actorId, body))
+    },
+    {
+      ...v1Route("getVisualSearchQuery"),
+      regex: /^\/api\/v1\/visual-search\/queries\/([^/]+)$/,
+      run: ({ params }) =>
+        response(
+          200,
+          platform.getVisualSearchQuery(actorId, decodeURIComponent(params[0]))
+        )
+    },
+    {
+      ...v1Route("selectVisualSearchCandidate"),
+      regex: /^\/api\/v1\/visual-search\/queries\/([^/]+)\/selections$/,
+      run: ({ params, body }) =>
+        response(
+          201,
+          platform.selectVisualSearchCandidate(
+            actorId,
+            decodeURIComponent(params[0]),
+            body
+          )
+        )
+    },
+    {
       ...v1Route("createAsset"),
       regex: /^\/api\/v1\/assets$/,
       run: ({ body }) => {

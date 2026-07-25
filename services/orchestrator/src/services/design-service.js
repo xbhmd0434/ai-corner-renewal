@@ -354,6 +354,7 @@ export class DesignRequestService {
         resource_version: asset.resource_version,
         name: asset.name,
         provenance: clone(asset.provenance),
+        media_ids: [...(asset.media_ids || [])],
         attributes: clone(asset.attributes),
         confirmed_intent:
           asset.asset_type === "inspiration"
