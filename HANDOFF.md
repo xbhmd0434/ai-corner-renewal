@@ -956,6 +956,12 @@ SQLite 与私有媒体挂载 `/app/data`，真实 Agent Plan / Seedream 只由�
 带 Cookie 首页 200、SQLite 写入指定数据目录。当前机器没有 Docker CLI，因此
 镜像构建仍需由 Zeabur 首次构建验证。
 
+2026-07-26 首次 Zeabur 单端口部署发现正式前端的浏览器模块仍位于静态目录
+`/api/*.js`，与后端 `/api/*` 命名空间冲突，导致模块请求 404、页面停留在默认
+“离线”状态。`server.js` 现在只对白名单中的五个前端模块路径提供静态 JavaScript，
+其余 `/api/*` 仍严格进入后端路由；未登录请求仍需先通过共享口令。生产模式 Chrome
+回归已确认状态显示“在线”、空间选择组件完整渲染，且控制台和失败请求均为空。
+
 Zeabur 新项目已不能使用旧共享集群，需要购买或绑定 Server；购买按月固定费用并
 默认自动续费。目标机型已选 Tencent Hong Kong 2 vCPU / 2 GB / 40 GB，
 US$6/月，ZeaburOS。购买与填入真实密钥仍由项目所有者在控制台完成。
@@ -992,7 +998,8 @@ US$6/月，ZeaburOS。购买与填入真实密钥仍由项目所有者在控制�
 2026-07-26 最近一次完整 `npm.cmd run check` 覆盖并通过 209 项唯一自动测试，
 包含后端、协议与抖音前端 Builder/Adapter/视觉框选/商品发现/状态语义；随后
 `check:douyin` 独立重跑 68 项前端测试并再次通过。新增公网部署测试覆盖未登录
-口令页、精简健康检查、受保护 API 401、登录 Cookie、正式首页以及 AI 总开关。
+口令页、精简健康检查、受保护 API 401、登录 Cookie、正式首页、单端口前端模块
+白名单以及 AI 总开关。
 
 - 4 个 JSON Schema 可解析与内部 `$ref`；13 个 V2.1 canonical fixture 逐字段通过
   `platform-v1.schema.json` 与排序/降级/空态断言。

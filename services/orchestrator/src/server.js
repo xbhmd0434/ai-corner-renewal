@@ -12,6 +12,13 @@ import { sendLoginPage, serveStaticFile } from "./static-files.js";
 const makeRequestId = () => `http-request-${randomUUID()}`;
 const OPENAPI_DOCUMENT = createOpenApiDocument();
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9._:-]{8,200}$/;
+const FRONTEND_API_MODULE_PATHS = new Set([
+  "/api/http-client.js",
+  "/api/legacy-client.js",
+  "/api/product-discovery-client.js",
+  "/api/v1-client.js",
+  "/api/visual-search-client.js"
+]);
 const LOG_ROUTE_TEMPLATES = [
   [/^\/api\/v1\/media\/[^/]+\/content$/, "/api/v1/media/{media_id}/content"],
   [/^\/api\/v1\/media\/[^/]+$/, "/api/v1/media/{media_id}"],
@@ -1063,6 +1070,20 @@ export function createApiServer({
               })
         });
         return;
+      }
+
+      if (
+        ["GET", "HEAD"].includes(method) &&
+        FRONTEND_API_MODULE_PATHS.has(pathname)
+      ) {
+        if (access.enabled) {
+          access.requireSession(request);
+        }
+        statusCode = 200;
+        if (await serveStaticFile(request, responseObject, pathname, config)) {
+          return;
+        }
+        throw new ApiError("page_not_found", "页面不存在", 404);
       }
 
       if (!pathname.startsWith("/api/")) {
