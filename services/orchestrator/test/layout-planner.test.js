@@ -97,11 +97,13 @@ test("Layout Planner 把图片和规划 Prompt 交给文本视觉模型并校验
   assert.equal(result.latencyMs, 20);
 });
 
-test("Layout Planner 拒绝超出动作和商品槽位上限的模型输出", async () => {
-  const invalidPlan = candidatePlan();
-  invalidPlan.product_slots = Array.from({ length: 6 }, (_, index) => ({
-    ...invalidPlan.product_slots[0],
-    slot_id: `product_0${index + 1}`
+test("Layout Planner 对超量商品槽位去重并按容量安全裁剪", async () => {
+  const oversizedPlan = candidatePlan();
+  oversizedPlan.product_slots = Array.from({ length: 6 }, (_, index) => ({
+    ...oversizedPlan.product_slots[0],
+    slot_id: `product_0${index + 1}`,
+    category: index === 5 ? "补充商品1" : `补充商品${index + 1}`,
+    placement: index === 5 ? "区域1" : `区域${index + 1}`
   }));
   const planner = createLayoutPlanner({
     config: loadConfig({
@@ -111,7 +113,7 @@ test("Layout Planner 拒绝超出动作和商品槽位上限的模型输出", as
     fetchImpl: async () =>
       new Response(
         JSON.stringify({
-          choices: [{ message: { content: JSON.stringify(invalidPlan) } }]
+          choices: [{ message: { content: JSON.stringify(oversizedPlan) } }]
         }),
         { status: 200 }
       )
@@ -121,8 +123,157 @@ test("Layout Planner 拒绝超出动作和商品槽位上限的模型输出", as
     imageDataUrl: IMAGE_DATA_URL,
     prompt: "分析场景并制定布置方案。"
   });
-  assert.equal(result.sourceType, "fallback");
-  assert.equal(result.reason, "planning_contract_invalid");
+  assert.equal(result.sourceType, "live");
+  assert.equal(result.plan.product_slots.length, 4);
+  assert.deepEqual(result.normalization, {
+    actions_received: 1,
+    actions_kept: 1,
+    product_slots_received: 6,
+    product_slots_kept: 4,
+    defaulted_fields: [],
+    product_slots_deduplicated: 1
+  });
+});
+
+test("Layout Planner 为合法动作缺失的 placement 补受控默认并记录审计", async () => {
+  const incompletePlan = candidatePlan();
+  delete incompletePlan.actions[0].placement;
+  const planner = createLayoutPlanner({
+    config: loadConfig({
+      AI_BACKEND_MODE: "auto",
+      AGENT_PLAN_API_KEY: "secret"
+    }),
+    fetchImpl: async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: JSON.stringify(incompletePlan) } }]
+        }),
+        { status: 200 }
+      )
+  });
+
+  const result = await planner({
+    imageDataUrl: IMAGE_DATA_URL,
+    prompt: "保持家具不变并补充照明。"
+  });
+  assert.equal(result.sourceType, "live");
+  assert.match(result.plan.actions[0].placement, /可编辑区域/);
+  assert.deepEqual(result.normalization.defaulted_fields, [
+    "actions[0].placement"
+  ]);
+});
+
+test("Layout Planner 为清理整理动作补可推导字段，但不替 add 猜目标", async () => {
+  const incompletePlan = candidatePlan();
+  incompletePlan.actions = [{ type: "organize_loose_items" }];
+  const responseFor = (plan) =>
+    new Response(
+      JSON.stringify({
+        choices: [{ message: { content: JSON.stringify(plan) } }]
+      }),
+      { status: 200 }
+    );
+  const planner = createLayoutPlanner({
+    config: loadConfig({
+      AI_BACKEND_MODE: "auto",
+      AGENT_PLAN_API_KEY: "secret"
+    }),
+    fetchImpl: async () => responseFor(incompletePlan)
+  });
+
+  const result = await planner({
+    imageDataUrl: IMAGE_DATA_URL,
+    prompt: "整理桌面。"
+  });
+  assert.equal(result.sourceType, "live");
+  assert.equal(result.plan.actions[0].target, "散乱小物与线缆");
+  assert.match(result.plan.actions[0].instruction, /分类归拢/);
+  assert.deepEqual(result.normalization.defaulted_fields, [
+    "actions[0].target",
+    "actions[0].placement",
+    "actions[0].instruction",
+    "actions[0].reason"
+  ]);
+
+  const unsafePlan = candidatePlan();
+  unsafePlan.actions = [{ type: "add" }];
+  const rejectingPlanner = createLayoutPlanner({
+    config: loadConfig({
+      AI_BACKEND_MODE: "auto",
+      AGENT_PLAN_API_KEY: "secret"
+    }),
+    fetchImpl: async () => responseFor(unsafePlan)
+  });
+  const rejected = await rejectingPlanner({
+    imageDataUrl: IMAGE_DATA_URL,
+    prompt: "增加一件商品。"
+  });
+  assert.equal(rejected.sourceType, "fallback");
+  assert.equal(rejected.reason, "planning_contract_invalid");
+});
+
+test("Layout Planner 裁剪超量动作时优先保留清理、整理和 SourceComponent", async () => {
+  const oversizedPlan = candidatePlan();
+  oversizedPlan.actions = [
+    ...Array.from({ length: 8 }, (_, index) => ({
+      type: "add",
+      target: `补充商品${index + 1}`,
+      placement: `区域${index + 1}`,
+      instruction: `增加补充商品${index + 1}`,
+      reason: "完善构图"
+    })),
+    {
+      type: "remove_trash",
+      target: "桌面垃圾",
+      placement: "移出画面",
+      instruction: "清理包装与空瓶",
+      reason: "降低杂乱"
+    },
+    {
+      type: "organize_loose_items",
+      target: "散乱小物",
+      placement: "分区收纳",
+      instruction: "归拢线缆与小物",
+      reason: "改善秩序"
+    },
+    {
+      type: "add",
+      target: "source_component:source-component-1",
+      placement: "桌面右侧",
+      instruction: "原样放入圈选组件",
+      reason: "形成视觉焦点"
+    }
+  ];
+  const planner = createLayoutPlanner({
+    config: loadConfig({
+      AI_BACKEND_MODE: "auto",
+      AGENT_PLAN_API_KEY: "secret"
+    }),
+    fetchImpl: async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: JSON.stringify(oversizedPlan) } }]
+        }),
+        { status: 200 }
+      )
+  });
+
+  const result = await planner({
+    imageDataUrl: IMAGE_DATA_URL,
+    prompt: "保持必要动作并裁剪次要新增物。"
+  });
+  assert.equal(result.sourceType, "live");
+  assert.equal(result.plan.actions.length, 8);
+  assert.deepEqual(
+    result.plan.actions.slice(0, 3).map((item) => item.type),
+    ["remove_trash", "organize_loose_items", "add"]
+  );
+  assert.equal(
+    result.plan.actions[2].target,
+    "source_component:source-component-1"
+  );
+  assert.equal(result.normalization.actions_received, 11);
+  assert.equal(result.normalization.actions_kept, 8);
 });
 
 test("Layout Planner 拒绝移动、替换或删除现有家具的动作", async () => {

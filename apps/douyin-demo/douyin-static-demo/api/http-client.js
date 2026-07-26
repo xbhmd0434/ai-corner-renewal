@@ -196,6 +196,77 @@ function delay(ms) {
 }
 
 /**
+ * V2.1 协议第 9 节定义的错误码白名单。
+ * 调用方应按错误码（而非 HTTP 状态）决定前端动作。
+ */
+export const V2_ERROR_CODES = Object.freeze({
+  INTENT_CONFIRMATION_REQUIRED: "intent_confirmation_required",
+  SCENE_VERSION_STALE: "scene_version_stale",
+  RELATED_DESIGN_RUN_ACTIVE: "related_design_run_active",
+  PUBLICATION_REQUIRES_SAVED_PLAN: "publication_requires_saved_plan",
+  PUBLICATION_ALREADY_EXISTS: "publication_already_exists",
+  CART_INTENT_STALE: "cart_intent_stale",
+  RELATED_DESIGN_CONTRACT_INVALID: "related_design_contract_invalid",
+  IMPLEMENTATION_ORDER_INVALID: "implementation_order_invalid",
+  RATE_LIMITED: "rate_limited",
+  PROVIDER_FAILED: "provider_failed",
+  PROVIDER_TIMEOUT: "provider_timeout",
+  RESOURCE_VERSION_CONFLICT: "resource_version_conflict",
+  RESOURCE_NOT_FOUND: "resource_not_found"
+});
+
+/**
+ * 判断错误对象是否为指定错误码。
+ * 兼容两种来源：顶层 `code` 或 `error.code`（来自 ErrorEnvelope）。
+ * @param {object} error
+ * @param {string} code
+ * @returns {boolean}
+ */
+export function isErrorCode(error, code) {
+  if (!error || !code) return false;
+  const actual = error.code || error.error?.code;
+  return actual === code;
+}
+
+/**
+ * 判断错误是否为指定错误码之一。
+ * @param {object} error
+ * @param {string[]} codes
+ * @returns {boolean}
+ */
+export function hasErrorCode(error, codes) {
+  if (!error || !Array.isArray(codes) || codes.length === 0) return false;
+  const actual = error.code || error.error?.code;
+  return Boolean(actual) && codes.includes(actual);
+}
+
+/**
+ * 提取 ErrorEnvelope 中的 retry_after（毫秒），用于 429 rate_limited。
+ * 后端可能返回秒或 ISO8601；此处统一返回毫秒数，缺失返回 null。
+ * @param {object} error
+ * @returns {number|null}
+ */
+export function extractRetryAfterMs(error) {
+  const raw =
+    error?.details?.retry_after ??
+    error?.details?.retry_after_ms ??
+    error?.error?.details?.retry_after ??
+    error?.error?.details?.retry_after_ms;
+  if (raw == null) return null;
+  if (typeof raw === "number") {
+    // 兼容秒与毫秒两种写法
+    return raw > 1000 ? raw : raw * 1000;
+  }
+  if (typeof raw === "string") {
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n > 1000 ? n : n * 1000;
+    const date = Date.parse(raw);
+    if (!Number.isNaN(date)) return Math.max(0, date - Date.now());
+  }
+  return null;
+}
+
+/**
  * 错误映射
  */
 export function mapError(error) {
@@ -214,19 +285,75 @@ export function mapError(error) {
     504: { type: "gatewayTimeout", message: "请求超时，请稍后重试" }
   };
 
+  // V2.1 协议第 9 节：按错误码补强用户文案与可重试标记
+  const code = error.code || error.error?.code;
+  const V2_MESSAGES = {
+    [V2_ERROR_CODES.INTENT_CONFIRMATION_REQUIRED]:
+      "需要先确认意图，再继续生成。",
+    [V2_ERROR_CODES.SCENE_VERSION_STALE]: "场景版本已更新，请重新选择。",
+    [V2_ERROR_CODES.RELATED_DESIGN_RUN_ACTIVE]:
+      "相关设计正在运行，正在恢复进度。",
+    [V2_ERROR_CODES.PUBLICATION_REQUIRES_SAVED_PLAN]:
+      "请先保存方案，再尝试发布。",
+    [V2_ERROR_CODES.PUBLICATION_ALREADY_EXISTS]:
+      "该方案已发布，正在打开发布详情。",
+    [V2_ERROR_CODES.CART_INTENT_STALE]: "实施清单已更新，正在刷新。",
+    [V2_ERROR_CODES.RELATED_DESIGN_CONTRACT_INVALID]:
+      "相关设计请求校验失败，可重试或稍后再试。",
+    [V2_ERROR_CODES.IMPLEMENTATION_ORDER_INVALID]:
+      "当前勾选无法整套加入购物车，请逐项处理。",
+    [V2_ERROR_CODES.RATE_LIMITED]: "请求过于频繁，请稍后重试。",
+    [V2_ERROR_CODES.PROVIDER_FAILED]: "上游服务暂时不可用，请稍后重试。",
+    [V2_ERROR_CODES.PROVIDER_TIMEOUT]: "上游服务超时，请稍后重试。",
+    [V2_ERROR_CODES.RESOURCE_VERSION_CONFLICT]:
+      "资源已被更新，请刷新后重试。",
+    [V2_ERROR_CODES.RESOURCE_NOT_FOUND]: "资源未找到。"
+  };
+
+  let mapped = error;
   if (error.status && errorMap[error.status]) {
-    return { ...error, ...errorMap[error.status] };
+    const statusMapping = errorMap[error.status];
+    mapped = {
+      ...statusMapping,
+      ...error,
+      type: statusMapping.type,
+      message: error.message || statusMapping.message
+    };
+  }
+  if (code && V2_MESSAGES[code]) {
+    mapped = { ...mapped, code, message: V2_MESSAGES[code] };
   }
 
-  if (error.name === "AbortError") {
-    return { ...error, type: "aborted", message: "请求已取消" };
+  // 429 与 5xx 默认可重试；V2 协议明确 retryable=false 时覆盖
+  if (typeof mapped.retryable !== "boolean") {
+    if (mapped.status === 429 || (mapped.status >= 500 && mapped.status < 600)) {
+      mapped.retryable = true;
+    } else if (
+      hasErrorCode(mapped, [
+        V2_ERROR_CODES.PROVIDER_FAILED,
+        V2_ERROR_CODES.PROVIDER_TIMEOUT,
+        V2_ERROR_CODES.RATE_LIMITED
+      ])
+    ) {
+      mapped.retryable = true;
+    } else if (
+      hasErrorCode(mapped, [
+        V2_ERROR_CODES.RELATED_DESIGN_CONTRACT_INVALID,
+        V2_ERROR_CODES.IMPLEMENTATION_ORDER_INVALID,
+        V2_ERROR_CODES.RESOURCE_NOT_FOUND
+      ])
+    ) {
+      mapped.retryable = false;
+    }
   }
 
-  if (/network|fetch|连接/i.test(error.message || "")) {
-    return { ...error, type: "network", message: "网络连接失败，请检查网络" };
+  if (mapped.name === "AbortError") {
+    mapped = { ...mapped, type: "aborted", message: "请求已取消", retryable: false };
+  } else if (/network|fetch|连接/i.test(mapped.message || "")) {
+    mapped = { ...mapped, type: "network", message: "网络连接失败，请检查网络", retryable: true };
   }
 
-  return error;
+  return mapped;
 }
 
 /**

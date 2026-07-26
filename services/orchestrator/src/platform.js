@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { createRoomAnalyzer } from "./adapters/room-analyzer.js";
 import { createRenderGenerator } from "./adapters/render-generator.js";
 import { createLayoutPlanner } from "./adapters/layout-planner.js";
@@ -155,6 +156,34 @@ export function createPlatform({
   });
 
   assetService.seed(DEMO_ACTOR_ID);
+  const starterSpaceMedia = mediaService.ensureBundled(DEMO_ACTOR_ID, {
+    mediaId: "media-demo-starter-cluttered-desk",
+    filePath: fileURLToPath(
+      new URL(
+        "../../../apps/douyin-demo/douyin-static-demo/renewal/assets/starter-space-cluttered.png",
+        import.meta.url
+      )
+    ),
+    filename: "starter-space-cluttered.png",
+    contentType: "image/png",
+    purpose: "space_source"
+  });
+  const starterComponentMedia = mediaService.ensureBundled(DEMO_ACTOR_ID, {
+    mediaId: "media-demo-starter-mushroom-lamp",
+    filePath: fileURLToPath(
+      new URL(
+        "../../../apps/douyin-demo/douyin-static-demo/renewal/assets/starter-mushroom-lamp.png",
+        import.meta.url
+      )
+    ),
+    filename: "starter-mushroom-lamp.png",
+    contentType: "image/png",
+    purpose: "visual_search_query"
+  });
+  assetService.ensureStarterScenario(DEMO_ACTOR_ID, {
+    spaceMediaId: starterSpaceMedia.media_id,
+    componentMediaId: starterComponentMedia.media_id
+  });
   preferenceService.get(DEMO_ACTOR_ID);
   let maintenanceError = null;
   const cleanupExpired = () => {

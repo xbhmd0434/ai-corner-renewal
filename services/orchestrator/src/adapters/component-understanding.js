@@ -94,6 +94,16 @@ function fallbackIdentity(sourceContext = {}) {
   };
 }
 
+function fallbackReason(error) {
+  if (error?.name === "AbortError" || error?.name === "TimeoutError") {
+    return "component_understanding_timeout";
+  }
+  if (typeof error?.code === "string" && error.code.startsWith("component_")) {
+    return error.code;
+  }
+  return "component_understanding_unavailable";
+}
+
 function prompt() {
   return [
     "你是视频圈选组件识别 Agent。第一张且唯一的图片就是用户从视频关键帧中裁剪出的组件，不是整段视频。",
@@ -182,6 +192,19 @@ export function createComponentUnderstandingProvider({
         model: payload.model || config.agentPlanTextModel,
         latencyMs: Math.max(0, now() - startedAt),
         identity: normalize(cleanJson(text))
+      };
+    } catch (error) {
+      return {
+        sourceType: "fallback",
+        reason: fallbackReason(error),
+        diagnostic:
+          typeof error?.message === "string"
+            ? error.message.slice(0, 300)
+            : "unknown component understanding error",
+        promptVersion: PROMPT_VERSION,
+        model: config.agentPlanTextModel,
+        latencyMs: Math.max(0, now() - startedAt),
+        identity: fallbackIdentity(sourceContext)
       };
     } finally {
       clearTimeout(timeout);

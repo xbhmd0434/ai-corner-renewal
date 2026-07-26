@@ -217,6 +217,7 @@ function applyPlanToCard(card, layoutPlan, sourceComponent, selectedProducts) {
   const sourceProductId =
     sourceComponent?.selected_catalog_candidate?.product_id || null;
   const slots = layoutPlan.product_slots || [];
+  const stablePreservedElements = card.plan?.preserved_elements || [];
   const editableZones = card.room_profile?.editable_zones || ["desktop"];
   const normalizedZone = (hint) =>
     editableZones.find(
@@ -274,7 +275,10 @@ function applyPlanToCard(card, layoutPlan, sourceComponent, selectedProducts) {
     ),
     product_ids: selectedProducts.map((product) => product.product_id),
     preserved_elements: [
-      ...new Set((layoutPlan.preserve || []).map((item) => item.object))
+      ...new Set([
+        ...stablePreservedElements,
+        ...(layoutPlan.preserve || []).map((item) => item.object)
+      ])
     ],
     placements,
     steps: (layoutPlan.actions || []).map((action, index) => ({
@@ -442,6 +446,7 @@ export class FormalRenewalPipeline {
         diagnostic: planning.diagnostic || null,
         model: planning.model || null,
         latency_ms: planning.latencyMs ?? null,
+        normalization: planning.normalization || null,
         enforcement: enforcedLayout.enforcement
       },
       layout_plan: clone(layoutPlan),

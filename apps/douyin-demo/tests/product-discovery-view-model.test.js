@@ -62,16 +62,14 @@ test("partial preserves unmatched subjects and only numbers valid bboxes", async
   });
   const viewModel = adaptProductDiscoveryRun(run);
   assert.equal(viewModel.status, "partial");
-  assert.equal(viewModel.sourceBadge, "视觉 Agent · 抖音好物");
+  assert.equal(viewModel.sourceBadge, "AI 识别 · 抖音好物");
   assert.equal(viewModel.subjects[0].hotspotNumber, 1);
   assert.equal(viewModel.subjects[1].hotspotNumber, null);
   const markup = renderProductHotspots(viewModel);
   assert.match(markup, /data-product-hotspot="subject-example-lamp"/);
   assert.doesNotMatch(markup, /subject-unmatched/);
-  assert.equal(viewModel.agentImpact.title, "已识别 2 个可购买元素，定位 1 个画面热点");
   const componentMarkup = new ShopTheLook().render(viewModel);
-  assert.match(componentMarkup, /VISUAL AGENT \/ LIVE/);
-  assert.match(componentMarkup, /Agent 负责看图、定位/);
+  assert.match(componentMarkup, /从焕新图里找到这些抖音好物/);
 });
 
 test("live visual Agent + Demo catalog keeps both source layers explicit", async () => {
@@ -103,12 +101,11 @@ test("live visual Agent + Demo catalog keeps both source layers explicit", async
 
   const viewModel = adaptProductDiscoveryRun(run);
   const html = new ShopTheLook().render(viewModel);
-  assert.equal(viewModel.sourceBadge, "视觉 Agent · Demo 商品");
-  assert.equal(viewModel.sourceTone, "live");
-  assert.match(viewModel.description, /商品事实来自 Demo 目录/);
-  assert.match(viewModel.agentImpact.description, /生成 2 组检索需求/);
-  assert.match(html, /doubao-seed-2.0-lite/);
-  assert.match(html, /product-discovery-agent\/1.0/);
+  assert.equal(viewModel.sourceBadge, "AI 识别 · Demo 候选");
+  assert.equal(viewModel.sourceTone, "demo");
+  assert.match(viewModel.description, /商品来自 Demo 目录/);
+  assert.match(html, /AI 识别 · Demo 候选/);
+  assert.match(html, /Demo 来源/);
 });
 
 test("failed, cancelled and unavailable have distinct component states", async () => {

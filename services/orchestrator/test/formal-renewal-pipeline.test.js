@@ -34,6 +34,8 @@ test("正式效果图视觉校验失败后只回炉一次，并只发布通过�
     },
     options: { analysis_mode: "demo", include_trace: true }
   });
+  baseCard.constraints.hard_constraints = ["keep_desk"];
+  baseCard.plan.preserved_elements = ["desk"];
 
   const layoutPlan = {
     status: "ready",
@@ -167,6 +169,13 @@ test("正式效果图视觉校验失败后只回炉一次，并只发布通过�
   );
   assert.equal(output.card.render.after_ref, "asset://private-media/accepted-render");
   assert.equal(output.card.render.is_demo_asset, false);
+  assert.ok(output.card.plan.preserved_elements.includes("desk"));
+  assert.ok(output.card.plan.preserved_elements.includes("墙体"));
+  assert.ok(
+    ["pass", "needs_confirmation"].includes(
+      output.card.validation.overall_status
+    )
+  );
 });
 
 test("正式渲染提示只把非圈选商品列为补充商品", () => {

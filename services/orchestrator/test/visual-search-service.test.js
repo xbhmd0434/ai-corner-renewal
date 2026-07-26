@@ -255,3 +255,67 @@ test("视觉搜索三条 HTTP 路由与前端请求形状闭环", async () => {
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("组件识别网络失败时仍由服务端 fallback 创建可生成 SourceComponent", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "corner-visual-fallback-"));
+  const config = {
+    ...loadConfig({
+      AI_BACKEND_MODE: "auto",
+      AGENT_PLAN_API_KEY: "test-key"
+    }),
+    databasePath: join(directory, "state.sqlite"),
+    privateMediaDirectory: join(directory, "media")
+  };
+  const platform = createPlatform({
+    config,
+    fetchImpl: async () => {
+      throw new TypeError("fetch failed");
+    }
+  });
+  try {
+    const actorId = platform.actorId;
+    const media = platform.mediaService.create(actorId, {
+      file: {
+        filename: "component.png",
+        contentType: "image/png",
+        bytes: ONE_PIXEL_PNG
+      },
+      purpose: "visual_search_query",
+      retention: "temporary"
+    });
+    const query = await platform.createVisualSearchQuery(actorId, {
+      schema_version: "1.0",
+      query_media_id: media.media_id,
+      source_context: {
+        provider: "douyin",
+        external_content_id: "video-fallback-001",
+        caption: "桌面上的暖光小台灯",
+        timestamp_ms: 900,
+        selection_bbox: { x: 0.1, y: 0.1, width: 0.5, height: 0.5 }
+      },
+      options: { max_candidates: 2 }
+    });
+    assert.equal(query.status, "succeeded");
+    assert.equal(query.source_mode, "fallback");
+    assert.equal(
+      query.provider_trace.fallback_reason,
+      "component_understanding_unavailable"
+    );
+
+    const selection = platform.selectVisualSearchCandidate(
+      actorId,
+      query.visual_search_query_id,
+      {
+        schema_version: "1.0",
+        candidate_id: query.candidates[0].candidate_id,
+        asset_lifecycle: "saved",
+        modeling_mode: "preview_2d"
+      }
+    );
+    assert.equal(selection.source_component.immutable_anchor, true);
+    assert.equal(selection.source_component.query_media_id, media.media_id);
+  } finally {
+    await platform.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

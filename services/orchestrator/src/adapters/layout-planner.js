@@ -89,6 +89,73 @@ function stringArray(value, path, maximum = 16) {
   return value.map((item, index) => requiredString(item, `${path}[${index}]`, 300));
 }
 
+const MAX_LAYOUT_ACTIONS = 8;
+const MAX_PRODUCT_SLOTS = 4;
+
+function actionPriority(action) {
+  if (action.type === "remove_trash") return 0;
+  if (action.type === "organize_loose_items") return 1;
+  if (
+    action.type === "add" &&
+    action.target.startsWith("source_component:")
+  ) {
+    return 2;
+  }
+  return 3;
+}
+
+function actionPlacement(value, type, path) {
+  if (value !== undefined && value !== null && value !== "") {
+    return { value: requiredString(value, path, 500), defaulted: false };
+  }
+  const inferred =
+    type === "remove_trash"
+      ? "从原位置移出画面并妥善处理，不改变固定家具"
+      : type === "organize_loose_items"
+        ? "在原区域原位分类归拢，保持固定家具和主要设备位置不变"
+        : "放置在可编辑区域内的稳定支撑面上，不遮挡设备、通道或采光";
+  return { value: inferred, defaulted: true };
+}
+
+function actionTarget(value, type, path) {
+  if (value !== undefined && value !== null && value !== "") {
+    return { value: requiredString(value, path, 200), defaulted: false };
+  }
+  if (type === "remove_trash") {
+    return { value: "垃圾、空包装与无用杂物", defaulted: true };
+  }
+  if (type === "organize_loose_items") {
+    return { value: "散乱小物与线缆", defaulted: true };
+  }
+  throw plannerError("planning_contract_invalid", `${path} 必须是非空字符串`);
+}
+
+function actionInstruction(value, type, target, path) {
+  if (value !== undefined && value !== null && value !== "") {
+    return { value: requiredString(value, path, 800), defaulted: false };
+  }
+  const inferred =
+    type === "remove_trash"
+      ? `彻底移除${target}，不要在效果图中原样复制`
+      : type === "organize_loose_items"
+        ? `将${target}分类归拢并完成线缆整理，减少视觉杂乱`
+        : `按规划把${target}稳定放入可编辑区域，保持原图固定结构不变`;
+  return { value: inferred, defaulted: true };
+}
+
+function actionReason(value, type, path) {
+  if (value !== undefined && value !== null && value !== "") {
+    return { value: requiredString(value, path, 500), defaulted: false };
+  }
+  const inferred =
+    type === "remove_trash"
+      ? "降低杂乱并让改造前后差异清晰可见"
+      : type === "organize_loose_items"
+        ? "改善秩序、使用效率与视觉完整度"
+        : "完成设计焦点与整体构图";
+  return { value: inferred, defaulted: true };
+}
+
 function normalizePlan(candidate) {
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
     throw plannerError("planning_contract_invalid", "布置规划必须是 JSON 对象");
@@ -115,13 +182,119 @@ function normalizePlan(candidate) {
   const productSlots = Array.isArray(candidate.product_slots)
     ? candidate.product_slots
     : [];
-  if (actions.length < 1 || actions.length > 8 || productSlots.length > 5) {
+  if (actions.length < 1) {
     throw plannerError(
       "planning_contract_invalid",
-      "actions 必须为 1～8 项，product_slots 不能超过 5 项"
+      "actions 至少需要 1 项"
     );
   }
+  const defaultedActionFields = [];
+  const normalizedActions = actions.map((item, index) => {
+    const type = requiredString(item?.type, `actions[${index}].type`, 40);
+    if (!["organize_loose_items", "remove_trash", "add"].includes(type)) {
+      throw plannerError(
+        "planning_contract_invalid",
+        `actions[${index}].type 不允许修改现有家具`
+      );
+    }
+    const target = actionTarget(
+      item?.target,
+      type,
+      `actions[${index}].target`
+    );
+    const placement = actionPlacement(
+      item?.placement,
+      type,
+      `actions[${index}].placement`
+    );
+    const instruction = actionInstruction(
+      item?.instruction,
+      type,
+      target.value,
+      `actions[${index}].instruction`
+    );
+    const reason = actionReason(
+      item?.reason,
+      type,
+      `actions[${index}].reason`
+    );
+    for (const [field, normalized] of Object.entries({
+      target,
+      placement,
+      instruction,
+      reason
+    })) {
+      if (normalized.defaulted) {
+        defaultedActionFields.push(`actions[${index}].${field}`);
+      }
+    }
+    return {
+      type,
+      target: target.value,
+      placement: placement.value,
+      instruction: instruction.value,
+      reason: reason.value,
+      source_index: index
+    };
+  });
+  const normalizedProductSlots = productSlots.map((item, index) => ({
+    slot_id: requiredString(item?.slot_id, `product_slots[${index}].slot_id`, 80),
+    category: requiredString(item?.category, `product_slots[${index}].category`, 100),
+    purpose: requiredString(item?.purpose, `product_slots[${index}].purpose`, 300),
+    quantity:
+      Number.isInteger(item?.quantity) && item.quantity >= 1 && item.quantity <= 6
+        ? item.quantity
+        : 1,
+    size_constraint: requiredString(
+      item?.size_constraint,
+      `product_slots[${index}].size_constraint`,
+      300
+    ),
+    color: requiredString(item?.color, `product_slots[${index}].color`, 150),
+    material: requiredString(
+      item?.material,
+      `product_slots[${index}].material`,
+      150
+    ),
+    placement: requiredString(
+      item?.placement,
+      `product_slots[${index}].placement`,
+      500
+    ),
+    support: requiredString(item?.support, `product_slots[${index}].support`, 300),
+    clearance_constraints: stringArray(
+      item?.clearance_constraints || [],
+      `product_slots[${index}].clearance_constraints`,
+      8
+    ),
+    douyin_search_queries: stringArray(
+      item?.douyin_search_queries || [],
+      `product_slots[${index}].douyin_search_queries`,
+      4
+    ),
+    source_index: index
+  }));
+  const boundedActions = normalizedActions
+    .toSorted((left, right) => {
+      const priorityDifference = actionPriority(left) - actionPriority(right);
+      return priorityDifference || left.source_index - right.source_index;
+    })
+    .slice(0, MAX_LAYOUT_ACTIONS)
+    .map(({ source_index, ...action }) => action);
+  const seenSlots = new Set();
+  const boundedProductSlots = normalizedProductSlots
+    .filter((slot) => {
+      const key = `${slot.category.trim().toLowerCase()}|${slot.placement
+        .trim()
+        .toLowerCase()}`;
+      if (seenSlots.has(key)) return false;
+      seenSlots.add(key);
+      return true;
+    })
+    .slice(0, MAX_PRODUCT_SLOTS)
+    .map(({ source_index, ...slot }) => slot);
   return {
+    plan: {
     status,
     needs_input_reason: "",
     scene: {
@@ -162,58 +335,8 @@ function normalizePlan(candidate) {
         800
       )
     },
-    actions: actions.map((item, index) => {
-      const type = requiredString(item?.type, `actions[${index}].type`, 40);
-      if (!["organize_loose_items", "remove_trash", "add"].includes(type)) {
-        throw plannerError(
-          "planning_contract_invalid",
-          `actions[${index}].type 不允许修改现有家具`
-        );
-      }
-      return {
-      type,
-      target: requiredString(item?.target, `actions[${index}].target`, 200),
-      placement: requiredString(item?.placement, `actions[${index}].placement`, 500),
-      instruction: requiredString(
-        item?.instruction,
-        `actions[${index}].instruction`,
-        800
-      ),
-      reason: requiredString(item?.reason, `actions[${index}].reason`, 500)
-    };
-    }),
-    product_slots: productSlots.map((item, index) => ({
-      slot_id: requiredString(item?.slot_id, `product_slots[${index}].slot_id`, 80),
-      category: requiredString(item?.category, `product_slots[${index}].category`, 100),
-      purpose: requiredString(item?.purpose, `product_slots[${index}].purpose`, 300),
-      quantity:
-        Number.isInteger(item?.quantity) && item.quantity >= 1 && item.quantity <= 6
-          ? item.quantity
-          : 1,
-      size_constraint: requiredString(
-        item?.size_constraint,
-        `product_slots[${index}].size_constraint`,
-        300
-      ),
-      color: requiredString(item?.color, `product_slots[${index}].color`, 150),
-      material: requiredString(item?.material, `product_slots[${index}].material`, 150),
-      placement: requiredString(
-        item?.placement,
-        `product_slots[${index}].placement`,
-        500
-      ),
-      support: requiredString(item?.support, `product_slots[${index}].support`, 300),
-      clearance_constraints: stringArray(
-        item?.clearance_constraints || [],
-        `product_slots[${index}].clearance_constraints`,
-        8
-      ),
-      douyin_search_queries: stringArray(
-        item?.douyin_search_queries || [],
-        `product_slots[${index}].douyin_search_queries`,
-        4
-      )
-    })),
+    actions: boundedActions,
+    product_slots: boundedProductSlots,
     render_instruction: requiredString(
       candidate.render_instruction,
       "render_instruction",
@@ -224,6 +347,24 @@ function normalizePlan(candidate) {
       "negative_constraints",
       24
     )
+    },
+    normalization: {
+      actions_received: actions.length,
+      actions_kept: boundedActions.length,
+      product_slots_received: productSlots.length,
+      product_slots_kept: boundedProductSlots.length,
+      defaulted_fields: defaultedActionFields,
+      product_slots_deduplicated:
+        normalizedProductSlots.length -
+        new Set(
+          normalizedProductSlots.map(
+            (slot) =>
+              `${slot.category.trim().toLowerCase()}|${slot.placement
+                .trim()
+                .toLowerCase()}`
+          )
+        ).size
+    }
   };
 }
 
@@ -328,11 +469,13 @@ export function createLayoutPlanner({
         response,
         config.roomAnalyzerResponseLimitBytes ?? MAX_RESPONSE_BYTES
       );
+      const normalized = normalizePlan(assistantJson(payload));
       return {
         sourceType: "live",
         model: payload.model || config.agentPlanTextModel,
         latencyMs: Math.max(0, now() - startedAt),
-        plan: normalizePlan(assistantJson(payload))
+        plan: normalized.plan,
+        normalization: normalized.normalization
       };
     } catch (error) {
       return {

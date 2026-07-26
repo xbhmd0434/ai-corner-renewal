@@ -2,7 +2,74 @@
  * DesignTaskBuilder
  * 统一任务请求构建器
  * 符合 HANDOFF.md 7. 统一任务请求示例
+ * 符合 v2-parallel-development-contract.md 6.2 V2.1 DesignRequest
  */
+
+import { CONTRACT_VERSION } from "../api/capabilities.js";
+
+/**
+ * V2.1 P0 固定约束：不提交预算、不打孔、宠物等可见偏好。
+ * 协议第 1 节明确：后端可以保留内部保护上限，但不得因此在主流程要求用户补预算。
+ */
+export const V2_P0_CONSTRAINTS = Object.freeze({});
+
+/**
+ * 构建 V2.1 P0 DesignRequest。
+ *
+ * 依据 `v2-parallel-development-contract.md` 第 6.2 节：
+ * - `constraints` 固定为 `{}`，不提交 budget_cny / no_drilling / pet_context。
+ * - `goal` 固定为空字符串，`goal_codes` 固定为空数组（意图由 InspirationAsset 提供）。
+ * - `options.experience_contract` 固定为 `renewal-card/2.1`。
+ *
+ * 该函数与旧版 `buildDesignRequest` 共存：旧函数保留以维持向后兼容与现有测试，
+ * V2.1 主流程（renewal/main.js）只走这一条路径。
+ *
+ * @param {object} params
+ * @param {string} params.space_asset_id - 已确认场景资产 ID
+ * @param {string} params.space_version_id - sealed SpaceVersion ID
+ * @param {string[]} [params.reference_asset_ids] - InspirationAsset IDs（最多 3 个）
+ * @param {string} [params.trigger="video_apply"] - 触发方式
+ * @param {string} [params.editable_region_id] - 可编辑区域 ID（可选）
+ * @returns {object} - DesignRequest
+ */
+export function buildV2DesignRequest(params) {
+  const {
+    trigger = "video_apply",
+    space_asset_id,
+    space_version_id,
+    reference_asset_ids = [],
+    editable_region_id
+  } = params || {};
+
+  if (!space_asset_id) {
+    throw new Error("DesignRequest 验证失败: space_asset_id 不能为空");
+  }
+  if (!space_version_id) {
+    throw new Error("DesignRequest 验证失败: space_version_id 不能为空");
+  }
+
+  const trimmedReferenceAssetIds = (reference_asset_ids || []).slice(0, 3);
+
+  const request = {
+    schema_version: "1.0",
+    trigger,
+    space_asset_id,
+    space_version_id,
+    reference_asset_ids: trimmedReferenceAssetIds,
+    goal: "",
+    goal_codes: [],
+    constraints: { ...V2_P0_CONSTRAINTS },
+    options: {
+      experience_contract: CONTRACT_VERSION
+    }
+  };
+
+  if (editable_region_id) {
+    request.editable_region_id = editable_region_id;
+  }
+
+  return request;
+}
 
 /**
  * 构建 DesignRequest
@@ -72,9 +139,7 @@ export function buildDesignRequest(params) {
     editable_region_id: editable_region_id || "",
     options: {
       analysis_mode: options.analysis_mode || "auto",
-      include_trace: options.include_trace !== false,
-      experience_contract:
-        options.experience_contract || "renewal-card/2.1"
+      include_trace: options.include_trace !== false
     }
   };
 

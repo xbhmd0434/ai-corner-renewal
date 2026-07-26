@@ -1,8 +1,8 @@
 # 抖音展示 Demo → AI 一角焕新 P0：前端工程交接
 
-> 更新日期：2026-07-25
+> 更新日期：2026-07-26
 > 读者：前端开发、联调同学、产品验收同学
-> 当前成熟度：抖音壳为“运行时静态 Demo”；`renewal.html` 为“可持久联调集成原型”；结果后的商品发现购买承接为“协议完成、真实目录待接”；旧 `me.js` 空间层为“已退出主路径的视觉 Mock”
+> 当前成熟度：抖音壳为“运行时静态 Demo”；`renewal.html` 为“V2.1 可持久联调集成原型”；生成、相关设计、保存/发布和实施清单已接真实仓内 API；真实抖音目录/交易仍未接；第三阶段 3D 试搭已废弃
 > 本文用途：说明当前代码事实、已接通边界、剩余范围、状态与验收方式
 > 产品依据：产品同学 2026-07 新版《AI 一角焕新：产品蓝图与全链路功能清单》
 
@@ -101,8 +101,8 @@ http://127.0.0.1:8765/douyin-static-demo/index.html
 | 文件 | 当前职责 | 下一阶段处理 |
 | --- | --- | --- |
 | `index.html` | 根入口跳转 | 保留 |
-| `douyin-static-demo/index.html` | 推荐流结构 | 已通过“焕新”按钮写入最小视频上下文并进入统一任务 |
-| `douyin-static-demo/app.js` | 三条固定视频、播放和点赞、`VideoEntryBridge` | 不拼 DesignRequest；旧融合类仍保留但不在主入口触发 |
+| `douyin-static-demo/index.html` | 推荐流结构 | “焕新”和暂停后的“圈选搬进我家”共用视频灵感入口 |
+| `douyin-static-demo/app.js` | 三条固定视频、播放和点赞、统一焕新触发 | 不写 session 草稿、不拼 DesignRequest；只把当前 slide/video 交给圈选控制器 |
 | `douyin-static-demo/me.html` | 静态个人页和旧空间活动层容器 | 中间“+”已进入 `renewal.html?source=home` |
 | `douyin-static-demo/me.js` | 个人页和旧 Mock 空间层 | 旧层代码仍在，但已退出“+”主路径；主链路稳定后可删除 |
 | `douyin-static-demo/me.css` | 个人页和工作台样式 | 可复用视觉，不承担状态含义 |
@@ -131,6 +131,10 @@ P0 页面落地方式固定为：
 - 正式入口只使用 `?source=video|home`、`?drawer=asset|history` 和方案 ID；
   `mode.js` 继续识别旧 hash，避免已保存的演示链接立即失效；
 - 当前 `me.html` 全屏活动层在新页面完成后退出主路径，不继续扩成第二套路由。
+- `renewal.html` 的首屏信息架构固定为三个真实对象/规则块：
+  `01 搬什么（confirmed InspirationAsset）→ 02 搬到哪里（sealed SpaceVersion）→
+  03 AI 怎么搬（保留/整理/放入）`。不参与 V2.1 请求的 ProductPicker 与
+  FeaturePicker 已从主页面壳移除，不能再作为生成条件展示。
 
 当前入口：
 
@@ -142,8 +146,10 @@ renewal.html?source=home&drawer=history
 renewal.html?plan_asset_id={id}&plan_version_id={id}
 ```
 
-视频入口先创建临时参考资产，再把 `reference_asset_id` 写入一个短期
-`sessionStorage` 草稿并进入单核心界面；URL 中不放图片、用户文本或完整请求。
+视频入口先把用户确认的关键帧圈选创建为 temporary `InspirationAsset`，在视频页
+完成 `component | style` 意图确认，再把同一个 `inspiration_asset_id /
+reference_asset_id` 写入短期 `sessionStorage` 并进入单核心界面；URL 中不放图片、
+用户文本或完整请求。
 
 当前无 UI 框架模块边界：
 
@@ -184,14 +190,16 @@ douyin-static-demo/
 
 已接通的主路径：
 
-- 推荐流保持三条本地视频、播放和滑动；每条视频的“焕新”写入
-  `provider/external_content_id/author/timestamp/caption`，后端创建 temporary
-  Inspiration Asset；不上传完整视频。
-- 用户手动暂停视频后会出现“一角焕新 / 框选搜同款”入口；新
-  `visual-search/**` 模块完成定帧、矩形框选、最小面积校验、整帧兜底、查询中、
-  候选确认、轻量 2D 资产生成和入库完成页。真实视觉搜索能力未实现时，候选固定
-  标为“本地 Demo”；用户确认后优先调用现有 `/api/v1/assets` 创建 saved
-  ItemAsset，后端不可用才降级到当前浏览器。
+- 推荐流保持三条本地视频、播放和滑动；右侧“焕新”和暂停后出现的
+  “圈选搬进我家”共用同一个入口控制器，不再存在跳过圈选直接进焕新页的支路。
+- `visual-search/**` 目前承担视频灵感入口 UI：定帧、矩形框选、最小面积校验、
+  只上传裁剪图，并行创建 temporary InspirationAsset 与 VisualSearchQuery。前者
+  提供组件/风格意图候选，后者调用 Component Understanding Agent 读取真实裁剪图。
+  用户选择“组件”时必须确认 VisualSearchQuery 并创建 SourceComponent ItemAsset；
+  选择“风格 / 氛围”时调用 Inspiration intent-confirmation。
+- 焕新页按稳定参考资产 ID 重新 GET 权威详情：组件入口收到 SourceComponent Item，
+  风格入口收到 confirmed Inspiration。跨页上下文不持久化 bbox、Blob URL、裁剪图、
+  短时媒体 URL 或 Agent 正文。
 - 视觉搜索从入口到完成页统一采用温馨家居编辑风：奶油纸底、苔绿主操作、
   陶土橙提示、相纸式画面和轻纸纹。框选、查询、候选、建模、保存文案使用
   “喜欢/好物/收藏”语义；协议名、资产 ID 和 Demo/实时来源声明仍保留在必要位置，
@@ -226,8 +234,23 @@ douyin-static-demo/
   bbox、URL 或商品事实。
 - 新视觉为纸张米色、苔绿和珊瑚色的生活方式编辑风格；桌面是项目叙事与 430px
   手机双栏，`<520px` 移除设备外壳并占满视口；没有 CDN 字体或外部图标依赖。
-- 浏览器 `sessionStorage` 只保存 ID、目标和约束草稿，不保存 File、Base64、短时媒体 URL 或密钥。
+- 浏览器 `sessionStorage` 只保存允许恢复的业务 ID，不保存目标、约束、商品正文、
+  File、Base64、短时媒体 URL 或密钥。
 - 旧 `me.js` Canvas/随机商品/Mock 识别仍存在于源码，但入口已退出主路径；不得把它描述成联网能力。
+- V2.1 主生成的真实输入边界是一个已确认 InspirationAsset 或稳定
+  SourceComponent ItemAsset、一个 sealed
+  SpaceVersion 与可选 editable region；Builder 固定提交 `goal=""`、
+  `goal_codes=[]`、`constraints={}`。后端仅在
+  `experience_contract=renewal-card/2.1` 时接受该空 goal。
+- 新会话默认读取稳定 ID `item-demo-lamp` 与 `space-demo-desk`；这两个 starter
+  必须单独 GET 后与最近资产列表合并，因为历史测试资产可能把 Demo seed 挤出
+  `limit=30` 的第一页。组件已由候选确认成为不可替换 SourceComponent，不重复走
+  Inspiration 意图确认。
+- GenerationRun 与 RelatedDesignRun 独立并发、独立轮询和独立失败；结果默认是私人
+  draft，用户必须显式保存后才能发布。商品发现只在用户点击「实施」后启动；
+  `cart_batch_handoff=false` 时只展示逐项动作，不伪装成已下单。
+- 意图确认接口只返回资产摘要；确认成功后 `main.js` 必须重新 GET 完整资产详情，
+  以 `attributes.confirmed_intent` 更新 Store，不能从确认响应猜测快照。
 
 ### 2.4 当前缺口与重做风险
 
@@ -319,50 +342,47 @@ P0 不为现有四个 Mock 动作分别造接口：
 
 ## 4. 两条前端主链路
 
-### 4.1 视频 → 视觉搜索 → 单品资产
+### 4.1 视频 → 图像理解 → 组件/风格确认
 
 ```text
-手动暂停视频
-→ 出现“一角焕新”
-→ 冻结当前帧并拖动框选一个物品
-→ 生成仅含框选区域的查询图
-→ VisualSearchQuery 或明确标注的本地 Demo 候选
-→ 用户确认一个 Candidate
-→ saved ItemAsset
-→ preview_2d ModelVersion（后端待实现）
-→ 我的资产库
+点击右侧“焕新”或暂停后的“圈选搬进我家”
+→ 暂停并冻结当前关键帧
+→ 拖动圈选喜欢的组件或局部氛围
+→ 同一裁剪分别上传为 reference_source 与 visual_search_query
+├→ InspirationAsset：提供 component/style 意图候选
+└→ VisualSearchQuery：Component Understanding Agent 读取真实裁剪图
+→ 用户确认“组件”
+  → SourceComponent ItemAsset 进入 renewal.html
+→ 用户确认“风格 / 氛围”
+  → confirmed InspirationAsset 进入 renewal.html
 ```
 
-当前前端完成标准已经达到：暂停入口、框选、搜索中、候选选择、建模进度和完成页
-可运行；bbox 会写入后端 ItemAsset provenance。真实查询图上传只会在
-`GET /api/health` 声明 `features.visual_search=true` 后发生，避免后端未实现时
-制造 404 或残留未绑定媒体。
+当前完成标准：未确认意图不能进入焕新页；组件路径必须存在成功 VisualSearchQuery
+并持久化原裁剪 SourceComponent，风格路径必须确认 InspirationAsset；上传、解析或
+确认失败停留在视频页并允许重新圈选；视频标题不能冒充图像识别结果。
 
 当前前端状态：
 
 ```text
-closed → selecting → searching → results → modeling → saved
-                      ↘ demo_fixture
-modeling → backend ItemAsset | browser_local_fallback
+closed → selecting → recognizing → needs_confirmation → confirmed → handoff
+                         ↘ failed → selecting
 ```
 
-商品候选、ItemAsset 和 ModelVersion 是三个独立对象。用户未确认候选前不入库；
-重新建模创建新 ModelVersion，不覆盖 ItemAsset。完整拟议契约见
-`../../docs/visual-search-api.md`。
+组件路径使用
+`VisualSearchQuery → controlled catalog grounding → SourceComponent ItemAsset`。
+Demo Catalog grounding 不得替换原裁剪视觉身份，也不得展示为用户已选真实同款；
+效果图后的真实商品匹配仍由“实施”里的 ProductDiscoveryRun 负责。
 
 ### 4.2 视频 → 空间
 
 ```text
-推荐流中的固定家居视频
-→ 暂停或点击“放进我家”
-→ 轻浮层选择“搭配灵感”或“具体单品”
-→ “仅放进我家”创建临时资产；“收藏”创建长期资产
-→ 获取最多 3 个兼容空间和推荐理由
-→ 用户确认一个 SpaceVersion
-→ 进入统一任务装配页
-→ 创建 DesignRequest
-→ 创建并轮询 GenerationRun
-→ 展示 PlanVersion / AICard
+confirmed InspirationAsset
+→ 进入 renewal.html 并自动带入识别摘要
+→ 默认最近兼容 sealed SpaceVersion；无真实场景时使用只读 AI 示例场景
+→ 创建不可变 DesignRequest（renewal-card/2.1）
+→ 并发创建 GenerationRun 与 RelatedDesignRun
+→ 分别恢复/轮询，任一失败不覆盖另一方
+→ 展示 PlanVersion 与相关设计
 ```
 
 前端传递的视频上下文仅包含：
@@ -382,7 +402,7 @@ modeling → backend ItemAsset | browser_local_fallback
 - 后续主动收藏将同一 temporary 资产升级为 saved；
 - 重复操作复用后端 `deduplicated=true` 的资产，不在前端自行去重。
 
-P0 固定演示种子：
+P0 视频入口固定演示种子：
 
 ```js
 {
@@ -397,15 +417,23 @@ P0 固定演示种子：
 该配置后续应放到前后端共同评审的 Demo seed manifest，不散落在点击事件里。
 `video-3` 不进入三分钟主案例。
 
+「搬进我家」初始组合由后端 seed 拥有：
+
+- `space-demo-desk / space-demo-desk-v1`：只读“原来的脏乱书桌”，真实空间底图；
+- `item-demo-lamp`：saved ItemAsset“奶油白蘑菇小台灯”；
+- `source-component-demo-mushroom-lamp`：组件不可替换锚点，保留白色、蘑菇形和暖光；
+- 服务启动会幂等升级旧 seed 并绑定永久私有媒体，不覆盖其他用户/测试资产；
+- 前端仅保存和提交稳定业务 ID，不把两张 starter 图片写入 sessionStorage。
+
 圈选交互：
 
 1. 用户点击“圈选/放进我家”后先暂停当前视频；
 2. 进入圈选模式时锁住上下滑和推荐流切换；
-3. 支持一个矩形框的拖动、缩放、取消和确认；
-4. 圈选小于最小面积时提示重新选择，也可选“使用整个画面”；
-5. 确认后生成代表帧并展示保存类型；
-6. 本地/同源 Demo 视频可由 Canvas 截帧；截帧失败时使用 seed manifest 中的授权代表图，
-   不能静默上传整段视频；
+3. 支持一个矩形框的拖动、取消和重新选择；
+4. 圈选小于最小面积时停留在当前页并提示扩大范围，不能静默改成整帧；
+5. 有效圈选只生成并上传 bbox 对应的裁剪图；
+6. 本地/同源 Demo 视频可由 Canvas 截帧；截帧失败时明确报错并允许重试，
+   不能静默上传整段视频或替换成无关种子图；
 7. 取消后恢复原播放和手势状态。
 
 ### 4.3 空间 → 灵感
@@ -845,14 +873,14 @@ new URL(access.url, API_BASE_URL).toString()
 | 前端任务 | 现在可并行的部分 | 端到端完成依赖 |
 | --- | --- | --- |
 | FE-00 | 已完成 | 固定 HTTP 启动、Hash Router、ES Module 和测试已落地 |
-| FE-01 | 已完成核心 | `/api/v1` Client、Builder、AICard/Plan/Asset Adapter 已按实际协议联调 |
-| FE-02 | 前端 Demo 完成 | 暂停定帧、框选、候选选择与 ItemAsset 写入已通；真实视觉搜索与 ModelVersion 依赖后端 |
+| FE-01 | V2.1 已联调 | `/api/v1` Client、Builder、能力门控与各类 Adapter 已穿过临时 SQLite 集成测试 |
+| FE-02 | Demo Provider 链路完成 | 暂停定帧、框选、候选选择与 ItemAsset 写入已通；真实抖音检索目录仍未接 |
 | FE-03 | 部分完成 | 上传、私有媒体、解析确认、资产列表已通；资产写操作待做 |
-| FE-04 | 已完成核心 | 两入口共用 Builder，空间版本、目标、预算、不打孔、宠物可提交 |
-| FE-05 | 部分完成 | 生成轮询、取消、结果、历史与用户主动离线 fixture 已通；生成失败重试仍待补 |
-| FE-06 | 部分完成 | 持久方案历史和隐私边界已通；偏好、埋点、删除 UI 待做 |
-| FE-07 | 部分完成 | 两条主链路已浏览器验收；预算二次调整和断网兜底待做 |
-| FE-08 商品发现 | 前端协议完成 | Client、Adapter、恢复/轮询、全状态 UI、热点与四类 CommerceAction 已通；真实 Agent/抖音目录依赖后端能力 |
+| FE-04 | V2.1 核心完成 | 两入口共用 Builder；已确认意图 + sealed 场景是唯一生成输入，旧预算/宠物主流程已退出 |
+| FE-05 | 核心完成 | 生成轮询、取消、结果和历史已通；与 RelatedDesignRun 正交并发 |
+| FE-06 | 核心完成 | 私人草稿保存、主动发布/撤下与隐私恢复已通；偏好、埋点、资产删除 UI 待做 |
+| FE-07 | 首屏浏览器验收完成 | 430×932 已验证 starter 组件/空间、三段说明、可用 CTA 与控制台零错误；完整结果流仍按发布前清单复验 |
+| FE-08 商品发现 | 仓内 Demo 联调完成 | 用户点「实施」后才启动；清单、恢复/轮询和四类 CommerceAction 已通，真实抖音目录依赖后端能力 |
 
 “fixture UI 完成”不能标记为“端到端完成”。
 
@@ -896,22 +924,21 @@ new URL(access.url, API_BASE_URL).toString()
 
 ### FE-02：视频入口
 
-状态：前端 Demo 完成；真实视觉搜索和 ModelVersion 后端待实现
+状态：V2.1 视频灵感交接已完成；真实抖音宿主、真实意图模型质量与内容授权仍待上线
 
-- 推荐流新增“收藏为灵感”“收藏单品”“放进我家”；
-- 按本文固定 `video-2`、时间点、圈选框和代表帧配置主案例；
-- 已实现暂停、锁滚动、圈选、取消、确认和整帧兜底；
-- 记录 Demo 视频 ID、时间点、圈选框和代表帧；
-- 临时资产创建后进入空间选择；
-- 展示最多 3 个空间及后端 `match_reasons`；
-- 没有空间时转去上传，完成后回到原任务。
+- 右侧“焕新”和暂停后入口共用同一圈选控制器；
+- 记录 Demo 视频 ID、时间点、归一化圈选框和作者来源；
+- 只上传圈选裁剪图并创建 temporary InspirationAsset；
+- 等待后端意图分析，展示并确认 component/style；
+- 只把稳定业务 ID 和最小展示来源写入 sessionStorage；
+- 进入焕新页后重新 GET 资产，不复用临时图片 URL。
 
 完成标准：
 
-- 固定视频能创建一次 saved ItemAsset；后端不可用时诚实标为浏览器暂存；
-- 商品候选明确区分 Live 与本地 Demo，未把视觉相似称为准确同款；
-- 返回上传流程后仍保留视频上下文；
-- 不上传完整视频，不伪装成真实抖音解析。
+- 组件/风格两种确认都把同一个 InspirationAsset 交给焕新页；
+- 未确认、失败或后端不可用时不能进入正式生成；
+- sessionStorage 不出现 bbox、Blob URL、媒体 URL 或图片字节；
+- 不上传完整视频，不在效果图前创建商品候选。
 
 ### FE-03：焕新首页、资产中心与空间确认
 
@@ -1060,7 +1087,7 @@ new URL(access.url, API_BASE_URL).toString()
 - Hash Router：刷新和返回能恢复实体 ID，不把隐私数据写进 URL；
 - `resolveMediaRef`：fixture 和 Live URL 分流。
 - `visual-search/model`：反向拖拽与越界收敛、最小框选面积、CSS 百分比和视频
-  来源最小化。
+  来源最小化，以及确认后只把稳定 InspirationAsset ID 交给焕新页。
 - `renewal/mode`：新 query 入口、旧 hash 兼容、抽屉和指定方案版本恢复。
 - `product-discovery-client`：四条冻结路由、默认 list 参数和 mutation 幂等 Header；
 - `product-discovery-view-model`：running/ready/partial/empty/failed/cancelled/
@@ -1070,19 +1097,36 @@ new URL(access.url, API_BASE_URL).toString()
 
 当前验证结果：
 
-- `npm.cmd run check:douyin`：67 项前端纯逻辑测试和全部前端脚本语法检查通过；
+- `npm.cmd run check:douyin`：81 项前端纯逻辑测试和全部前端脚本语法检查通过；
 - 根目录 `npm.cmd run check:douyin-integration`：使用临时 SQLite 跑通
-  `upload → asset → seal → DesignRequest → GenerationRun → PlanVersion`；
+  `upload space → seal`，再通过视频入口真实 Client 跑通
+  `reference_source crop → create/parse/confirm InspirationAsset →
+  V2 Builder(goal="") → DesignRequest`，并继续跑通旧兼容
+  `DesignRequest → GenerationRun → PlanVersion`；该测试锁定了前后端真实拼接，不写
+  仓库正式 `data`；
+- 2026-07-26 手工浏览器首次点生成暴露 V2.1 `goal=""` 被旧后端字符串校验拒绝的
+  422；后端已只为 `renewal-card/2.1` 放行，旧契约仍拒绝空 goal。HTTP Client 同时
+  改为保留后端公开的具体 422 文案，避免再次只显示“输入校验失败”。
 - 浏览器 430×900 验收：视频入口、真实 PNG 上传、私有媒体、空间确认、生成、
   方案详情均无控制台错误；结果为 6 个商品、4 个步骤、8 项校验；
-- 430×900 Chrome 浏览器实测暂停入口、视频定帧、反向拖动框选、三张候选选择、
-  轻量建模和 ItemAsset 完成页；页面无横向溢出，Demo 来源与后端保存状态可辨认；
+- 430×900 Chrome 浏览器实测右侧“焕新”、视频定帧、拖动框选、组件/风格切换、
+  意图确认和跨页回读；组件路径保存 SourceComponent Item ID，风格路径保存
+  InspirationAsset ID；sessionStorage 只含稳定 ID 与最小来源，无 bbox/Blob URL/
+  图片字节；
 - 1440×900 和 390×844 Chrome 实测新版核心界面：桌面双栏、移动端全视口、
   资产/历史抽屉、历史结果回填、清单展开均可用且无横向溢出；无效果图占位层
   不再遮挡结果操作；
 - 1440×900 与 390×844 Chrome 逐步验收温馨风视觉搜索：框选、查询中、三候选、
   轻量建模和收藏完成页均无横向溢出或控制台错误；进入流程时外层舞台同步变为
   暖米色，关闭后移除 `body.visual-search-mode`，不会污染推荐流常态样式；
+- 2026-07-26 用历史错误资产（普通 Item、无预览、无 SourceComponent）回归：
+  `renewal.html?source=video` 不再伪装成蘑菇灯，明确提示重新框选，生成按钮禁用，
+  控制台零错误；
+- 2026-07-26 430×900 Edge 实测非台灯区域：前端确实创建 VisualSearchQuery；
+  受限网络时明确显示“Agent 降级 · 待你确认”，后端在可访问公网的本机进程中重启
+  后显示“Agent 实时识别 / 显示器增高架”。确认后创建 SourceComponent，焕新页
+  A 卡片使用 471×314 原裁剪和“显示器增高架”动态名称，未出现固定台灯文案或错误
+  图片；控制台零错误；
 - 根目录 `npm.cmd start` 已用隔离端口验证能同时拉起静态代理和仓内后端。
 - 2026-07-25 商品发现浏览器验收：390×844、430×900、1440×900 的 document、
   内容区、商品区和商品票据均无横向溢出，控制台无错误；当前后端返回

@@ -177,6 +177,7 @@ export class VisualSearchService {
         prompt_version: understood.promptVersion,
         model: understood.model,
         latency_ms: understood.latencyMs,
+        fallback_reason: understood.reason || null,
         catalog_source: catalog.sourceType
       };
       query.updated_at = this.now().toISOString();

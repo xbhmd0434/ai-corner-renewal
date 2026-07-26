@@ -13,9 +13,14 @@ const makeRequestId = () => `http-request-${randomUUID()}`;
 const OPENAPI_DOCUMENT = createOpenApiDocument();
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9._:-]{8,200}$/;
 const FRONTEND_API_MODULE_PATHS = new Set([
+  "/api/capabilities.js",
+  "/api/cart-intent-client.js",
   "/api/http-client.js",
+  "/api/intent-confirmation-client.js",
   "/api/legacy-client.js",
   "/api/product-discovery-client.js",
+  "/api/publication-client.js",
+  "/api/related-design-client.js",
   "/api/v1-client.js",
   "/api/visual-search-client.js"
 ]);

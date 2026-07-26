@@ -509,7 +509,14 @@ export class DesignRequestService {
       }
     }
     requireUniqueStrings(body, "reference_asset_ids", 3);
-    requireOptionalString(body, "goal", 500);
+    // renewal-card/2.1 的冻结请求体明确使用 goal=""，意图由已确认的
+    // InspirationAsset 快照拥有。旧契约仍保持“出现 goal 就必须非空”。
+    const isV2EmptyGoal =
+      body.goal === "" &&
+      body.options?.experience_contract === "renewal-card/2.1";
+    if (!isV2EmptyGoal) {
+      requireOptionalString(body, "goal", 500);
+    }
     requireUniqueStrings(body, "goal_codes", 5);
     for (const code of body.goal_codes) {
       if (!GOAL_CODES.has(code)) {

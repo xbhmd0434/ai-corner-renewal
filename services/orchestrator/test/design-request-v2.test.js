@@ -36,6 +36,7 @@ test("V2.1 DesignRequest 快照 confirmed_intent 并生成稳定 context_fingerp
       space_asset_id: "space-demo-desk",
       space_version_id: "space-demo-desk-v1",
       reference_asset_ids: ["inspiration-demo-warm"],
+      goal: "",
       goal_codes: [],
       constraints: {},
       options: V2_OPTIONS
@@ -45,6 +46,7 @@ test("V2.1 DesignRequest 快照 confirmed_intent 并生成稳定 context_fingerp
     const snapshotIntent = full.input_snapshot.reference_snapshots[0].confirmed_intent;
     assert.ok(snapshotIntent);
     assert.equal(snapshotIntent.intent_type, "style");
+    assert.equal(full.input_snapshot.goal, "");
     // 空 constraints 不产生 blocking missing_fields
     const blocking = full.missing_fields.filter((item) => item.blocking);
     assert.equal(blocking.length, 0);
@@ -85,6 +87,30 @@ test("换场景强制创建新 DesignRequest 且 context_fingerprint 不同", as
     assert.notEqual(
       firstFull.input_snapshot.context_fingerprint,
       secondFull.input_snapshot.context_fingerprint
+    );
+  } finally {
+    await runtime.close();
+  }
+});
+
+test("空 goal 只为 renewal-card/2.1 放行，旧契约仍拒绝", async () => {
+  const runtime = createRuntime();
+  try {
+    assert.throws(
+      () =>
+        runtime.platform.designRequestService.create(runtime.platform.actorId, {
+          schema_version: "1.0",
+          trigger: "video_apply",
+          space_asset_id: "space-demo-desk",
+          space_version_id: "space-demo-desk-v1",
+          reference_asset_ids: ["inspiration-demo-warm"],
+          goal: "",
+          goal_codes: [],
+          constraints: {}
+        }),
+      (error) =>
+        error.code === "design_request_invalid" &&
+        error.message === "goal 必须是 1～500 字符"
     );
   } finally {
     await runtime.close();

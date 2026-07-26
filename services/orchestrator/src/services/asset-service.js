@@ -12,6 +12,9 @@ const PARSE_STATES = new Set([
 ]);
 const DISPOSITIONS = new Set(["keep", "movable", "removable"]);
 const BBOX_KEYS = ["x", "y", "width", "height"];
+const STARTER_SPACE_ASSET_ID = "space-demo-desk";
+const STARTER_COMPONENT_ASSET_ID = "item-demo-lamp";
+const STARTER_SOURCE_COMPONENT_ID = "source-component-demo-mushroom-lamp";
 
 const clone = (value) => structuredClone(value);
 const uniqueStrings = (value) =>
@@ -465,6 +468,133 @@ export class AssetService {
       for (const version of seeds.versions) {
         this.repository.save("spaceVersions", actorId, version);
       }
+    });
+  }
+
+  /**
+   * Idempotently upgrades the read-only demo records into the real starter
+   * scenario shown by “搬进我家”. This deliberately runs even when the database
+   * already contains older demo seeds.
+   */
+  ensureStarterScenario(
+    actorId,
+    { spaceMediaId, componentMediaId }
+  ) {
+    const createdAt = this.now().toISOString();
+    const existingSpace = this.repository.find(
+      "assets",
+      actorId,
+      STARTER_SPACE_ASSET_ID,
+      { includeDeleted: true }
+    );
+    const existingVersion = this.repository.find(
+      "spaceVersions",
+      actorId,
+      `${STARTER_SPACE_ASSET_ID}-v1`,
+      { includeDeleted: true }
+    );
+    const existingComponent = this.repository.find(
+      "assets",
+      actorId,
+      STARTER_COMPONENT_ASSET_ID,
+      { includeDeleted: true }
+    );
+    if (!existingSpace || !existingVersion || !existingComponent) {
+      throw new Error("Starter scenario requires the base demo seed");
+    }
+
+    const space = {
+      ...existingSpace,
+      lifecycle: "saved",
+      parse_state: "ready",
+      name: "原来的脏乱书桌",
+      tags: ["demo_seed", "starter_scenario", "cluttered_desk"],
+      is_default: true,
+      media_ids: [spaceMediaId],
+      attributes: {
+        ...existingSpace.attributes,
+        scene_type: "desk_corner",
+        reference_width_cm: 180,
+        scene_origin: "ai_example",
+        read_only: true,
+        starter_sample: true
+      },
+      deleted_at: null,
+      updated_at: existingSpace.updated_at || createdAt
+    };
+    const version = {
+      ...existingVersion,
+      state: "sealed",
+      parse_state: "ready",
+      media_ids: [spaceMediaId],
+      reference_width_cm: 180,
+      attributes: {
+        ...existingVersion.attributes,
+        scene_type: "desk_corner",
+        scene_origin: "ai_example",
+        read_only: true,
+        starter_sample: true,
+        reference_width_cm: 180
+      },
+      updated_at: existingVersion.updated_at || createdAt
+    };
+    const component = {
+      ...existingComponent,
+      lifecycle: "saved",
+      parse_state: "ready",
+      name: "奶油白蘑菇小台灯",
+      tags: ["demo_seed", "starter_scenario", "source_component", "table_lamp"],
+      is_default: true,
+      media_ids: [componentMediaId],
+      provenance: {
+        kind: "video_context",
+        provider: "douyin_demo",
+        external_content_id: "starter-mushroom-lamp",
+        author_display: "初始体验样例",
+        timestamp_ms: 0,
+        selection_bbox: { x: 0, y: 0, width: 1, height: 1 }
+      },
+      attributes: {
+        user_role: "wanted",
+        identity_level: "visual_component",
+        starter_sample: true,
+        source_component: {
+          source_component_id: STARTER_SOURCE_COMPONENT_ID,
+          immutable_anchor: true,
+          query_media_id: componentMediaId,
+          category_code: "table_lamp",
+          label: "蘑菇造型桌面台灯",
+          colors: ["白色"],
+          materials: ["塑料", "亚克力"],
+          shape_keywords: ["蘑菇形"],
+          style_keywords: ["简约", "现代"],
+          search_queries: [
+            "蘑菇造型桌面台灯",
+            "白色简约台灯",
+            "现代床头台灯"
+          ],
+          visual_confidence: 0.95,
+          selected_catalog_candidate: {
+            candidate_id: "candidate-2-prod-green-mushroom-lamp",
+            product_id: "prod-green-mushroom-lamp",
+            name: "暖光蘑菇灯",
+            category_code: "lighting",
+            match_type: "visual_similar"
+          }
+        }
+      },
+      deleted_at: null,
+      updated_at: existingComponent.updated_at || createdAt
+    };
+
+    this.repository.transaction(() => {
+      this.repository.save("assets", actorId, space);
+      this.repository.save("spaceVersions", actorId, version);
+      this.repository.save("assets", actorId, component);
+      this.repository.bindMedia(actorId, STARTER_SPACE_ASSET_ID, [spaceMediaId]);
+      this.repository.bindMedia(actorId, STARTER_COMPONENT_ASSET_ID, [
+        componentMediaId
+      ]);
     });
   }
 

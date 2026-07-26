@@ -17,6 +17,7 @@
     "openapi:check": "node scripts/generate-openapi.mjs --check",
     "check:agent-plan": "node scripts/check-agent-plan.mjs",
     "check:agent-plan-room": "node scripts/check-agent-plan-room.mjs",
+    "check:agent-plan-component": "node scripts/check-agent-plan-component.mjs",
     "check:agent-plan-image": "node scripts/check-agent-plan-image.mjs",
     "check:agent-plan-products": "node scripts/check-agent-plan-product-discovery.mjs",
     "benchmark:first-live": "node scripts/run-first-live-benchmark.mjs",
@@ -24,7 +25,7 @@
     "check:douyin": "npm --prefix apps/douyin-demo run check",
     "check:douyin-integration": "npm --prefix apps/douyin-demo run check:integration",
     "test": "node --test --test-concurrency=1",
-    "check": "node --check apps/web/app.js && node --check services/orchestrator/src/adapters/layout-planner.js && node --check apps/web/data/demo-data.js && node --check scripts/start-all.mjs && node --check scripts/check-agent-plan.mjs && node --check scripts/check-agent-plan-room.mjs && node --check scripts/check-agent-plan-image.mjs && node --check scripts/check-agent-plan-product-discovery.mjs && node --check scripts/run-first-live-benchmark.mjs && node scripts/validate.mjs && npm run openapi:check && node --test --test-concurrency=1 && npm run check:douyin"
+    "check": "node --check apps/web/app.js && node --check services/orchestrator/src/adapters/layout-planner.js && node --check apps/web/data/demo-data.js && node --check scripts/start-all.mjs && node --check scripts/check-agent-plan.mjs && node --check scripts/check-agent-plan-room.mjs && node --check scripts/check-agent-plan-component.mjs && node --check scripts/check-agent-plan-image.mjs && node --check scripts/check-agent-plan-product-discovery.mjs && node --check scripts/run-first-live-benchmark.mjs && node scripts/validate.mjs && npm run openapi:check && node --test --test-concurrency=1 && npm run check:douyin"
   },
   "engines": {
     "node": ">=22.5"

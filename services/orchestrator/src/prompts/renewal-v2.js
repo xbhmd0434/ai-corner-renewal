@@ -49,8 +49,8 @@ export function buildFormalLayoutPrompt({
     `空间事实：${JSON.stringify(roomProfile || {})}`,
     `SourceComponent：${JSON.stringify(sourceComponent || null)}`,
     `硬约束：${JSON.stringify(constraints || {})}`,
-    "actions 只允许 organize_loose_items、remove_trash、add。若有 SourceComponent，必须有一条 add action，target 精确写成 source_component:<source_component_id>。",
-    "product_slots 最多4个，每个 slot 都要包含摆放位置、支撑面、净空约束和1~4条中文搜索词。",
+    "actions 只允许 organize_loose_items、remove_trash、add，总数必须为1~8项，并按必要性从高到低排列。若有 SourceComponent，必须有一条 add action，target 精确写成 source_component:<source_component_id>。",
+    "product_slots 最多4个，按对整体效果的必要性从高到低排列；宁可少而精，不得为了凑数添加相似或重复品类。每个 slot 都要包含摆放位置、支撑面、净空约束和1~4条中文搜索词。",
     "严格返回 JSON，不要 Markdown、解释或额外字段。status 只能是 ready 或 needs_input。",
     '{"status":"ready","needs_input_reason":"","scene":{"scene_type":"字符串","primary_function":"字符串","existing_style":"字符串","dominant_colors":[],"main_materials":[],"lighting":"字符串","editable_area":"字符串"},"preserve":[{"object":"字符串","reason":"字符串"}],"problems":[{"type":"字符串","area":"字符串","evidence":"字符串","priority":1}],"design_direction":{"goal":"字符串","focal_point":"字符串","palette":[],"materials":[],"spatial_strategy":"字符串"},"actions":[{"type":"add","target":"source_component:source-component-id","placement":"字符串","instruction":"字符串","reason":"字符串"}],"product_slots":[{"slot_id":"supplement-1","category":"lighting","purpose":"字符串","quantity":1,"size_constraint":"字符串","color":"字符串","material":"字符串","placement":"字符串","support":"字符串","clearance_constraints":[],"douyin_search_queries":["字符串"]}],"render_instruction":"字符串","negative_constraints":[]}'
   ].join("\n");

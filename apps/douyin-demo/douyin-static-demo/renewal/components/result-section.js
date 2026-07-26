@@ -33,13 +33,11 @@ export class ResultSection {
             : '<div class="compare-stage"><div class="compare-placeholder">效果图正在归档，执行清单已经准备好。</div></div>'
         }
         <div class="result-body">
-          <div class="result-summary"><span>预计商品合计</span><strong>${formatMoney(viewModel.totalPriceCny)}</strong><p>${escapeHtml(viewModel.summary || "基于你的空间、预算与生活限制生成。")}</p></div>
-          <div class="result-facts"><span>${viewModel.products?.length || 0} 件商品</span><span>${viewModel.steps?.length || 0} 个步骤</span><span>${viewModel.appliedConstraints?.noDrilling ? "免打孔" : "按需安装"}</span></div>
+          <div class="result-summary"><span>预计商品合计</span><strong>${formatMoney(viewModel.totalPriceCny)}</strong><p>${escapeHtml(viewModel.summary || "基于你的空间与灵感生成。")}</p></div>
+          <div class="result-facts"><span>${viewModel.products?.length || 0} 件商品</span><span>${viewModel.steps?.length || 0} 个步骤</span></div>
           <div data-shop-root>${this.shopTheLook.render(productDiscoveryViewModel)}</div>
           <div class="result-actions">
             <button class="primary-action" type="button" data-action="details">查看落地清单</button>
-            <button class="secondary-action" type="button" data-action="budget">再省一点</button>
-            <button class="secondary-action" type="button" data-action="style">换种感觉</button>
           </div>
           <div class="result-details" hidden>
             ${this.renderProducts(viewModel.products)}
@@ -61,8 +59,7 @@ export class ResultSection {
       details.hidden = !details.hidden;
       event.currentTarget.textContent = details.hidden ? "查看落地清单" : "收起落地清单";
     });
-    this.element.querySelector('[data-action="budget"]')?.addEventListener("click", () => this.actions.onBudget?.(viewModel));
-    this.element.querySelector('[data-action="style"]')?.addEventListener("click", () => this.actions.onStyle?.(viewModel));
+    // V2.1 P0：预算/手动风格编辑按钮已移除，不再绑定 onBudget / onStyle。
     this.shopTheLook.bind(this.element.querySelector("[data-shop-root]"), productDiscoveryViewModel);
     this.shopTheLook.bindHotspots(this.element);
   }

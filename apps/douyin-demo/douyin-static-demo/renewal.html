@@ -21,7 +21,7 @@
           <i></i>
           <span>03 落地</span>
         </div>
-        <small>一角焕新 · Demo 0.5.1</small>
+        <small>一角焕新 · Demo 0.5.2</small>
       </aside>
 
       <section class="phone renewal-phone" aria-label="AI 一角焕新手机演示">
@@ -52,16 +52,20 @@
             <article class="renewal-core" id="coreCard" data-core-state="IDLE">
               <div class="renewal-core__lead">
                 <span>ONE CORNER, ONE NEW LIFE</span>
-                <h2 id="coreHeading">今天，想焕新哪一角？</h2>
-                <p id="coreSubheading">选好空间和预算，剩下的交给 AI。</p>
+                <h2 id="coreHeading">把这盏灯，搬进这张桌面。</h2>
+                <p id="coreSubheading">先看清“搬什么”和“搬到哪里”，再交给 AI。</p>
               </div>
 
-              <section class="core-section" id="inspirationBar" aria-label="灵感来源"></section>
-              <section class="core-section" id="spacePicker" aria-label="空间选择"></section>
+              <section class="core-section" id="inspirationBar" aria-label="要搬进来的组件"></section>
+              <section class="core-section" id="intentPanel" aria-label="组件锁定规则" hidden></section>
+              <section class="core-section" id="spacePicker" aria-label="要改造的真实空间"></section>
+              <section class="core-section render-preview" id="renderPreview" aria-label="AI 操作说明" hidden></section>
               <section class="core-section" id="constraintBar" aria-label="焕新要求"></section>
               <section class="core-section" id="generateArea" aria-label="生成方案"></section>
               <section class="core-section" id="progressArea" aria-label="生成进度" hidden></section>
               <section class="core-section result-area" id="resultArea" aria-label="焕新结果" hidden></section>
+              <section class="core-section" id="resultWorkflowArea" aria-label="保存、发布与实施" hidden></section>
+              <section class="core-section" id="relatedDesignArea" aria-label="相关设计" hidden></section>
             </article>
           </div>
 
@@ -78,6 +82,7 @@
           </footer>
 
           <input id="spaceFileInput" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+          <input id="spaceCameraInput" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden />
 
           <div class="renewal-drawer" id="assetDrawer" aria-hidden="true">
             <div class="renewal-drawer__scrim" data-close-drawer></div>

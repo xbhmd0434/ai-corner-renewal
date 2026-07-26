@@ -80,7 +80,13 @@ try {
     getGenerationRun,
     getPlanVersion
   } = await import("../douyin-static-demo/api/v1-client.js");
-  const { buildDesignRequest } = await import(
+  const {
+    confirmVideoInspirationIntent,
+    createVideoInspiration
+  } = await import(
+    "../douyin-static-demo/api/visual-search-client.js"
+  );
+  const { buildDesignRequest, buildV2DesignRequest } = await import(
     "../douyin-static-demo/adapters/design-task-builder.js"
   );
   const { adaptPlanResult } = await import(
@@ -125,6 +131,53 @@ try {
     detail.current_space_version.resource_version
   );
   assert.equal(sealed.state, "sealed");
+
+  // 真实走视频页 Client：裁剪图必须先成为 reference_source 媒体，再创建
+  // InspirationAsset；不能把视觉搜索候选 ItemAsset 直接交给焕新页。
+  const inspirationParsed = await createVideoInspiration({
+    cropBlob: new Blob([imageBytes], { type: "image/png" }),
+    sourceContext: {
+      provider: "douyin_static_demo",
+      external_content_id: "integration-video",
+      author_display: "@集成测试",
+      caption: "集成测试视频灵感",
+      timestamp_ms: 1200,
+      selection_bbox: {
+        x: 0.12,
+        y: 0.18,
+        width: 0.42,
+        height: 0.36
+      }
+    }
+  });
+  assert.equal(inspirationParsed.asset_type, "inspiration");
+  assert.deepEqual(inspirationParsed.provenance.selection_bbox, {
+    x: 0.12,
+    y: 0.18,
+    width: 0.42,
+    height: 0.36
+  });
+  const inspirationConfirmed = await confirmVideoInspirationIntent(
+    inspirationParsed,
+    {
+    intentType: inspirationParsed.attributes.intent_analysis.suggested_type,
+    summary: inspirationParsed.attributes.intent_analysis.summary
+    }
+  );
+  assert.ok(inspirationConfirmed.attributes.confirmed_intent);
+
+  // 穿过真实前端 Builder、HTTP Client 与后端校验，锁定 V2.1 冻结请求体。
+  // 该契约要求 goal=""、goal_codes=[]、constraints={}，不能只在两端单测。
+  const v2Request = buildV2DesignRequest({
+    trigger: "video_apply",
+    space_asset_id: detail.asset_id,
+    space_version_id: sealed.space_version_id,
+    reference_asset_ids: [inspirationConfirmed.asset_id],
+    editable_region_id: editableRegionId
+  });
+  assert.equal(v2Request.goal, "");
+  const v2Design = await createDesignRequest(v2Request);
+  assert.equal(v2Design.can_start_generation, true);
 
   const request = buildDesignRequest({
     trigger: "space_upload",

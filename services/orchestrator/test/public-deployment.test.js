@@ -94,10 +94,16 @@ test("公网模式先显示访问口令页，登录后才提供正式前端和 A
     assert.equal(openApi.status, 200);
 
     const frontendModules = [
+      "capabilities.js",
+      "cart-intent-client.js",
       "http-client.js",
+      "intent-confirmation-client.js",
       "legacy-client.js",
       "product-discovery-client.js",
-      "v1-client.js"
+      "publication-client.js",
+      "related-design-client.js",
+      "v1-client.js",
+      "visual-search-client.js"
     ];
     for (const moduleName of frontendModules) {
       const moduleResponse = await fetch(`${baseUrl}/api/${moduleName}`, {
@@ -109,6 +115,12 @@ test("公网模式先显示访问口令页，登录后才提供正式前端和 A
         /^text\/javascript/
       );
     }
+
+    const unknownFrontendModule = await fetch(
+      `${baseUrl}/api/not-a-real-client.js`,
+      { headers: { Cookie: cookie } }
+    );
+    assert.equal(unknownFrontendModule.status, 404);
   } finally {
     await close(server);
   }

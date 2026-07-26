@@ -13,11 +13,14 @@ import { createPlatform } from "../services/orchestrator/src/platform.js";
 const PROJECT_ROOT = resolve(
   fileURLToPath(new URL("../", import.meta.url))
 );
-const ARTIFACT_DIRECTORY = join(
+const DEFAULT_ARTIFACT_DIRECTORY = join(
   PROJECT_ROOT,
   "artifacts",
   "first-live-benchmark"
 );
+const ARTIFACT_DIRECTORY = process.env.FIRST_LIVE_ARTIFACT_DIRECTORY
+  ? resolve(process.env.FIRST_LIVE_ARTIFACT_DIRECTORY)
+  : DEFAULT_ARTIFACT_DIRECTORY;
 const SOURCE_SCENE = join(
   PROJECT_ROOT,
   "data",
@@ -25,7 +28,7 @@ const SOURCE_SCENE = join(
   "media-3ad85aa3-77d4-4aa9-9443-2dfc5544c8f0.png"
 );
 const SOURCE_COMPONENT = join(
-  ARTIFACT_DIRECTORY,
+  DEFAULT_ARTIFACT_DIRECTORY,
   "component-mushroom-lamp.png"
 );
 
