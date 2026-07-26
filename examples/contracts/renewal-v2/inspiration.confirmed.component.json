@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "asset_id": "inspiration-fixture-confirmed-component",
+  "asset_type": "inspiration",
+  "lifecycle": "saved",
+  "parse_state": "ready",
+  "name": "奶油白陶瓷花瓶",
+  "tags": ["fixture"],
+  "is_default": false,
+  "resource_version": 3,
+  "current_space_version_id": null,
+  "expires_at": null,
+  "created_at": "2026-07-25T14:00:00.000Z",
+  "updated_at": "2026-07-25T14:00:05.000Z",
+  "provenance": {
+    "kind": "video_context",
+    "provider": "douyin_demo",
+    "external_content_id": "video-warm-desk-01",
+    "timestamp_ms": 3200,
+    "selection_bbox": { "x": 0.20, "y": 0.18, "width": 0.34, "height": 0.42 }
+  },
+  "attributes": {
+    "intent_analysis": {
+      "state": "ready",
+      "suggested_type": "component",
+      "summary": "奶油白陶瓷花瓶",
+      "component_reference": {
+        "category_code": "vase",
+        "colors": ["cream"],
+        "materials": ["ceramic"],
+        "shape_keywords": ["rounded"]
+      },
+      "style_reference": null,
+      "candidates": [],
+      "source_mode": "demo",
+      "provider": "deterministic-demo",
+      "model": null
+    },
+    "confirmed_intent": {
+      "intent_type": "component",
+      "summary": "奶油白陶瓷花瓶",
+      "confirmed_by": "user",
+      "confirmed_at": "2026-07-25T14:00:04.500Z"
+    }
+  }
+}

@@ -1,9 +1,10 @@
 # 后端 API 与可验证示例
 
-> `0.5.0` 说明：本文保留旧 `health/generate/revise` 的完整兼容手册。
+> `0.5.2` 说明：本文保留旧 `health/generate/revise` 的完整兼容手册。
 > 新产品 `/api/v1` 已实现，资源路径、对象状态和请求示例以
 > `docs/backend-next-phase-handoff.md` 为准，机器协议见
-> `packages/contracts/schemas/platform-v1.schema.json`，模型空端口见
+> `packages/contracts/schemas/platform-v1.schema.json`，可导入接口契约见
+> `docs/openapi.yaml` 或运行时 `GET /api/openapi.json`，模型空端口见
 > `docs/model-integration.md`。当前服务端使用 Node SQLite 和私有媒体目录，旧接口
 > 的方案同样会进入持久 PlanAsset/PlanVersion。
 
@@ -82,18 +83,34 @@ npm.cmd run start:backend
 - Web：`http://127.0.0.1:8765`
 - API：`http://127.0.0.1:8787`
 
-当前前端以 `REMIX_DATA` 提供离线样例与灵感选择；完整流程会把压缩后的用户图片、
-预算和约束提交到 `/api/generate`，把 AICard 映射为方案，并用 `/api/revise` 创建
-¥300 版本。页面只做请求构建和 AICard 展示，不拥有预算或硬约束规则。下一阶段再
-迁移到持久 `/api/v1/media → space → DesignRequest → Run`。
+兼容 `apps/web` 仍使用 `/api/generate → /api/revise`；当前默认
+`apps/douyin-demo` 已使用持久
+`/api/v1/media → Asset → sealed SpaceVersion → DesignRequest → GenerationRun
+→ PlanVersion`。前端只构造请求和展示投影，不拥有预算、商品事实或硬约束规则。
 
 ## 5. 接口
 
 ### `GET /api/health`
 
 返回服务状态、协议/API 版本、运行模式、鉴权模式、SQLite migration、上传限制、
-Repository 数量、模型端口能力和运行时间。
+Repository 数量、模型端口能力、`openapi_url` 和运行时间。
 健康检查不会尝试调用模型。
+
+### `GET /api/openapi.json`
+
+返回与当前 25 个 `/api/v1` 操作同源生成的 OpenAPI 3.1 契约，可直接导入
+Apifox/Postman。仓库内等价文件为 `docs/openapi.yaml`；它采用 JSON 语法（JSON
+是 YAML 1.2 的合法子集），由 `npm.cmd run openapi:generate` 生成，
+`npm.cmd run openapi:check` 和根检查负责阻止路由、Schema 与文档漂移。
+
+GenerationRun 的创建和轮询响应稳定包含：
+
+- `phase_index / phase_total` 与整数 `progress`（0～100）；
+- `source_mode`，尚未确定来源时为 `null`；
+- `retryable`、安全的 `error`；
+- `needs_input`：无待补信息时为 `null`，否则返回原因、问题、必填字段、是否允许
+  假设继续以及是否已有可预览方案；
+- 成功后的 `result.plan_asset_id` 与 PlanVersion/AICard。
 
 ### `POST /api/generate`
 
@@ -259,6 +276,8 @@ AGENT_PLAN_TEXT_MODEL=doubao-seed-2.0-lite
 AGENT_PLAN_IMAGE_MODEL=doubao-seedream-5.0-lite
 AGENT_PLAN_TIMEOUT_MS=30000
 AGENT_PLAN_IMAGE_TIMEOUT_MS=90000
+AGENT_PLAN_DISCOVERY_TIMEOUT_MS=45000
+AGENT_PLAN_DISCOVERY_RESPONSE_LIMIT_BYTES=524288
 AGENT_PLAN_IMAGE_RESPONSE_LIMIT_BYTES=25165824
 ROOM_ANALYZER_RESPONSE_LIMIT_BYTES=262144
 ```
@@ -318,6 +337,59 @@ ROOM_ANALYZER_RESPONSE_LIMIT_BYTES=262144
 
 未提供真实 Provider 凭据并记录一次成功调用时，只能验收 Demo 与降级链路，不能把
 `source_mode=demo/fallback` 描述成真实多模态调用。
+
+## 7.5 焕新结果商品发现（后置工作流）
+
+四个 `/api/v1` 接口负责 PlanVersion 合格 after 图之后的商品发现与购买承接：
+
+```text
+POST /api/v1/plans/{plan_asset_id}/versions/{plan_version_id}/product-discovery-runs
+GET  /api/v1/plans/{plan_asset_id}/versions/{plan_version_id}/product-discovery-runs
+GET  /api/v1/product-discovery-runs/{product_discovery_run_id}
+POST /api/v1/product-discovery-runs/{product_discovery_run_id}/cancel
+```
+
+完整协议见 `docs/product-discovery-api-contract.md`，共享 fixtures 见
+`examples/requests/product-discovery.create.json` 与
+`examples/responses/product-discovery.run.*.json`。
+
+关键行为：
+
+- `ProductDiscoveryService` 有六阶段状态机
+  `queued → analyzing_render → building_queries → retrieving_products →
+  grounding_matches → packaging → succeeded | failed | cancelled`；
+  同一 PlanVersion 同时只能有一个 active run；`initial`、`retry`、
+  `refresh` 按协议实现幂等和冲突语义。
+- Render 前置校验从 PlanVersion 读取 `after_ref`，浏览器不能提交图片
+  URL；`rejected`、`unavailable`、`stale` 默认拒绝；旧 AICard v1 只要有
+  `after_ref` 就允许运行，但会写入 `legacy_render_consistency_unverified`
+  notice。
+- `ProductDiscoveryProvider` Port 已有三个实现：
+  `AgentPlanProductDiscoveryProvider` 在非 Demo 模式且配置 Agent Plan Key 时，
+  把私有 after 图与方案新增物白名单交给火山方舟多模态模型，返回
+  `source_type=live、strategy=image_agent` 的视觉元素、归一化 bbox、外观与
+  搜索意图；`UnconfiguredProductDiscoveryProvider` 不发网络请求并触发降级；
+  `PlanGroundedDiscoveryProvider` 读取当前 PlanVersion 的 placements 和
+  products，构造 bbox=null、source_type=fallback、strategy=plan_grounded 的
+  subjects。
+- Provider 失败 → 自动 plan-grounded fallback；Agent 输出非法 JSON、越界
+  bbox、伪造 product_id/价格/URL/店铺等字段一律拒绝并 fallback。
+- `CommerceCatalogAdapter` 本轮直接复用 `services/orchestrator/src/data/demo-catalog.js`
+  的商品事实，不复制第二份；Demo 商品返回 `source_type=demo_catalog`；
+  没有真实链接时返回 `search_query`；不生成伪造抖音商品链接。
+- 商品事实（`product_id`、`title`、`price_cny`、`availability`、`source`、
+  `commerce_action`）由 Catalog + 确定性 Grounding 代码拥有；Agent 只能
+  输出可购买元素、bbox、外观和搜索词。没有 exact 证据时最多返回
+  `visual_similar`。
+- 进程重启时 `productDiscoveryService.recover(actorId)` 把 queued/running
+  run 恢复为 queued 并从头安全重跑；结果写入 SQLite 时不会重复最终结果。
+
+`GET /api/health` 返回 `features.product_discovery=true`；
+`features.product_discovery_live_agent` 仅在非 Demo 模式且配置
+`AGENT_PLAN_API_KEY` 时为 `true`，同时
+`model_capabilities.product_discovery=agent_plan_visual_grounding`。
+`features.douyin_commerce_catalog` 仍为 `false`，因为当前商品事实继续来自
+明确标注的 Demo Catalog。
 
 ## 8. 数据、隐私和安全
 

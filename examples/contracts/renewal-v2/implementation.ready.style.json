@@ -1,0 +1,126 @@
+{
+  "schema_version": "1.0",
+  "product_discovery_run_id": "product-discovery-run-fixture-ready-style",
+  "plan_asset_id": "plan-fixture-002",
+  "plan_version_id": "plan-version-fixture-002",
+  "render_fingerprint": "sha256:def0987654321abc",
+  "status": "succeeded",
+  "stage": "packaging",
+  "stage_index": 6,
+  "stage_total": 6,
+  "progress": 100,
+  "source_mode": "fallback",
+  "result_state": "ready",
+  "retryable": false,
+  "result": {
+    "subjects": [
+      {
+        "subject_id": "subject-fixture-lamp",
+        "label": "原视频里的暖白台灯",
+        "category_code": "table_lamp",
+        "bbox": null,
+        "appearance": { "colors": ["warm_white"], "materials": [], "style_keywords": [] },
+        "placement_hint": "书桌左后方",
+        "confidence": null,
+        "search_queries": ["暖白台灯"],
+        "match_state": "matched",
+        "matches": [
+          {
+            "match_id": "match-fixture-lamp",
+            "product_id": "prod-warm-clamp-lamp",
+            "title": "暖白夹式台灯",
+            "category_code": "table_lamp",
+            "cover_url": null,
+            "price_cny": 189,
+            "price_label": "¥189",
+            "match_type": "visual_similar",
+            "match_confidence": null,
+            "match_reasons": ["原视频出现的相似台灯"],
+            "availability": { "status": "demo", "checked_at": "2026-07-25T14:15:00.000Z" },
+            "commerce_action": { "type": "search_query", "label": "去抖音搜", "url": null, "query": "暖白台灯" },
+            "source": { "source_type": "demo_catalog", "label": "本地 Demo 商品目录", "checked_at": "2026-07-25T14:15:00.000Z" }
+          }
+        ]
+      },
+      {
+        "subject_id": "subject-fixture-tray",
+        "label": "奶油白桌面收纳盘",
+        "category_code": "desktop_storage",
+        "bbox": null,
+        "appearance": { "colors": ["cream"], "materials": [], "style_keywords": [] },
+        "placement_hint": "书桌右侧",
+        "confidence": null,
+        "search_queries": ["奶油白桌面收纳盘"],
+        "match_state": "matched",
+        "matches": [
+          {
+            "match_id": "match-fixture-tray",
+            "product_id": "prod-warm-storage-trays",
+            "title": "奶油白收纳盘",
+            "category_code": "desktop_storage",
+            "cover_url": null,
+            "price_cny": 88,
+            "price_label": "¥88",
+            "match_type": "visual_similar",
+            "match_confidence": null,
+            "match_reasons": ["同色系桌面收纳"],
+            "availability": { "status": "demo", "checked_at": "2026-07-25T14:15:00.000Z" },
+            "commerce_action": { "type": "search_query", "label": "去抖音搜", "url": null, "query": "奶油白桌面收纳盘" },
+            "source": { "source_type": "demo_catalog", "label": "本地 Demo 商品目录", "checked_at": "2026-07-25T14:15:00.000Z" }
+          }
+        ]
+      }
+    ],
+    "subjects_count": 2,
+    "matched_subjects_count": 2,
+    "matches_count": 2,
+    "notices": [],
+    "provenance": {
+      "image_analysis": {
+        "source_type": "fallback",
+        "strategy": "plan_grounded",
+        "provider": null,
+        "model": null,
+        "prompt_version": null
+      },
+      "commerce_catalog": {
+        "source_type": "demo_catalog",
+        "label": "本地 Demo 商品目录",
+        "checked_at": "2026-07-25T14:15:00.000Z"
+      }
+    },
+    "implementation_list": [
+      {
+        "list_item_id": "implementation-item-fixture-lamp",
+        "subject_id": "subject-fixture-lamp",
+        "display_name": "原视频里的暖白台灯",
+        "origin_type": "source_video",
+        "origin_label": "原视频里出现",
+        "sort_group": 0,
+        "sort_index": 0,
+        "disposition": "add",
+        "quantity": 1,
+        "selected_match_id": "match-fixture-lamp",
+        "alternative_match_ids": []
+      },
+      {
+        "list_item_id": "implementation-item-fixture-tray",
+        "subject_id": "subject-fixture-tray",
+        "display_name": "奶油白桌面收纳盘",
+        "origin_type": "ai_supplement",
+        "origin_label": "AI 补充",
+        "sort_group": 1,
+        "sort_index": 0,
+        "disposition": "add",
+        "quantity": 1,
+        "selected_match_id": "match-fixture-tray",
+        "alternative_match_ids": []
+      }
+    ],
+    "estimated_total_cny": 277,
+    "currency": "CNY"
+  },
+  "error": null,
+  "created_at": "2026-07-25T14:15:00.000Z",
+  "updated_at": "2026-07-25T14:15:03.000Z"
+}

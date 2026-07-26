@@ -1,0 +1,118 @@
+{
+  "contract_version": "corner-renewal/1.0",
+  "status": "ready",
+  "maturity": "plan_only",
+  "inspiration": {
+    "intent_type": "component",
+    "summary": "奶油白圆润陶瓷花瓶",
+    "component_reference": {
+      "source_component_id": "source-component-vase-001",
+      "category": "vase",
+      "colors": [
+        "cream"
+      ],
+      "materials": [
+        "ceramic"
+      ],
+      "shapes": [
+        "rounded"
+      ]
+    }
+  },
+  "scene": {
+    "scene_type": "desk_corner",
+    "fixed_structure": [
+      "墙面",
+      "窗户",
+      "书桌"
+    ],
+    "preserve": [
+      "显示器",
+      "键盘"
+    ],
+    "editable_regions": [
+      "书桌左后方",
+      "书桌右侧"
+    ]
+  },
+  "plan": {
+    "title": "奶油陶瓷焦点书桌",
+    "design_direction": "以圈选花瓶为视觉锚点，用暖光与少量木质收纳建立柔和层次。",
+    "actions": [
+      {
+        "type": "add",
+        "target": "source_component:source-component-vase-001",
+        "placement": "书桌左后方",
+        "instruction": "保持花瓶的奶油白颜色、圆润轮廓和陶瓷质感"
+      },
+      {
+        "type": "add",
+        "target": "supplement:warm-desk-lamp",
+        "placement": "书桌右侧",
+        "instruction": "增加低亮度暖光，避免遮挡显示器"
+      }
+    ],
+    "product_slots": [
+      {
+        "slot_id": "slot-warm-desk-lamp",
+        "category": "lighting",
+        "purpose": "为花瓶和桌面增加柔和侧光",
+        "quantity": 1,
+        "placement": "书桌右侧",
+        "support": "稳定桌面",
+        "search_queries": [
+          "小型暖光桌灯",
+          "奶油色桌面氛围灯"
+        ]
+      }
+    ],
+    "render_instruction": "保持原图机位、墙面、窗户、书桌、显示器和键盘不变；将圈选花瓶原样放在书桌左后方，并在右侧增加一盏小型暖光桌灯，形成克制但明显的奶油暖木桌搭。",
+    "negative_constraints": [
+      "不得改变相机机位和房间固定结构",
+      "不得遗漏或替换圈选花瓶",
+      "不得移动显示器和键盘",
+      "不得让新增物体悬空、相交或遮挡屏幕"
+    ]
+  },
+  "render": {
+    "status": "not_run",
+    "label": "AI 效果示意",
+    "prompt": "保持原图机位与固定结构，将奶油白圆润陶瓷花瓶放在书桌左后方作为视觉焦点，在书桌右侧增加小型暖光桌灯；保留显示器和键盘，写实家居摄影，比例自然，无悬空、无相交、无结构变化。"
+  },
+  "evaluation": {
+    "status": "not_run",
+    "gates": {}
+  },
+  "implementation": {
+    "items": [
+      {
+        "list_item_id": "item-source-vase",
+        "label": "奶油白圆润陶瓷花瓶",
+        "source_role": "video_selected",
+        "match_type": "need_search",
+        "quantity": 1,
+        "placement": "书桌左后方"
+      },
+      {
+        "list_item_id": "item-warm-lamp",
+        "label": "小型暖光桌灯",
+        "source_role": "ai_supplement",
+        "match_type": "need_search",
+        "quantity": 1,
+        "placement": "书桌右侧"
+      }
+    ]
+  },
+  "notices": [
+    {
+      "code": "measurement_required",
+      "level": "warning",
+      "message": "购买前需要复测花瓶和桌灯的可用摆放尺寸。"
+    },
+    {
+      "code": "render_not_run",
+      "level": "info",
+      "message": "当前结果仅包含规划和效果图指令，尚未生成或视觉校验效果图。"
+    }
+  ]
+}

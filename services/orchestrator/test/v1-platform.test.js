@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { loadConfig } from "../src/config.js";
 import { createPlatform } from "../src/platform.js";
 import { createApiServer } from "../src/server.js";
+import { listenLoopbackSafely } from "./helpers/http-listen.js";
 
 const silentLogger = { info() {}, error() {} };
 
@@ -25,12 +26,12 @@ async function createTestRuntime(
     config,
     logger: silentLogger
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { baseUrl } = await listenLoopbackSafely(server);
   return {
     config,
     platform,
     server,
-    baseUrl: `http://127.0.0.1:${server.address().port}`,
+    baseUrl,
     async close() {
       await new Promise((resolve, reject) =>
         server.close((error) => (error ? reject(error) : resolve()))
@@ -536,8 +537,71 @@ test("DesignRequest → GenerationRun → 预算/风格调整 → 幂等重启�
       `/api/v1/plans/${planAssetId}`
     );
     assert.equal(plan.response.status, 200);
+    assert.equal(
+      plan.response.headers.get("etag"),
+      `"resource-version-${plan.value.resource_version}"`
+    );
     assert.equal(plan.value.versions.length, 2);
     assert.equal(plan.value.current_plan_version_id, currentVersionId);
+  } finally {
+    await runtime.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("GenerationRun 暴露稳定进度和结构化 needs_input", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "corner-run-state-"));
+  const runtime = await createTestRuntime(directory);
+  try {
+    const design = await jsonRequest(runtime.baseUrl, "/api/v1/design-requests", {
+      method: "POST",
+      key: "design-needs-input-001",
+      body: {
+        schema_version: "1.0",
+        trigger: "space_reuse",
+        space_asset_id: "space-demo-desk",
+        space_version_id: "space-demo-desk-v1",
+        reference_asset_ids: [],
+        goal: "预算内先整理桌面",
+        goal_codes: ["organization", "low_budget"],
+        constraints: {
+          budget_cny: 1,
+          no_drilling: true,
+          keep_detected_object_ids: ["detected-space-demo-desk-desk"],
+          pet_context: "none"
+        },
+        editable_region_id: "desktop-and-back-wall",
+        options: { analysis_mode: "demo", include_trace: false }
+      }
+    });
+    assert.equal(design.response.status, 201);
+
+    const started = await jsonRequest(
+      runtime.baseUrl,
+      `/api/v1/design-requests/${design.value.design_request_id}/runs`,
+      {
+        method: "POST",
+        key: "run-needs-input-001",
+        body: { schema_version: "1.0", reason: "initial" }
+      }
+    );
+    assert.equal(started.response.status, 202);
+    assert.equal(started.value.progress, 0);
+    assert.equal(started.value.needs_input, null);
+
+    const completed = await waitForRun(
+      runtime.baseUrl,
+      started.value.generation_run_id
+    );
+    assert.equal(completed.status, "succeeded");
+    assert.equal(completed.progress, 100);
+    assert.equal(completed.needs_input.reason_code, "budget_below_minimum");
+    assert.equal(completed.needs_input.has_preview, false);
+    assert.deepEqual(completed.needs_input.required_fields, [
+      "constraints.budget_cny"
+    ]);
+    assert.equal(completed.result.plan_asset_id, null);
+    assert.equal(completed.result.aicard.status, "needs_input");
   } finally {
     await runtime.close();
     rmSync(directory, { recursive: true, force: true });

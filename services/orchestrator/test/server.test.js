@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { loadConfig } from "../src/config.js";
 import { createApiServer } from "../src/server.js";
 import { createOrchestrator } from "../src/workflow.js";
+import { listenLoopbackSafely } from "./helpers/http-listen.js";
 
 const root = resolve(fileURLToPath(new URL("../../../", import.meta.url)));
 const mainRequest = JSON.parse(
@@ -30,9 +31,7 @@ async function withServer(run, configOverrides = {}) {
     logger: silentLogger,
     requestIdFactory: () => `req-http-${String(++id).padStart(3, "0")}`
   });
-  await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
-  const address = server.address();
-  const baseUrl = `http://127.0.0.1:${address.port}`;
+  const { baseUrl } = await listenLoopbackSafely(server);
   try {
     await run(baseUrl);
   } finally {
@@ -49,6 +48,16 @@ test("health → generate → revise(300) HTTP 主链路", async () => {
     assert.equal(healthResponse.status, 200);
     assert.equal(health.status, "ok");
     assert.match(health.request_id, /^req-/);
+
+    const openApiResponse = await fetch(`${baseUrl}/api/openapi.json`);
+    const openApi = await openApiResponse.json();
+    assert.equal(openApiResponse.status, 200);
+    assert.equal(openApi.openapi, "3.1.0");
+    assert.equal(
+      openApi.paths["/api/v1/generation-runs/{generation_run_id}"].get
+        .operationId,
+      "getGenerationRun"
+    );
 
     const generateResponse = await fetch(`${baseUrl}/api/generate`, {
       method: "POST",

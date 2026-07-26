@@ -4,973 +4,119 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI 一角焕新</title>
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./styles.css" />
-    <style>
-      .renewal-app {
-        --bg: #07060d;
-        --panel: rgba(20, 20, 32, 0.82);
-        --border: rgba(255, 255, 255, 0.08);
-        --text: #f5f5f7;
-        --muted: rgba(245, 245, 247, 0.56);
-        --hot: #fe2c55;
-        --cyan: #25f4ee;
-        --gold: #ffcd3a;
-        --violet: #a78bfa;
-        position: absolute;
-        inset: 0;
-        background:
-          radial-gradient(circle at 82% 4%, rgba(254, 44, 85, 0.16), transparent 30%),
-          radial-gradient(circle at 8% 92%, rgba(37, 244, 238, 0.12), transparent 28%),
-          linear-gradient(180deg, #0b071e 0%, #07060d 50%, #050713 100%);
-        color: var(--text);
-        font-family: "MiSans", "HarmonyOS Sans SC", "Microsoft YaHei", sans-serif;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-      }
-
-      .renewal-header {
-        display: flex;
-        align-items: center;
-        padding: 12px 16px;
-        background: var(--panel);
-        border-bottom: 1px solid var(--border);
-        backdrop-filter: blur(20px);
-      }
-
-      .renewal-header__back {
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(255, 255, 255, 0.06);
-        border-radius: 50%;
-        border: none;
-        color: var(--text);
-        font-size: 18px;
-        cursor: pointer;
-      }
-
-      .renewal-header__back:hover {
-        background: rgba(255, 255, 255, 0.1);
-      }
-
-      .renewal-header__title {
-        flex: 1;
-        text-align: center;
-        font-size: 16px;
-        font-weight: 700;
-      }
-
-      .backend-status {
-        min-width: 74px;
-        padding: 6px 8px;
-        border: 1px solid var(--border);
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.05);
-        color: var(--muted);
-        font: inherit;
-        font-size: 9px;
-        font-weight: 800;
-        cursor: pointer;
-      }
-
-      .backend-status::before {
-        content: "";
-        display: inline-block;
-        width: 6px;
-        height: 6px;
-        margin-right: 5px;
-        border-radius: 50%;
-        background: currentColor;
-      }
-
-      .backend-status.is-online {
-        color: var(--cyan);
-      }
-
-      .backend-status.is-offline {
-        color: var(--hot);
-      }
-
-      .renewal-content {
-        flex: 1;
-        overflow-y: auto;
-        padding: 16px;
-      }
-
-      .renewal-page {
-        display: none;
-      }
-
-      .renewal-page.active {
-        display: block;
-      }
-
-      .renewal-footer {
-        display: flex;
-        background: var(--panel);
-        border-top: 1px solid var(--border);
-        backdrop-filter: blur(20px);
-        padding: 8px 0;
-        padding-bottom: calc(8px + env(safe-area-inset-bottom));
-      }
-
-      .renewal-footer__item {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-        padding: 8px;
-        border: none;
-        background: none;
-        color: var(--muted);
-        font-size: 10px;
-        cursor: pointer;
-      }
-
-      .renewal-footer__item.active {
-        color: var(--hot);
-      }
-
-      .renewal-footer__item svg {
-        width: 22px;
-        height: 22px;
-        stroke-width: 2;
-        fill: none;
-        stroke: currentColor;
-      }
-
-      .renewal-card {
-        background: var(--panel);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 16px;
-        margin-bottom: 12px;
-      }
-
-      .renewal-card__title {
-        font-size: 14px;
-        font-weight: 700;
-        margin-bottom: 8px;
-      }
-
-      .renewal-card__body {
-        font-size: 12px;
-        color: var(--muted);
-        line-height: 1.5;
-      }
-
-      .renewal-card--tryon {
-        position: relative;
-        overflow: hidden;
-        border-color: rgba(37, 244, 238, 0.16);
-        background:
-          radial-gradient(circle at 92% 18%, rgba(37, 244, 238, 0.16), transparent 34%),
-          radial-gradient(circle at 4% 100%, rgba(254, 44, 85, 0.13), transparent 36%),
-          var(--panel);
-      }
-
-      .renewal-card--tryon::after {
-        content: "3D";
-        position: absolute;
-        top: 12px;
-        right: 14px;
-        color: rgba(255, 255, 255, 0.045);
-        font-size: 52px;
-        font-weight: 1000;
-        letter-spacing: -0.08em;
-        pointer-events: none;
-      }
-
-      .renewal-card--tryon .renewal-card__title,
-      .renewal-card--tryon .renewal-card__body,
-      .renewal-card--tryon .renewal-button {
-        position: relative;
-        z-index: 1;
-      }
-
-      .renewal-card--tryon .renewal-card__body {
-        max-width: 290px;
-        margin-bottom: 12px;
-      }
-
-      .renewal-button {
-        width: 100%;
-        padding: 12px;
-        border: none;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 700;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-
-      .renewal-button--primary {
-        background: linear-gradient(90deg, var(--hot), var(--violet));
-        color: white;
-      }
-
-      .renewal-button--primary:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
-      }
-
-      .renewal-button--secondary {
-        background: rgba(255, 255, 255, 0.06);
-        color: var(--text);
-        border: 1px solid var(--border);
-      }
-
-      .renewal-button--secondary:hover {
-        background: rgba(255, 255, 255, 0.1);
-      }
-
-      .renewal-empty {
-        text-align: center;
-        padding: 40px 20px;
-        color: var(--muted);
-      }
-
-      .renewal-empty__icon {
-        font-size: 48px;
-        margin-bottom: 16px;
-      }
-
-      .renewal-empty__text {
-        font-size: 14px;
-        line-height: 1.5;
-      }
-
-      .renewal-badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: 700;
-        margin-left: 8px;
-      }
-
-      .renewal-badge--hot {
-        background: rgba(254, 44, 85, 0.15);
-        color: var(--hot);
-      }
-
-      .renewal-badge--cyan {
-        background: rgba(37, 244, 238, 0.15);
-        color: var(--cyan);
-      }
-
-      .renewal-badge--gold {
-        background: rgba(255, 205, 58, 0.15);
-        color: var(--gold);
-      }
-
-      .loading-spinner {
-        width: 24px;
-        height: 24px;
-        border: 2px solid rgba(255, 255, 255, 0.1);
-        border-top-color: var(--hot);
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        margin: 0 auto;
-      }
-
-      .renewal-card--loading {
-        display: grid;
-        place-items: center;
-        gap: 12px;
-        padding: 36px 12px;
-        color: var(--muted);
-        text-align: center;
-      }
-
-      .upload-zone {
-        padding: 22px 16px;
-        border: 1px dashed rgba(37, 244, 238, 0.32);
-        border-radius: 14px;
-        background: rgba(37, 244, 238, 0.04);
-        text-align: center;
-        transition: border-color 0.2s, background 0.2s, transform 0.2s;
-      }
-
-      .upload-zone.is-dragging {
-        border-color: var(--cyan);
-        background: rgba(37, 244, 238, 0.1);
-        transform: scale(1.01);
-      }
-
-      .upload-zone__icon {
-        display: grid;
-        place-items: center;
-        width: 76px;
-        height: 76px;
-        margin: 0 auto 14px;
-        border-radius: 24px;
-        background:
-          linear-gradient(145deg, rgba(37, 244, 238, 0.18), rgba(167, 139, 250, 0.1));
-        font-size: 34px;
-      }
-
-      .context-banner {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        margin-bottom: 12px;
-        padding: 12px 14px;
-        border: 1px solid rgba(255, 205, 58, 0.2);
-        border-radius: 12px;
-        background: rgba(255, 205, 58, 0.07);
-      }
-
-      .context-banner span,
-      .eyebrow {
-        color: var(--gold);
-        font-size: 9px;
-        font-weight: 900;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
-
-      .context-banner strong {
-        font-size: 12px;
-      }
-
-      .context-banner--inline {
-        margin: 2px 0 14px;
-      }
-
-      .task-space-card {
-        display: grid;
-        grid-template-columns: 92px 1fr;
-        gap: 14px;
-        align-items: center;
-      }
-
-      .task-space-card--compact {
-        grid-template-columns: 72px 1fr;
-      }
-
-      .task-space-card__media {
-        display: grid;
-        place-items: center;
-        aspect-ratio: 1;
-        overflow: hidden;
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.06);
-        font-size: 32px;
-      }
-
-      .task-space-card__media img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-
-      .task-space-card__copy h2,
-      .plan-result__header h2,
-      .asset-detail h2 {
-        margin: 3px 0 5px;
-        font-family: "Noto Serif SC", "Songti SC", serif;
-        font-size: 18px;
-      }
-
-      .task-space-card__copy p,
-      .asset-detail p {
-        margin: 0;
-        color: var(--muted);
-        font-size: 11px;
-        line-height: 1.55;
-      }
-
-      .object-chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin: 12px 0;
-      }
-
-      .object-chips span {
-        padding: 5px 8px;
-        border: 1px solid var(--border);
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.04);
-        color: rgba(245, 245, 247, 0.78);
-        font-size: 10px;
-      }
-
-      .task-form {
-        display: grid;
-        gap: 14px;
-      }
-
-      .task-field {
-        display: grid;
-        gap: 7px;
-        min-width: 0;
-      }
-
-      .task-field > span {
-        color: rgba(245, 245, 247, 0.72);
-        font-size: 11px;
-        font-weight: 800;
-      }
-
-      .task-field textarea,
-      .task-field input,
-      .task-field select {
-        width: 100%;
-        box-sizing: border-box;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        outline: none;
-        background: rgba(255, 255, 255, 0.05);
-        color: var(--text);
-        font: inherit;
-        font-size: 12px;
-      }
-
-      .task-field textarea {
-        min-height: 84px;
-        padding: 11px;
-        resize: vertical;
-        line-height: 1.55;
-      }
-
-      .task-field input,
-      .task-field select {
-        height: 40px;
-        padding: 0 10px;
-      }
-
-      .task-field select option {
-        background: #15131e;
-      }
-
-      .task-form__row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-      }
-
-      .goal-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 7px;
-      }
-
-      .goal-grid label,
-      .task-toggle {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        padding: 9px;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.035);
-        color: rgba(245, 245, 247, 0.75);
-        font-size: 10px;
-      }
-
-      .goal-grid input,
-      .task-toggle input {
-        accent-color: var(--hot);
-      }
-
-      .space-picker,
-      .asset-list,
-      .plan-list,
-      .product-list,
-      .validation-list {
-        display: grid;
-        gap: 8px;
-      }
-
-      .space-picker__item,
-      .asset-row,
-      .plan-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
-        padding: 10px;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.035);
-        color: var(--text);
-        text-align: left;
-        cursor: pointer;
-      }
-
-      .space-picker__icon,
-      .asset-row__icon,
-      .plan-row__version,
-      .product-row__icon {
-        display: grid;
-        flex: 0 0 auto;
-        place-items: center;
-        width: 36px;
-        height: 36px;
-        border-radius: 11px;
-        background: linear-gradient(145deg, rgba(37, 244, 238, 0.14), rgba(167, 139, 250, 0.12));
-        color: var(--cyan);
-        font-weight: 900;
-      }
-
-      .space-picker__item > span:nth-child(2),
-      .asset-row__copy,
-      .plan-row__copy,
-      .product-row__copy {
-        display: grid;
-        flex: 1;
-        gap: 3px;
-        min-width: 0;
-      }
-
-      .space-picker small,
-      .asset-row small,
-      .plan-row small,
-      .product-row small {
-        overflow: hidden;
-        color: var(--muted);
-        font-size: 9px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .parse-ready {
-        color: var(--cyan);
-      }
-
-      .parse-warning {
-        color: var(--gold);
-      }
-
-      .parse-failed {
-        color: var(--hot);
-      }
-
-      .asset-detail__image,
-      .asset-detail__placeholder {
-        width: 100%;
-        aspect-ratio: 16 / 10;
-        margin-bottom: 14px;
-        border-radius: 14px;
-        object-fit: cover;
-        background: rgba(255, 255, 255, 0.05);
-      }
-
-      .asset-detail__placeholder {
-        display: grid;
-        place-items: center;
-        font-size: 50px;
-      }
-
-      .asset-detail .renewal-button + .renewal-button {
-        margin-top: 8px;
-      }
-
-      .generation-progress {
-        height: 5px;
-        margin: 18px 0 8px;
-        overflow: hidden;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-      }
-
-      .generation-progress span {
-        display: block;
-        width: 8%;
-        height: 100%;
-        border-radius: inherit;
-        background: linear-gradient(90deg, var(--cyan), var(--hot));
-        transition: width 0.45s ease;
-      }
-
-      .plan-result {
-        display: grid;
-        gap: 12px;
-      }
-
-      .plan-result__header {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 10px;
-      }
-
-      .result-compare {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
-
-      .result-compare figure {
-        position: relative;
-        overflow: hidden;
-        aspect-ratio: 3 / 4;
-        margin: 0;
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.05);
-      }
-
-      .result-compare img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-
-      .result-compare figcaption {
-        position: absolute;
-        right: 6px;
-        bottom: 6px;
-        padding: 4px 7px;
-        border-radius: 999px;
-        background: rgba(5, 5, 9, 0.78);
-        font-size: 8px;
-      }
-
-      .result-disclaimer {
-        margin: -4px 2px 0;
-        color: var(--muted);
-        font-size: 9px;
-        line-height: 1.5;
-      }
-
-      .result-summary {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        align-items: end;
-        gap: 4px 12px;
-      }
-
-      .result-summary span {
-        color: var(--muted);
-        font-size: 10px;
-      }
-
-      .result-summary strong {
-        color: var(--hot);
-        font-size: 24px;
-      }
-
-      .result-summary p {
-        grid-column: 1 / -1;
-        margin: 5px 0 0;
-        color: rgba(245, 245, 247, 0.72);
-        font-size: 11px;
-        line-height: 1.6;
-      }
-
-      .product-row {
-        display: flex;
-        align-items: center;
-        gap: 9px;
-        padding: 9px 0;
-        border-bottom: 1px solid var(--border);
-      }
-
-      .product-row:last-child {
-        border-bottom: 0;
-      }
-
-      .product-row b {
-        color: var(--hot);
-        font-size: 11px;
-      }
-
-      .step-list {
-        display: grid;
-        gap: 12px;
-        margin: 0;
-        padding-left: 24px;
-      }
-
-      .step-list li {
-        padding-left: 3px;
-        color: var(--cyan);
-        font-size: 11px;
-      }
-
-      .step-list span {
-        color: var(--text);
-        font-weight: 800;
-      }
-
-      .step-list p {
-        margin: 3px 0 0;
-        color: var(--muted);
-        font-size: 10px;
-        line-height: 1.5;
-      }
-
-      .validation-row {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        padding: 8px;
-        border-radius: 9px;
-        background: rgba(255, 255, 255, 0.035);
-      }
-
-      .validation-row > span {
-        display: grid;
-        flex: 0 0 auto;
-        place-items: center;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: rgba(255, 205, 58, 0.15);
-        color: var(--gold);
-        font-size: 9px;
-        font-weight: 900;
-      }
-
-      .validation-row--pass > span {
-        background: rgba(37, 244, 238, 0.14);
-        color: var(--cyan);
-      }
-
-      .validation-row p {
-        margin: 1px 0 0;
-        color: rgba(245, 245, 247, 0.72);
-        font-size: 9px;
-        line-height: 1.45;
-      }
-
-      .renewal-toast {
-        position: absolute;
-        right: 16px;
-        bottom: 78px;
-        left: 16px;
-        z-index: 30;
-        padding: 11px 14px;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: rgba(18, 17, 27, 0.94);
-        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
-        color: var(--text);
-        font-size: 11px;
-        text-align: center;
-        opacity: 0;
-        pointer-events: none;
-        transform: translateY(10px);
-        transition: opacity 0.2s, transform 0.2s;
-      }
-
-      .renewal-toast.show {
-        opacity: 1;
-        transform: translateY(0);
-      }
-
-      .renewal-loading {
-        position: absolute;
-        inset: 0;
-        z-index: 25;
-        display: none;
-        place-items: center;
-        background: rgba(7, 6, 13, 0.44);
-        backdrop-filter: blur(2px);
-      }
-
-      .renewal-loading.show {
-        display: grid;
-      }
-
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-    </style>
+    <link rel="stylesheet" href="./renewal/styles/renewal.css" />
   </head>
   <body>
-    <main class="home-shell">
-      <section class="phone" aria-label="AI 一角焕新">
+    <main class="renewal-stage">
+      <aside class="renewal-intro" aria-label="项目介绍">
+        <span class="renewal-intro__eyebrow">DOUYIN × HOME × AI</span>
+        <h1>把刷到的喜欢，<br /><em>搬进我家。</em></h1>
+        <p>从一帧生活灵感，到适合真实空间、预算和生活限制的可执行方案。</p>
+        <div class="renewal-intro__flow" aria-label="体验流程">
+          <span>01 灵感</span>
+          <i></i>
+          <span>02 空间</span>
+          <i></i>
+          <span>03 落地</span>
+        </div>
+        <small>一角焕新 · Demo 0.5.2</small>
+      </aside>
+
+      <section class="phone renewal-phone" aria-label="AI 一角焕新手机演示">
         <div class="renewal-app" id="renewalApp">
+          <div class="renewal-device-status" aria-hidden="true">
+            <time id="deviceTime">09:41</time>
+            <span>
+              <svg viewBox="0 0 24 12"><path d="M1 10h2V8H1v2Zm4 0h2V6H5v4Zm4 0h2V4H9v6Zm4 0h2V2h-2v8Z"/></svg>
+              <svg viewBox="0 0 18 12"><path d="M1 4.5C5.5.5 12.5.5 17 4.5M4 7c3-2.5 7-2.5 10 0M7.5 9.5c1.5-1 3.5-1 5 0"/></svg>
+              <svg viewBox="0 0 26 12"><rect x="1" y="1" width="21" height="10" rx="2"/><path d="M24 4v4"/><rect x="3" y="3" width="16" height="6" rx="1"/></svg>
+            </span>
+          </div>
+
           <header class="renewal-header">
-            <button class="renewal-header__back" type="button" id="renewalBack">‹</button>
-            <div class="renewal-header__title" id="renewalTitle">AI 一角焕新</div>
-            <button class="backend-status is-offline" type="button" id="backendStatus" aria-label="检查后端连接">API · 离线</button>
+            <button class="renewal-icon-button" type="button" id="renewalBack" aria-label="返回视频流">
+              <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <div class="renewal-header__title">
+              <small>AI HOME EDIT</small>
+              <strong>一角焕新</strong>
+            </div>
+            <button class="backend-status is-offline" type="button" id="backendStatus" aria-label="检查后端连接">
+              <i></i><span>离线</span>
+            </button>
           </header>
 
           <div class="renewal-content" id="renewalContent">
-            <!-- 首页 -->
-            <div class="renewal-page" id="page-home">
-              <div class="renewal-card">
-                <div class="renewal-card__title">
-                  空间优化
-                  <span class="renewal-badge renewal-badge--hot">推荐</span>
-                </div>
-                <div class="renewal-card__body">
-                  上传你的空间照片，AI 帮你识别物品、优化布局，打造理想生活空间。
-                </div>
-                <button class="renewal-button renewal-button--primary" type="button" data-nav="#/spaces/new">
-                  开始优化
-                </button>
+            <article class="renewal-core" id="coreCard" data-core-state="IDLE">
+              <div class="renewal-core__lead">
+                <span>ONE CORNER, ONE NEW LIFE</span>
+                <h2 id="coreHeading">把这盏灯，搬进这张桌面。</h2>
+                <p id="coreSubheading">先看清“搬什么”和“搬到哪里”，再交给 AI。</p>
               </div>
 
-              <div class="renewal-card renewal-card--tryon">
-                <div class="renewal-card__title">
-                  3D 挂件试搭
-                  <span class="renewal-badge renewal-badge--cyan">NEW</span>
-                </div>
-                <div class="renewal-card__body">
-                  把刷到的挂件挂到自己的包上，调整挂点、角度和大小，再从多个视角确认效果。
-                </div>
-                <button class="renewal-button renewal-button--secondary" type="button" id="openAccessoryTryon">
-                  打开我的 3D 橱窗
-                </button>
-              </div>
-
-              <div class="renewal-card">
-                <div class="renewal-card__title">
-                  我的资产
-                  <span class="renewal-badge renewal-badge--cyan">管理</span>
-                </div>
-                <div class="renewal-card__body">
-                  查看和管理你的空间、灵感和单品资产。
-                </div>
-                <button class="renewal-button renewal-button--secondary" type="button" data-nav="#/assets">
-                  进入资产中心
-                </button>
-              </div>
-
-              <div class="renewal-card">
-                <div class="renewal-card__title">
-                  设计任务
-                  <span class="renewal-badge renewal-badge--gold">进行中</span>
-                </div>
-                <div class="renewal-card__body">
-                  创建设计任务，让 AI 为你生成专属方案。
-                </div>
-                <button class="renewal-button renewal-button--secondary" type="button" data-nav="#/task">
-                  创建任务
-                </button>
-              </div>
-            </div>
-
-            <!-- 资产中心 -->
-            <div class="renewal-page" id="page-assets">
-              <div class="renewal-card">
-                <div class="renewal-card__title">资产列表</div>
-                <div class="renewal-card__body" id="assetsList">
-                  <div class="renewal-empty">
-                    <div class="renewal-empty__icon">📦</div>
-                    <div class="renewal-empty__text">暂无资产<br>点击首页「开始优化」上传空间图片</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 上传空间 -->
-            <div class="renewal-page" id="page-spaces-new">
-              <div class="renewal-card">
-                <div class="renewal-card__title">上传空间图片</div>
-                <div class="renewal-card__body">
-                  <div class="upload-zone" id="spaceUploadZone">
-                    <div class="upload-zone__icon">🖼</div>
-                    <p style="margin-bottom: 16px;">选择或拖入一张空间照片</p>
-                    <input type="file" accept="image/*" id="spaceFileInput" style="display: none;" />
-                    <button class="renewal-button renewal-button--primary" type="button" id="selectSpaceBtn">选择图片</button>
-                    <p style="font-size: 11px; color: rgba(245,245,247,0.4); margin-top: 8px;">支持 JPEG / PNG / WebP · 上限以后端能力为准</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 任务装配 -->
-            <div class="renewal-page" id="page-task">
-              <div id="taskContent"></div>
-            </div>
-
-            <!-- 生成状态 -->
-            <div class="renewal-page" id="page-generation">
-              <div class="renewal-card">
-                <div class="renewal-card__title">生成中</div>
-                <div class="renewal-card__body">
-                  <div style="text-align: center; padding: 20px 0;">
-                    <div class="loading-spinner" style="margin-bottom: 16px;"></div>
-                    <p id="generationStatus">正在分析空间...</p>
-                    <div class="generation-progress"><span id="generationProgress"></span></div>
-                    <p style="font-size: 11px; color: rgba(245,245,247,0.4); margin-top: 8px;">请耐心等待，这可能需要一些时间</p>
-                  </div>
-                </div>
-                <button class="renewal-button renewal-button--secondary" type="button" id="cancelGeneration">
-                  取消生成
-                </button>
-              </div>
-            </div>
-
-            <!-- 方案结果 -->
-            <div class="renewal-page" id="page-plans">
-              <div class="renewal-card">
-                <div class="renewal-card__title" id="plansShellTitle">方案历史</div>
-                <div class="renewal-card__body" id="plansContent">
-                  <div class="renewal-empty">
-                    <div class="renewal-empty__icon">📋</div>
-                    <div class="renewal-empty__text">暂无方案<br>完成设计任务后查看生成结果</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 偏好设置 -->
-            <div class="renewal-page" id="page-preferences">
-              <div class="renewal-card">
-                <div class="renewal-card__title">偏好设置</div>
-                <div class="renewal-card__body">
-                  <div class="renewal-empty">
-                    <div class="renewal-empty__icon">⚙️</div>
-                    <div class="renewal-empty__text">偏好设置功能开发中</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+              <section class="core-section" id="inspirationBar" aria-label="要搬进来的组件"></section>
+              <section class="core-section" id="intentPanel" aria-label="组件锁定规则" hidden></section>
+              <section class="core-section" id="spacePicker" aria-label="要改造的真实空间"></section>
+              <section class="core-section render-preview" id="renderPreview" aria-label="AI 操作说明" hidden></section>
+              <section class="core-section" id="constraintBar" aria-label="焕新要求"></section>
+              <section class="core-section" id="generateArea" aria-label="生成方案"></section>
+              <section class="core-section" id="progressArea" aria-label="生成进度" hidden></section>
+              <section class="core-section result-area" id="resultArea" aria-label="焕新结果" hidden></section>
+              <section class="core-section" id="resultWorkflowArea" aria-label="保存、发布与实施" hidden></section>
+              <section class="core-section" id="relatedDesignArea" aria-label="相关设计" hidden></section>
+            </article>
           </div>
 
-          <footer class="renewal-footer">
-            <button class="renewal-footer__item active" type="button" data-nav="#/home">
-              <svg viewBox="0 0 24 24">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
-              </svg>
-              <span>首页</span>
+          <footer class="renewal-bottom-bar">
+            <button type="button" id="openAssetDrawer">
+              <svg viewBox="0 0 24 24"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg>
+              <span><small>COLLECTION</small>我的收藏</span>
             </button>
-            <button class="renewal-footer__item" type="button" data-nav="#/assets">
-              <svg viewBox="0 0 24 24">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-              </svg>
-              <span>资产</span>
-            </button>
-            <button class="renewal-footer__item" type="button" data-nav="#/task">
-              <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 16 14"/>
-              </svg>
-              <span>任务</span>
-            </button>
-            <button class="renewal-footer__item" type="button" data-nav="#/plans">
-              <svg viewBox="0 0 24 24">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10 9 9 9 8 9"/>
-              </svg>
-              <span>方案</span>
-            </button>
-            <button class="renewal-footer__item" type="button" data-nav="#/preferences">
-              <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-              </svg>
-              <span>我的</span>
+            <i></i>
+            <button type="button" id="openHistoryDrawer">
+              <svg viewBox="0 0 24 24"><path d="M4 5h16v15H4z"/><path d="M8 2v6M16 2v6M8 12h8M8 16h5"/></svg>
+              <span><small>HISTORY</small>历史方案</span>
             </button>
           </footer>
+
+          <input id="spaceFileInput" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+          <input id="spaceCameraInput" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden />
+
+          <div class="renewal-drawer" id="assetDrawer" aria-hidden="true">
+            <div class="renewal-drawer__scrim" data-close-drawer></div>
+            <section class="renewal-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="assetDrawerTitle">
+              <div class="renewal-drawer__grip"></div>
+              <header>
+                <div><small>MY COLLECTION</small><h2 id="assetDrawerTitle">我的收藏</h2></div>
+                <button class="renewal-icon-button" type="button" data-close-drawer aria-label="关闭收藏抽屉">
+                  <svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg>
+                </button>
+              </header>
+              <div id="assetDrawerContent"></div>
+            </section>
+          </div>
+
+          <div class="renewal-drawer" id="historyDrawer" aria-hidden="true">
+            <div class="renewal-drawer__scrim" data-close-drawer></div>
+            <section class="renewal-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="historyDrawerTitle">
+              <div class="renewal-drawer__grip"></div>
+              <header>
+                <div><small>SAVED PLANS</small><h2 id="historyDrawerTitle">历史方案</h2></div>
+                <button class="renewal-icon-button" type="button" data-close-drawer aria-label="关闭历史方案抽屉">
+                  <svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg>
+                </button>
+              </header>
+              <div id="historyDrawerContent"></div>
+            </section>
+          </div>
+
+          <div class="renewal-dialog-layer" id="renewalDialogLayer" aria-hidden="true"></div>
           <div class="renewal-toast" id="renewalToast" role="status" aria-live="polite"></div>
           <div class="renewal-loading" id="renewalLoading" aria-hidden="true">
-            <div class="loading-spinner"></div>
+            <div class="renewal-loading__mark"><i></i><i></i><i></i></div>
+            <span>正在整理这一角…</span>
           </div>
         </div>
       </section>

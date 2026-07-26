@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "product_discovery_run_id": "product-discovery-run-empty-example",
+  "plan_asset_id": "plan-example",
+  "plan_version_id": "plan-version-example",
+  "render_fingerprint": "sha256:example-render-fingerprint",
+  "status": "succeeded",
+  "stage": "packaging",
+  "stage_index": 6,
+  "stage_total": 6,
+  "progress": 100,
+  "source_mode": "live",
+  "result_state": "empty",
+  "retryable": false,
+  "result": {
+    "subjects": [],
+    "subjects_count": 0,
+    "matched_subjects_count": 0,
+    "matches_count": 0,
+    "notices": [
+      {
+        "code": "no_reliable_product_subject",
+        "level": "info",
+        "message": "没有从效果图中找到足够可靠的可购买元素。"
+      }
+    ],
+    "provenance": {
+      "image_analysis": {
+        "source_type": "live",
+        "strategy": "image_agent",
+        "provider": "configured-provider",
+        "model": "configured-model",
+        "prompt_version": "provided-by-prompt-owner"
+      },
+      "commerce_catalog": {
+        "source_type": "unavailable",
+        "label": "未调用商品目录",
+        "checked_at": "2026-07-25T12:00:04.000Z"
+      }
+    }
+  },
+  "error": null,
+  "created_at": "2026-07-25T12:00:00.000Z",
+  "updated_at": "2026-07-25T12:00:05.000Z"
+}

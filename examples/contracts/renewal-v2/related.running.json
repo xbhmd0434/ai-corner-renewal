@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "contract_version": "renewal-card/2.1",
+  "related_design_run_id": "related-run-fixture-running",
+  "design_request_id": "design-request-fixture-001",
+  "context_fingerprint": "sha256:6f4d9c8bfe12a03e",
+  "reason": "initial",
+  "status": "running",
+  "stage": "retrieving_inspiration",
+  "progress": 40,
+  "result_state": null,
+  "source_mode": null,
+  "retryable": false,
+  "result": null,
+  "error": null,
+  "created_at": "2026-07-25T14:00:00.000Z",
+  "updated_at": "2026-07-25T14:00:01.500Z"
+}

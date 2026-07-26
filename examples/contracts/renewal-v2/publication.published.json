@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "contract_version": "renewal-card/2.1",
+  "publication_id": "publication-fixture-published",
+  "plan_asset_id": "plan-fixture-001",
+  "plan_version_id": "plan-version-fixture-001",
+  "status": "published",
+  "visibility": "public",
+  "title": "我的原木暖光书桌",
+  "published_snapshot": {
+    "scene_type": "desk_corner",
+    "intent_type": "component",
+    "source_attribution": "基于用户主动发布的一角焕新 AI 效果示意"
+  },
+  "error": null,
+  "withdrawn_at": null,
+  "created_at": "2026-07-25T14:10:00.000Z",
+  "updated_at": "2026-07-25T14:10:02.000Z"
+}

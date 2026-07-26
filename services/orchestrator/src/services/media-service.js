@@ -32,6 +32,7 @@ const MEDIA_TYPES = Object.freeze({
 const ALLOWED_PURPOSES = new Set([
   "space_source",
   "reference_source",
+  "visual_search_query",
   "generated_render"
 ]);
 
@@ -282,6 +283,60 @@ export class SourceIngestionService {
       rmSync(target, { force: true });
       throw error;
     }
+    return this.project(actorId, record);
+  }
+
+  /**
+   * Trusted bootstrap path for bundled demo inputs.
+   * Unlike user uploads, starter media has a stable id and permanent retention so
+   * the read-only initial scenario survives restarts and can be referenced by
+   * DesignRequest snapshots.
+   */
+  ensureBundled(actorId, { mediaId, filePath, filename, contentType, purpose }) {
+    if (!mediaId || !filePath || !filename || !contentType) {
+      throw new Error("Bundled media metadata is incomplete");
+    }
+    if (!ALLOWED_PURPOSES.has(purpose)) {
+      throw new Error(`Unsupported bundled media purpose: ${purpose}`);
+    }
+    const mediaDefinition = MEDIA_TYPES[contentType];
+    const sourceBytes = readFileSync(filePath);
+    if (
+      !mediaDefinition ||
+      !extensionMatches(filename, mediaDefinition.extension) ||
+      !mediaDefinition.magic(sourceBytes)
+    ) {
+      throw new Error(`Bundled media signature mismatch: ${filename}`);
+    }
+    const { sanitized, dimensions } = sanitizeAndInspect(
+      contentType,
+      sourceBytes
+    );
+    const storageKey = `${mediaId}${mediaDefinition.extension}`;
+    const target = join(this.config.privateMediaDirectory, storageKey);
+    if (!existsSync(target)) {
+      writeFileSync(target, sanitized, { flag: "wx" });
+    }
+    const existing = this.repository.find("media", actorId, mediaId, {
+      includeDeleted: true
+    });
+    const createdAt = existing?.created_at || this.now().toISOString();
+    const record = {
+      schema_version: "1.0",
+      media_id: mediaId,
+      media_type: contentType,
+      width_px: dimensions.width,
+      height_px: dimensions.height,
+      byte_size: sanitized.length,
+      sanitized: true,
+      purpose,
+      storage_key: storageKey,
+      retention_expires_at: null,
+      deleted_at: null,
+      created_at: createdAt,
+      updated_at: existing?.updated_at || createdAt
+    };
+    this.repository.save("media", actorId, record);
     return this.project(actorId, record);
   }
 

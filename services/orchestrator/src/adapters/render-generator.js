@@ -182,35 +182,12 @@ function fallbackReason(error) {
     : "render_unavailable";
 }
 
-export function createRenderGenerator({
+function createSeedreamRequest({
   config,
-  fetchImpl = globalThis.fetch,
-  now = () => Date.now()
+  fetchImpl,
+  now
 }) {
-  return async function generateRender({
-    roomInput,
-    plan,
-    roomProfile,
-    products,
-    requestedMode = "auto"
-  }) {
-    if (config.backendMode === "demo" || requestedMode === "demo") {
-      return {
-        sourceType: "demo",
-        model: config.agentPlanImageModel,
-        latencyMs: 0
-      };
-    }
-    if (!config.agentPlanApiKey) {
-      return {
-        sourceType: "fallback",
-        reason: "render_not_configured",
-        message: "未配置 Agent Plan 专属 Key，效果图已回退为 Demo。",
-        model: config.agentPlanImageModel,
-        latencyMs: 0
-      };
-    }
-
+  return async function requestSeedream({ roomInput, prompt, referenceImages = [] }) {
     const startedAt = now();
     const controller = new AbortController();
     const timeout = setTimeout(
@@ -230,8 +207,17 @@ export function createRenderGenerator({
           signal: controller.signal,
           body: JSON.stringify({
             model: config.agentPlanImageModel,
-            prompt: renderPrompt({ plan, roomProfile, products }),
-            image: [imageForAgentPlan(roomInput)],
+            prompt,
+            image: [
+              imageForAgentPlan(roomInput),
+              ...referenceImages
+                .filter(
+                  (item) =>
+                    typeof item === "string" &&
+                    (item.startsWith("data:image/") || item.startsWith("https://"))
+                )
+                .slice(0, 3)
+            ],
             size: "2K",
             sequential_image_generation: "disabled",
             response_format: "b64_json",
@@ -271,6 +257,51 @@ export function createRenderGenerator({
         latencyMs: Math.max(0, now() - startedAt),
         ...image
       };
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+}
+
+export function createRenderGenerator({
+  config,
+  fetchImpl = globalThis.fetch,
+  now = () => Date.now()
+}) {
+  const requestSeedream = createSeedreamRequest({ config, fetchImpl, now });
+  return async function generateRender({
+    roomInput,
+    plan,
+    roomProfile,
+    products,
+    promptOverride,
+    referenceImages = [],
+    requestedMode = "auto"
+  }) {
+    if (config.backendMode === "demo" || requestedMode === "demo") {
+      return {
+        sourceType: "demo",
+        model: config.agentPlanImageModel,
+        latencyMs: 0
+      };
+    }
+    if (!config.agentPlanApiKey) {
+      return {
+        sourceType: "fallback",
+        reason: "render_not_configured",
+        message: "未配置 Agent Plan 专属 Key，效果图已回退为 Demo。",
+        model: config.agentPlanImageModel,
+        latencyMs: 0
+      };
+    }
+
+    const startedAt = now();
+    try {
+      return await requestSeedream({
+        roomInput,
+        prompt: promptOverride || renderPrompt({ plan, roomProfile, products }),
+        referenceImages
+      });
     } catch (error) {
       return {
         sourceType: "fallback",
@@ -279,8 +310,6 @@ export function createRenderGenerator({
         model: config.agentPlanImageModel,
         latencyMs: Math.max(0, now() - startedAt)
       };
-    } finally {
-      clearTimeout(timeout);
     }
   };
 }

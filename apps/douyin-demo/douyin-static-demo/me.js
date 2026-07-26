@@ -1307,7 +1307,7 @@ function closeSpaceActivity() {
 }
 
 shootSubmit?.addEventListener("click", () => {
-  window.location.href = "./renewal.html#/home";
+  window.location.href = "./renewal.html?source=home";
 });
 
 /* =============================================================

@@ -14,11 +14,6 @@ const required = [
   "apps/web/styles.css",
   "apps/web/app.js",
   "apps/web/data/demo-data.js",
-  "apps/web/accessory-studio.html",
-  "apps/web/accessory-studio.css",
-  "apps/web/accessory-studio.js",
-  "apps/web/data/accessory-demo-data.js",
-  "apps/web/assets/models/README.md",
   "apps/web/assets/desk-before.png",
   "apps/web/assets/desk-after-warm.png",
   "docs/product-spec.md",
@@ -27,11 +22,14 @@ const required = [
   "docs/public-release.md",
   ".env.example",
   "docs/backend-api.md",
+  "docs/openapi.yaml",
   "packages/contracts/schemas/aicard-v1.schema.json",
   "packages/contracts/schemas/generate-request-v1.schema.json",
   "packages/contracts/schemas/revise-request-v1.schema.json",
   "packages/contracts/schemas/platform-v1.schema.json",
   "packages/contracts/src/index.js",
+  "packages/contracts/src/openapi.js",
+  "packages/contracts/src/v1-route-manifest.js",
   "packages/validation/src/index.js",
   "services/orchestrator/src/index.js",
   "services/orchestrator/src/local-env.js",
@@ -39,13 +37,14 @@ const required = [
   "services/orchestrator/src/workflow.js",
   "services/orchestrator/src/platform.js",
   "services/orchestrator/src/repository.js",
+  "services/orchestrator/src/adapters/layout-planner.js",
   "examples/aicard.demo.json",
   "examples/requests/generate.main.json",
   "examples/requests/revise.to-300.json",
   "examples/run-backend-demo.mjs",
   "scripts/check-agent-plan.mjs",
-  "scripts/run-hunyuan.mjs",
-  "scripts/generate-hunyuan-shape.py"
+  "scripts/generate-openapi.mjs",
+  "scripts/check-agent-plan-image.mjs"
 ];
 
 const missing = required.filter((path) => !existsSync(join(root, path)));
@@ -53,7 +52,7 @@ if (missing.length) {
   throw new Error(`缺少必要文件：\n${missing.join("\n")}`);
 }
 
-const htmlFiles = ["index.html", "accessory-studio.html"];
+const htmlFiles = ["index.html"];
 const localReferences = htmlFiles.flatMap((name) => {
   const file = join(webRoot, name);
   const html = readFileSync(file, "utf8");

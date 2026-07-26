@@ -33,31 +33,24 @@ const backendAssetRoot = resolve(
   "web",
   "assets"
 );
-const threeCandidates = [
-  resolve(projectRoot, "node_modules", "three"),
-  resolve(backendRoot, "node_modules", "three")
-];
-const threeRoot = threeCandidates.find((candidate) =>
-  existsSync(candidate)
+const productDiscoveryFixtureRoot = resolve(
+  backendRoot,
+  "examples",
+  "responses"
 );
-if (!threeRoot) {
-  throw new Error("缺少 Three.js 依赖，请先在仓库根目录运行 npm install。");
-}
 const host = process.env.WEB_HOST || "127.0.0.1";
 const port = Number(process.env.WEB_PORT || 8765);
 const backendHost = process.env.API_HOST || "127.0.0.1";
 const backendPort = Number(process.env.API_PORT || 8787);
 const backendAssetPrefix =
   "/ai-corner-renewal/apps/web/assets/";
-const threePrefix = "/vendor/three/";
+const productDiscoveryFixturePrefix = "/__product-discovery-fixtures/";
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
-  ".glb": "model/gltf-binary",
-  ".gltf": "model/gltf+json",
   ".mp4": "video/mp4",
   ".png": "image/png",
   ".jpg": "image/jpeg",
@@ -84,11 +77,12 @@ function resolveStaticPath(requestUrl) {
         pathname.slice(backendAssetPrefix.length)
       );
     }
-    if (pathname.startsWith(threePrefix)) {
-      return safeResolve(
-        threeRoot,
-        pathname.slice(threePrefix.length)
-      );
+    if (pathname.startsWith(productDiscoveryFixturePrefix)) {
+      const fileName = pathname.slice(productDiscoveryFixturePrefix.length);
+      if (!/^product-discovery\.run\.(running|ready|empty)\.json$/.test(fileName)) {
+        return null;
+      }
+      return safeResolve(productDiscoveryFixtureRoot, fileName);
     }
     const relative =
       pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");

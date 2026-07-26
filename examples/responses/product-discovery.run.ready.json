@@ -1,0 +1,108 @@
+{
+  "schema_version": "1.0",
+  "product_discovery_run_id": "product-discovery-run-example",
+  "plan_asset_id": "plan-example",
+  "plan_version_id": "plan-version-example",
+  "render_fingerprint": "sha256:example-render-fingerprint",
+  "status": "succeeded",
+  "stage": "packaging",
+  "stage_index": 6,
+  "stage_total": 6,
+  "progress": 100,
+  "source_mode": "fallback",
+  "result_state": "ready",
+  "retryable": false,
+  "result": {
+    "subjects": [
+      {
+        "subject_id": "subject-example-lamp",
+        "label": "桌面氛围灯",
+        "category_code": "table_lamp",
+        "bbox": null,
+        "appearance": {
+          "colors": [
+            "奶油白"
+          ],
+          "materials": [
+            "哑光金属"
+          ],
+          "style_keywords": [
+            "圆润",
+            "暖光"
+          ]
+        },
+        "placement_hint": "桌面右后侧",
+        "confidence": null,
+        "search_queries": [
+          "奶油白小台灯 暖光 桌面"
+        ],
+        "match_state": "matched",
+        "matches": [
+          {
+            "match_id": "match-example-lamp",
+            "product_id": "product-demo-lamp-001",
+            "title": "奶油白蘑菇台灯",
+            "category_code": "table_lamp",
+            "cover_url": null,
+            "price_cny": 129,
+            "price_label": "¥129",
+            "match_type": "visual_similar",
+            "match_confidence": null,
+            "match_reasons": [
+              "颜色与本次方案接近",
+              "体积适合桌面",
+              "支持免打孔摆放"
+            ],
+            "availability": {
+              "status": "demo",
+              "checked_at": "2026-07-25T12:00:04.000Z"
+            },
+            "commerce_action": {
+              "type": "search_query",
+              "label": "去抖音搜",
+              "url": null,
+              "query": "奶油白蘑菇台灯 暖光"
+            },
+            "source": {
+              "source_type": "demo_catalog",
+              "label": "本地 Demo 商品目录",
+              "checked_at": "2026-07-25T12:00:04.000Z"
+            }
+          }
+        ]
+      }
+    ],
+    "subjects_count": 1,
+    "matched_subjects_count": 1,
+    "matches_count": 1,
+    "notices": [
+      {
+        "code": "plan_grounded_fallback",
+        "level": "info",
+        "message": "当前结果根据本次方案关联，不代表图像 Agent 已实时识别。"
+      },
+      {
+        "code": "demo_commerce_catalog",
+        "level": "warning",
+        "message": "商品来自 Demo 目录，仅用于验证购买承接流程。"
+      }
+    ],
+    "provenance": {
+      "image_analysis": {
+        "source_type": "fallback",
+        "strategy": "plan_grounded",
+        "provider": null,
+        "model": null,
+        "prompt_version": null
+      },
+      "commerce_catalog": {
+        "source_type": "demo_catalog",
+        "label": "本地 Demo 商品目录",
+        "checked_at": "2026-07-25T12:00:04.000Z"
+      }
+    }
+  },
+  "error": null,
+  "created_at": "2026-07-25T12:00:00.000Z",
+  "updated_at": "2026-07-25T12:00:05.000Z"
+}

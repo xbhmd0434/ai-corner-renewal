@@ -5,6 +5,11 @@ import { loadConfig } from "../src/config.js";
 test("room analyzer response limit defaults to 256 KiB and is configurable", () => {
   assert.equal(loadConfig({}).roomAnalyzerResponseLimitBytes, 256 * 1024);
   assert.equal(loadConfig({}).agentPlanImageTimeoutMs, 90_000);
+  assert.equal(loadConfig({}).agentPlanDiscoveryTimeoutMs, 45_000);
+  assert.equal(
+    loadConfig({}).agentPlanDiscoveryResponseLimitBytes,
+    512 * 1024
+  );
   assert.equal(
     loadConfig({}).agentPlanImageResponseLimitBytes,
     24 * 1024 * 1024
@@ -13,6 +18,11 @@ test("room analyzer response limit defaults to 256 KiB and is configurable", () 
     loadConfig({ AGENT_PLAN_IMAGE_TIMEOUT_MS: "120000" })
       .agentPlanImageTimeoutMs,
     120_000
+  );
+  assert.equal(
+    loadConfig({ AGENT_PLAN_DISCOVERY_TIMEOUT_MS: "60000" })
+      .agentPlanDiscoveryTimeoutMs,
+    60_000
   );
   assert.equal(
     loadConfig({ ROOM_ANALYZER_RESPONSE_LIMIT_BYTES: "4096" })
@@ -25,14 +35,42 @@ test("room analyzer response limit defaults to 256 KiB and is configurable", () 
   );
   assert.throws(
     () => loadConfig({ ORCHESTRATOR_HOST: "0.0.0.0" }),
-    /回环地址/
+    /DEMO_ACCESS_CODE/
   );
+  assert.throws(
+    () =>
+      loadConfig({
+        ORCHESTRATOR_HOST: "0.0.0.0",
+        DEMO_ACCESS_CODE: "judge-code"
+      }),
+    /SESSION_SIGNING_SECRET/
+  );
+  const publicConfig = loadConfig({
+    ORCHESTRATOR_HOST: "0.0.0.0",
+    PORT: "8080",
+    DEMO_ACCESS_CODE: "judge-code",
+    SESSION_SIGNING_SECRET: "0123456789abcdef0123456789abcdef",
+    TRUST_PROXY: "true"
+  });
+  assert.equal(publicConfig.publicAccessEnabled, true);
+  assert.equal(publicConfig.port, 8080);
+  assert.equal(publicConfig.trustProxy, true);
+  assert.equal(publicConfig.aiMaxConcurrent, 2);
   assert.throws(
     () =>
       loadConfig({
         PRIVATE_MEDIA_DIRECTORY: "./apps/web/private-media"
       }),
     /静态目录/
+  );
+});
+
+test("layout planning uses an independent 90 second timeout", () => {
+  assert.equal(loadConfig({}).agentPlanLayoutTimeoutMs, 90_000);
+  assert.equal(
+    loadConfig({ AGENT_PLAN_LAYOUT_TIMEOUT_MS: "75000" })
+      .agentPlanLayoutTimeoutMs,
+    75_000
   );
 });
 

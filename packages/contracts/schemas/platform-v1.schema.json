@@ -11,7 +11,13 @@
     { "$ref": "#/$defs/GenerationRun" },
     { "$ref": "#/$defs/PlanVersionEnvelope" },
     { "$ref": "#/$defs/Preference" },
-    { "$ref": "#/$defs/EventBatchResult" }
+    { "$ref": "#/$defs/EventBatchResult" },
+    { "$ref": "#/$defs/ProductDiscoveryRun" },
+    { "$ref": "#/$defs/ProductDiscoveryRunList" },
+    { "$ref": "#/$defs/RelatedDesignRun" },
+    { "$ref": "#/$defs/RelatedDesignRunList" },
+    { "$ref": "#/$defs/Publication" },
+    { "$ref": "#/$defs/CartIntent" }
   ],
   "$defs": {
     "SchemaVersion": {
@@ -241,8 +247,10 @@
         "phase",
         "phase_index",
         "phase_total",
+        "progress",
         "source_mode",
         "retryable",
+        "needs_input",
         "result",
         "error",
         "created_at",
@@ -270,14 +278,43 @@
         },
         "phase_index": { "type": "integer", "minimum": 1, "maximum": 9 },
         "phase_total": { "const": 9 },
+        "progress": { "type": "integer", "minimum": 0, "maximum": 100 },
         "source_mode": {
           "enum": [null, "demo", "live", "fallback"]
         },
         "retryable": { "type": "boolean" },
+        "needs_input": {
+          "oneOf": [
+            { "$ref": "#/$defs/RunNeedsInput" },
+            { "type": "null" }
+          ]
+        },
         "result": { "type": ["object", "null"] },
         "error": { "type": ["object", "null"] },
         "created_at": { "$ref": "#/$defs/Timestamp" },
         "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "RunNeedsInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason_code",
+        "question",
+        "required_fields",
+        "can_continue_with_assumptions",
+        "has_preview"
+      ],
+      "properties": {
+        "reason_code": { "type": "string", "minLength": 1 },
+        "question": { "type": "string", "minLength": 1 },
+        "required_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "can_continue_with_assumptions": { "type": "boolean" },
+        "has_preview": { "type": "boolean" }
       }
     },
     "PlanVersionEnvelope": {
@@ -349,6 +386,260 @@
         "resource_version": { "type": "integer", "minimum": 1 }
       }
     },
+    "ProductDiscoveryRun": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "product_discovery_run_id",
+        "plan_asset_id",
+        "plan_version_id",
+        "render_fingerprint",
+        "status",
+        "stage",
+        "stage_index",
+        "stage_total",
+        "progress",
+        "source_mode",
+        "result_state",
+        "retryable",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "product_discovery_run_id": { "$ref": "#/$defs/Identifier" },
+        "plan_asset_id": { "$ref": "#/$defs/Identifier" },
+        "plan_version_id": { "$ref": "#/$defs/Identifier" },
+        "render_fingerprint": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["queued", "running", "succeeded", "failed", "cancelled"] },
+        "stage": { "enum": ["queued", "analyzing_render", "building_queries", "retrieving_products", "grounding_matches", "packaging"] },
+        "stage_index": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "stage_total": { "const": 6 },
+        "progress": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "source_mode": { "enum": ["live", "fallback", "demo", null] },
+        "result_state": { "enum": ["ready", "partial", "empty", null] },
+        "retryable": { "type": "boolean" },
+        "result": {
+          "oneOf": [
+            { "$ref": "#/$defs/ProductDiscoveryResult" },
+            { "type": "null" }
+          ]
+        },
+        "error": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["code", "message", "retryable"],
+              "properties": {
+                "code": { "type": "string" },
+                "message": { "type": "string" },
+                "retryable": { "type": "boolean" }
+              }
+            },
+            { "type": "null" }
+          ]
+        },
+        "created_at": { "$ref": "#/$defs/Timestamp" },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "ProductDiscoveryResult": {
+      "type": "object",
+      "required": [
+        "subjects",
+        "subjects_count",
+        "matched_subjects_count",
+        "matches_count",
+        "notices",
+        "provenance"
+      ],
+      "properties": {
+        "subjects": { "type": "array", "items": { "$ref": "#/$defs/DiscoveredSubject" } },
+        "subjects_count": { "type": "integer", "minimum": 0 },
+        "matched_subjects_count": { "type": "integer", "minimum": 0 },
+        "matches_count": { "type": "integer", "minimum": 0 },
+        "notices": { "type": "array", "items": { "type": "object" } },
+        "provenance": { "$ref": "#/$defs/ProductDiscoveryProvenance" },
+        "implementation_list": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ImplementationListItem" }
+        },
+        "estimated_total_cny": { "type": ["integer", "null"], "minimum": 0 },
+        "currency": { "type": ["string", "null"], "enum": [null, "CNY"] }
+      }
+    },
+    "ImplementationListItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "list_item_id",
+        "subject_id",
+        "display_name",
+        "origin_type",
+        "origin_label",
+        "sort_group",
+        "sort_index",
+        "disposition",
+        "quantity",
+        "selected_match_id",
+        "alternative_match_ids"
+      ],
+      "properties": {
+        "list_item_id": { "$ref": "#/$defs/Identifier" },
+        "subject_id": { "$ref": "#/$defs/Identifier" },
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "origin_type": { "enum": ["video_selected", "source_video", "ai_supplement"] },
+        "origin_label": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "sort_group": { "type": "integer", "enum": [0, 1, 2] },
+        "sort_index": { "type": "integer", "minimum": 0 },
+        "disposition": { "enum": ["existing", "add", "optional"] },
+        "quantity": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "selected_match_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/Identifier" },
+            { "type": "null" }
+          ]
+        },
+        "alternative_match_ids": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/Identifier" }
+        }
+      }
+    },
+    "DiscoveredSubject": {
+      "type": "object",
+      "required": [
+        "subject_id",
+        "label",
+        "category_code",
+        "bbox",
+        "appearance",
+        "placement_hint",
+        "confidence",
+        "search_queries",
+        "match_state",
+        "matches"
+      ],
+      "properties": {
+        "subject_id": { "$ref": "#/$defs/Identifier" },
+        "label": { "type": "string", "minLength": 1 },
+        "category_code": { "type": "string", "minLength": 1 },
+        "bbox": {
+          "oneOf": [
+            { "$ref": "#/$defs/BBox" },
+            { "type": "null" }
+          ]
+        },
+        "appearance": {
+          "type": "object",
+          "required": ["colors", "materials", "style_keywords"],
+          "properties": {
+            "colors": { "type": "array", "items": { "type": "string" } },
+            "materials": { "type": "array", "items": { "type": "string" } },
+            "style_keywords": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "placement_hint": { "type": "string" },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "search_queries": { "type": "array", "items": { "type": "string" } },
+        "match_state": { "enum": ["matched", "partial", "unmatched"] },
+        "matches": { "type": "array", "items": { "$ref": "#/$defs/GroundedProductMatch" } }
+      }
+    },
+    "GroundedProductMatch": {
+      "type": "object",
+      "required": [
+        "match_id",
+        "product_id",
+        "title",
+        "category_code",
+        "cover_url",
+        "price_cny",
+        "price_label",
+        "match_type",
+        "match_confidence",
+        "match_reasons",
+        "availability",
+        "commerce_action",
+        "source"
+      ],
+      "properties": {
+        "match_id": { "$ref": "#/$defs/Identifier" },
+        "product_id": { "$ref": "#/$defs/Identifier" },
+        "title": { "type": "string" },
+        "category_code": { "type": "string" },
+        "cover_url": { "type": ["string", "null"] },
+        "price_cny": { "type": ["integer", "null"], "minimum": 0 },
+        "price_label": { "type": "string" },
+        "match_type": { "enum": ["exact_catalog_product", "visual_similar", "category_recommendation"] },
+        "match_confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "match_reasons": { "type": "array", "items": { "type": "string" } },
+        "availability": {
+          "type": "object",
+          "required": ["status", "checked_at"],
+          "properties": {
+            "status": { "type": "string" },
+            "checked_at": { "$ref": "#/$defs/Timestamp" }
+          }
+        },
+        "commerce_action": {
+          "type": "object",
+          "required": ["type", "label", "url", "query"],
+          "properties": {
+            "type": { "enum": ["douyin_deeplink", "web_url", "search_query", "unavailable"] },
+            "label": { "type": "string" },
+            "url": { "type": ["string", "null"] },
+            "query": { "type": ["string", "null"] }
+          }
+        },
+        "source": {
+          "type": "object",
+          "required": ["source_type", "label", "checked_at"],
+          "properties": {
+            "source_type": { "type": "string" },
+            "label": { "type": "string" },
+            "checked_at": { "$ref": "#/$defs/Timestamp" }
+          }
+        }
+      }
+    },
+    "ProductDiscoveryProvenance": {
+      "type": "object",
+      "required": ["image_analysis", "commerce_catalog"],
+      "properties": {
+        "image_analysis": {
+          "type": "object",
+          "required": ["source_type", "strategy"],
+          "properties": {
+            "source_type": { "enum": ["live", "fallback"] },
+            "strategy": { "type": "string" },
+            "provider": { "type": ["string", "null"] },
+            "model": { "type": ["string", "null"] },
+            "prompt_version": { "type": ["string", "null"] }
+          }
+        },
+        "commerce_catalog": {
+          "type": "object",
+          "required": ["source_type", "label", "checked_at"],
+          "properties": {
+            "source_type": { "type": "string" },
+            "label": { "type": "string" },
+            "checked_at": { "$ref": "#/$defs/Timestamp" }
+          }
+        }
+      }
+    },
+    "ProductDiscoveryRunList": {
+      "type": "object",
+      "required": ["schema_version", "items", "next_cursor", "total"],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "items": { "type": "array", "items": { "type": "object" } },
+        "next_cursor": { "type": ["string", "null"] },
+        "total": { "type": "integer", "minimum": 0 }
+      }
+    },
     "EventBatchResult": {
       "type": "object",
       "required": [
@@ -371,6 +662,463 @@
             "properties": {
               "event_id": { "type": ["string", "null"] },
               "code": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "IntentAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "suggested_type", "summary", "source_mode"],
+      "properties": {
+        "state": {
+          "enum": ["ready", "needs_confirmation", "failed"]
+        },
+        "suggested_type": {
+          "oneOf": [
+            { "enum": ["component", "style"] },
+            { "type": "null" }
+          ]
+        },
+        "summary": { "type": "string", "maxLength": 200 },
+        "component_reference": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["category_code"],
+              "properties": {
+                "category_code": { "type": "string", "minLength": 1, "maxLength": 64 },
+                "colors": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": { "type": "string", "maxLength": 32 }
+                },
+                "materials": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": { "type": "string", "maxLength": 32 }
+                },
+                "shape_keywords": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": { "type": "string", "maxLength": 32 }
+                }
+              }
+            },
+            { "type": "null" }
+          ]
+        },
+        "style_reference": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["style_keywords"],
+              "properties": {
+                "style_keywords": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "items": { "type": "string", "maxLength": 32 }
+                },
+                "colors": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": { "type": "string", "maxLength": 32 }
+                },
+                "materials": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": { "type": "string", "maxLength": 32 }
+                }
+              }
+            },
+            { "type": "null" }
+          ]
+        },
+        "candidates": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["intent_type", "summary"],
+            "properties": {
+              "intent_type": { "enum": ["component", "style"] },
+              "summary": { "type": "string", "minLength": 1, "maxLength": 200 }
+            }
+          }
+        },
+        "source_mode": { "enum": ["demo", "live", "fallback"] },
+        "provider": { "type": ["string", "null"] },
+        "model": { "type": ["string", "null"] }
+      }
+    },
+    "ConfirmedIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intent_type", "summary", "confirmed_by", "confirmed_at"],
+      "properties": {
+        "intent_type": { "enum": ["component", "style"] },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "confirmed_by": { "enum": ["user", "system_default"] },
+        "confirmed_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "IntentConfirmationRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "resource_version", "intent_type", "summary"],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "resource_version": { "type": "integer", "minimum": 1 },
+        "intent_type": { "enum": ["component", "style"] },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "RelatedDesignRun": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "contract_version",
+        "related_design_run_id",
+        "design_request_id",
+        "context_fingerprint",
+        "status",
+        "stage",
+        "progress",
+        "result_state",
+        "source_mode",
+        "retryable",
+        "result",
+        "error",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "contract_version": { "const": "renewal-card/2.1" },
+        "related_design_run_id": { "$ref": "#/$defs/Identifier" },
+        "design_request_id": { "$ref": "#/$defs/Identifier" },
+        "context_fingerprint": { "type": "string", "minLength": 8 },
+        "reason": { "enum": ["initial", "retry", "refresh"] },
+        "status": { "enum": ["queued", "running", "succeeded", "failed", "cancelled"] },
+        "stage": {
+          "enum": [
+            "queued",
+            "extracting_context",
+            "retrieving_inspiration",
+            "retrieving_scene",
+            "reranking",
+            "packaging"
+          ]
+        },
+        "progress": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "result_state": {
+          "oneOf": [
+            { "enum": ["ready", "partial", "empty"] },
+            { "type": "null" }
+          ]
+        },
+        "source_mode": { "enum": ["demo", "live", "fallback", null] },
+        "retryable": { "type": "boolean" },
+        "result": {
+          "oneOf": [
+            { "$ref": "#/$defs/RelatedDesignResult" },
+            { "type": "null" }
+          ]
+        },
+        "error": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["code", "message", "retryable"],
+              "properties": {
+                "code": { "type": "string" },
+                "message": { "type": "string" },
+                "retryable": { "type": "boolean" }
+              }
+            },
+            { "type": "null" }
+          ]
+        },
+        "created_at": { "$ref": "#/$defs/Timestamp" },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "RelatedDesignRunList": {
+      "type": "object",
+      "required": ["schema_version", "items"],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "items": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "RelatedDesignResult": {
+      "type": "object",
+      "required": ["items", "notices", "provenance"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 24,
+          "items": { "$ref": "#/$defs/RelatedDesignItem" }
+        },
+        "notices": {
+          "type": "array",
+          "items": { "type": "object" }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "douyin_content": { "type": "string" },
+            "user_publications": { "type": "string" }
+          }
+        }
+      }
+    },
+    "RelatedDesignItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content_id",
+        "source_type",
+        "title",
+        "cover",
+        "author",
+        "relations",
+        "reason_labels",
+        "fallback_dimension",
+        "open_action"
+      ],
+      "properties": {
+        "content_id": { "$ref": "#/$defs/Identifier" },
+        "source_type": { "enum": ["douyin", "user_publication"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "cover": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["media_id", "access_url"],
+          "properties": {
+            "media_id": {
+              "oneOf": [
+                { "$ref": "#/$defs/Identifier" },
+                { "type": "null" }
+              ]
+            },
+            "access_url": { "type": ["string", "null"] }
+          }
+        },
+        "author": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["display_name"],
+          "properties": {
+            "display_name": { "type": "string", "maxLength": 100 }
+          }
+        },
+        "relations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["inspiration", "scene"],
+          "properties": {
+            "inspiration": { "$ref": "#/$defs/RelatedDesignRelation" },
+            "scene": { "$ref": "#/$defs/RelatedDesignRelation" }
+          }
+        },
+        "reason_labels": {
+          "type": "array",
+          "maxItems": 4,
+          "items": { "type": "string", "maxLength": 100 }
+        },
+        "fallback_dimension": {
+          "oneOf": [
+            { "enum": ["inspiration", "scene"] },
+            { "type": "null" }
+          ]
+        },
+        "open_action": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["douyin_deeplink", "internal_publication", "unavailable"] },
+            "url": { "type": ["string", "null"] },
+            "internal_publication_id": {
+              "oneOf": [
+                { "$ref": "#/$defs/Identifier" },
+                { "type": "null" }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "RelatedDesignRelation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strength", "reason_code"],
+      "properties": {
+        "strength": { "enum": ["strong", "weak", "none"] },
+        "reason_code": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    },
+    "CreateRelatedDesignRunRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "reason"],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "reason": { "enum": ["initial", "retry", "refresh"] },
+        "options": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "limit": { "type": "integer", "minimum": 1, "maximum": 24 },
+            "sources": {
+              "type": "array",
+              "uniqueItems": true,
+              "minItems": 1,
+              "items": { "enum": ["douyin", "user_publication"] }
+            }
+          }
+        }
+      }
+    },
+    "Publication": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "contract_version",
+        "publication_id",
+        "plan_asset_id",
+        "plan_version_id",
+        "status",
+        "visibility",
+        "title",
+        "published_snapshot",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "contract_version": { "const": "renewal-card/2.1" },
+        "publication_id": { "$ref": "#/$defs/Identifier" },
+        "plan_asset_id": { "$ref": "#/$defs/Identifier" },
+        "plan_version_id": { "$ref": "#/$defs/Identifier" },
+        "status": { "enum": ["indexing", "published", "index_failed", "withdrawn"] },
+        "visibility": { "enum": ["public"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "published_snapshot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scene_type", "intent_type", "source_attribution"],
+          "properties": {
+            "scene_type": { "type": "string", "minLength": 1, "maxLength": 64 },
+            "intent_type": { "enum": ["component", "style"] },
+            "source_attribution": { "type": "string", "minLength": 1, "maxLength": 200 }
+          }
+        },
+        "error": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["code", "message"],
+              "properties": {
+                "code": { "type": "string" },
+                "message": { "type": "string" }
+              }
+            },
+            { "type": "null" }
+          ]
+        },
+        "withdrawn_at": {
+          "oneOf": [
+            { "$ref": "#/$defs/Timestamp" },
+            { "type": "null" }
+          ]
+        },
+        "created_at": { "$ref": "#/$defs/Timestamp" },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "CreatePublicationRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "title", "cover_source", "source_attribution_acknowledged"],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "cover_source": { "enum": ["plan_render"] },
+        "source_attribution_acknowledged": { "const": true }
+      }
+    },
+    "CartIntent": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "cart_intent_id",
+        "status",
+        "accepted_count",
+        "rejected",
+        "action",
+        "created_at"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "cart_intent_id": { "$ref": "#/$defs/Identifier" },
+        "status": { "enum": ["ready", "partial", "unavailable"] },
+        "accepted_count": { "type": "integer", "minimum": 0 },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["list_item_id", "reason_code"],
+            "properties": {
+              "list_item_id": { "$ref": "#/$defs/Identifier" },
+              "reason_code": { "type": "string" }
+            }
+          }
+        },
+        "action": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["douyin_cart_batch", "search_bundle", "unavailable"] },
+            "token": { "type": ["string", "null"] },
+            "expires_at": {
+              "oneOf": [
+                { "$ref": "#/$defs/Timestamp" },
+                { "type": "null" }
+              ]
+            }
+          }
+        },
+        "created_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "CreateCartIntentRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "items"],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["list_item_id", "match_id", "quantity"],
+            "properties": {
+              "list_item_id": { "$ref": "#/$defs/Identifier" },
+              "match_id": { "$ref": "#/$defs/Identifier" },
+              "quantity": { "type": "integer", "minimum": 1, "maximum": 100 }
             }
           }
         }

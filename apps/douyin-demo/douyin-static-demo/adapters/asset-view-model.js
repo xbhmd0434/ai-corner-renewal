@@ -49,6 +49,19 @@ export function adaptAsset(asset) {
       current_space_version?.space_version_id ||
       null,
     spaceVersionState: current_space_version?.state || null,
+    sceneType:
+      attributes.scene_type ||
+      current_space_version?.attributes?.scene_type ||
+      null,
+    sceneOrigin:
+      attributes.scene_origin ||
+      current_space_version?.attributes?.scene_origin ||
+      null,
+    readOnly:
+      attributes.read_only === true ||
+      current_space_version?.attributes?.read_only === true,
+    lastUsedAt: asset.last_used_at ? new Date(asset.last_used_at) : null,
+    sourceComponent: attributes.source_component || null,
     detectedObjects: detectedObjects.map(adaptDetectedObject),
     createdAt: created_at ? new Date(created_at) : null,
     updatedAt: updated_at ? new Date(updated_at) : null,
@@ -61,6 +74,48 @@ export function adaptAsset(asset) {
     isFailed: parse_state === "failed",
     isParsing: parse_state === "parsing",
     objectCount: detectedObjects.filter(o => !o.removed).length
+  };
+}
+
+/**
+ * 把 InspirationAsset 或 SourceComponent Item 统一为一次设计的单一参考对象。
+ * SourceComponent 已经过用户候选确认，不再重复走 Inspiration 意图确认接口。
+ */
+export function adaptDesignReference(asset) {
+  const base = adaptAsset(asset);
+  if (!base) return null;
+  const attributes = asset.attributes || {};
+  const sourceComponent = attributes.source_component || null;
+  if (
+    base.type === "item" &&
+    sourceComponent?.immutable_anchor === true
+  ) {
+    return {
+      ...base,
+      referenceKind: "component",
+      confirmedIntent: {
+        intentType: "component",
+        summary: sourceComponent.label || base.name || "视频圈选组件",
+        confirmedBy: "visual_search_selection",
+        confirmedAt: asset.updated_at || asset.created_at || null
+      }
+    };
+  }
+  const confirmed = attributes.confirmed_intent || null;
+  return {
+    ...base,
+    referenceKind:
+      confirmed?.intent_type ||
+      attributes.intent_analysis?.suggested_type ||
+      null,
+    confirmedIntent: confirmed
+      ? {
+          intentType: confirmed.intent_type,
+          summary: confirmed.summary || base.name,
+          confirmedBy: confirmed.confirmed_by || null,
+          confirmedAt: confirmed.confirmed_at || null
+        }
+      : null
   };
 }
 

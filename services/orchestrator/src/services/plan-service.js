@@ -53,6 +53,32 @@ function rejectUnknownKeys(value, allowed, code, label) {
   if (unknown) throw invalid(code, `${label} 不支持字段 ${unknown}`);
 }
 
+function runProgress(run) {
+  if (run.status === "succeeded") return 100;
+  if (run.status === "queued") return 0;
+  const phaseIndex = Number.isInteger(run.phase_index) ? run.phase_index : 1;
+  const phaseTotal = Number.isInteger(run.phase_total)
+    ? run.phase_total
+    : GENERATION_PHASES.length;
+  return Math.min(99, Math.max(0, Math.round((phaseIndex / phaseTotal) * 100)));
+}
+
+function runNeedsInput(run) {
+  const card =
+    run.result?.plan_version?.aicard ||
+    run.result?.aicard ||
+    null;
+  if (card?.status !== "needs_input" || !card.follow_up) return null;
+  return {
+    reason_code: card.follow_up.reason_code,
+    question: card.follow_up.question,
+    required_fields: [...card.follow_up.required_fields],
+    can_continue_with_assumptions:
+      card.follow_up.can_continue_with_assumptions,
+    has_preview: Boolean(card.plan)
+  };
+}
+
 function runSummary(run) {
   return {
     schema_version: "1.0",
@@ -62,8 +88,10 @@ function runSummary(run) {
     phase: run.phase,
     phase_index: run.phase_index,
     phase_total: GENERATION_PHASES.length,
+    progress: runProgress(run),
     source_mode: run.source_mode,
     retryable: run.retryable,
+    needs_input: runNeedsInput(run),
     result: run.result,
     error: run.error,
     created_at: run.created_at,
@@ -148,6 +176,7 @@ export class PlanService {
     cardStore,
     config,
     roomAnalyzer,
+    formalRenewalPipeline = null,
     fetchImpl = globalThis.fetch,
     now = () => new Date()
   }) {
@@ -157,6 +186,7 @@ export class PlanService {
     this.cardStore = cardStore;
     this.config = config;
     this.roomAnalyzer = roomAnalyzer;
+    this.formalRenewalPipeline = formalRenewalPipeline;
     this.fetchImpl = fetchImpl;
     this.now = now;
     this.scheduled = new Set();
@@ -281,6 +311,8 @@ export class PlanService {
       setImmediate(async () => {
         try {
           if (!this.stopping) await this.process(actorId, runId);
+        } catch {
+          // stop/close 竞态兜底：避免未处理的 promise rejection 污染进程。
         } finally {
           this.scheduled.delete(runId);
           resolve();
@@ -359,6 +391,10 @@ export class PlanService {
             ? error.message
             : "方案生成未完成，可以重试",
         retryable: true
+      };
+      run.failure_diagnostics = {
+        code: error.code || "generation_failed",
+        issues: Array.isArray(error.issues) ? clone(error.issues).slice(0, 30) : []
       };
       run.updated_at = this.now().toISOString();
       this.repository.save("generationRuns", actorId, run);
@@ -1025,9 +1061,46 @@ export class PlanService {
         target_budget_cny: run.revision_action.target_budget_cny
       });
     }
-    return this.#orchestrator(actorId, run.generation_run_id).generate(
-      this.#toLegacyGenerateRequest(actorId, designRequest)
+    const legacyRequest = this.#toLegacyGenerateRequest(actorId, designRequest);
+    const isRenewalV2 =
+      snapshot.options?.experience_contract === "renewal-card/2.1";
+    if (!isRenewalV2 || !this.formalRenewalPipeline) {
+      return this.#orchestrator(actorId, run.generation_run_id).generate(
+        legacyRequest
+      );
+    }
+    const scaffoldRequest = clone(legacyRequest);
+    scaffoldRequest.options.analysis_mode = "demo";
+    const baseCard = await this.#orchestrator(
+      actorId,
+      run.generation_run_id
+    ).generate(scaffoldRequest);
+    const roomAnalysis = await this.roomAnalyzer(
+      legacyRequest.room_input,
+      legacyRequest.options.analysis_mode
     );
+    const output = await this.formalRenewalPipeline.execute({
+      actorId,
+      designRequest,
+      baseCard,
+      roomAnalysis,
+      roomInput: legacyRequest.room_input,
+      persistGeneratedRender: ({ bytes, mediaType }) => {
+        const media = this.mediaService.create(actorId, {
+          file: {
+            filename: generatedRenderFilename(mediaType),
+            contentType: mediaType,
+            bytes
+          },
+          purpose: "generated_render",
+          retention: "temporary"
+        });
+        return `${PRIVATE_MEDIA_PREFIX}${media.media_id}`;
+      }
+    });
+    run.pipeline_artifacts = output.artifacts;
+    this.repository.save("generationRuns", actorId, run);
+    return output.card;
   }
 
   #toLegacyGenerateRequest(actorId, designRequest) {
@@ -1140,6 +1213,54 @@ export class PlanService {
       aggregateSourceType,
       revisionAction: run.revision_action
     });
+    const isRenewalV2 = snapshot.options?.experience_contract === "renewal-card/2.1";
+    if (isRenewalV2) {
+      // V2.1 只生成主效果图，不再暴露 3 张候选
+      card.alternatives = [];
+    }
+    // 计算 implementation_source_roles（后端不可变结论）：
+    // - component 意图：inspiration 对应类别的 plan product 记为 video_selected；其它为 ai_supplement
+    // - style 意图：所有 plan product 视为 source_video（原视频里出现的物件）；无 confirmed_intent 时全部 ai_supplement
+    const inspirationSnapshot = snapshot.reference_snapshots?.find(
+      (item) => item.asset_type === "inspiration"
+    );
+    const sourceComponentSnapshot = snapshot.reference_snapshots?.find(
+      (item) => item.attributes?.source_component?.immutable_anchor === true
+    );
+    const sourceComponent = sourceComponentSnapshot?.attributes?.source_component || null;
+    const confirmed = inspirationSnapshot?.confirmed_intent || null;
+    const componentReference = inspirationSnapshot?.attributes?.intent_analysis?.component_reference || null;
+    const anchoredCategoryCode = confirmed?.intent_type === "component" ? componentReference?.category_code : null;
+    const implementationRoles = [];
+    if (card.plan?.product_ids?.length) {
+      for (const productId of card.plan.product_ids) {
+        const product = (card.products || []).find((p) => p.product_id === productId) || null;
+        let role;
+        if (
+          sourceComponent?.selected_catalog_candidate?.product_id === productId
+        ) {
+          role = "video_selected";
+        } else if (confirmed?.intent_type === "component") {
+          if (product && anchoredCategoryCode && product.category === anchoredCategoryCode) {
+            role = "video_selected";
+          } else {
+            role = "ai_supplement";
+          }
+        } else if (confirmed?.intent_type === "style") {
+          role = "source_video";
+        } else {
+          role = "ai_supplement";
+        }
+        implementationRoles.push({
+          product_id: productId,
+          role,
+          from_reference_asset_id:
+            role === "video_selected" && sourceComponentSnapshot
+              ? sourceComponentSnapshot.asset_id
+              : inspirationSnapshot?.asset_id || null
+        });
+      }
+    }
     const mediaId = snapshot.space_snapshot.space_version.media_ids?.[0];
     if (mediaId) {
       card.render.before_ref = `asset://private-media/${mediaId}`;
@@ -1156,6 +1277,9 @@ export class PlanService {
       design_request_snapshot: clone(snapshot),
       revision_action: clone(run.revision_action),
       source_mode: card.source_mode,
+      experience_contract: isRenewalV2 ? "renewal-card/2.1" : null,
+      implementation_source_roles: implementationRoles,
+      pipeline_artifacts: clone(run.pipeline_artifacts || null),
       redactions: [],
       aicard: clone(card),
       created_at: createdAt,

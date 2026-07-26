@@ -140,6 +140,22 @@ RoomProfile 来源；图片来源读取 `render.is_demo_asset` 和
 当前不向 Seedream 发送供应方商品图或 mask；候选方案和预算调整也不自动重绘，
 避免一次交互消耗多张额度。后续应由用户显式触发按需生成。
 
+正式焕新流水线直接执行两阶段规划与生图，并写入受控领域对象：
+
+```text
+已封存 SpaceVersion + confirmed_intent + 用户约束
+→ 文本视觉模型输出 LayoutPlan + ProductSlot
+→ 服务端 Builder 编译只读生图指令
+→ Seedream 编辑原图
+→ RenderEvaluator 验收
+→ 私有媒体 + GenerationRun + PlanVersion 持久化
+```
+
+规划与渲染模板事实源是 `src/prompts/renewal-v2.js`，执行入口是
+`FormalRenewalPipeline`。服务端对规划 JSON 做边界校验、过滤 SourceComponent
+同品类重复项并注入确定性整理动作后才构造 Seedream 指令；规划失败时不调用图片
+模型，视觉验收不通过时最多修复一次。旧 Prompt 实验台及专用 API 已移除。
+
 ### 3.4 `segmentation`
 
 输出必须是 0～1 bbox 和与原图同空间的 mask。用户确认的是独立状态；模型更新

@@ -15,7 +15,14 @@ const EVENT_NAMES = new Set([
   "plan_viewed",
   "plan_saved",
   "plan_revision_started",
-  "product_list_opened"
+  "product_list_opened",
+  // renewal-card/2.1 新增事件
+  "intent_confirmed",
+  "scene_switched",
+  "related_design_opened",
+  "publication_requested",
+  "implementation_opened",
+  "cart_handoff_requested"
 ]);
 
 const ENTITY_KEYS = new Set([

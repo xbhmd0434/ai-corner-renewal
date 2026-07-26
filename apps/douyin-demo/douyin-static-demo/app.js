@@ -1043,94 +1043,13 @@ function writeSessionValue(key, value) {
 }
 
 function openAiEntrySheet(item, video) {
-  document.querySelector(".ai-entry-layer")?.remove();
   video.pause();
-
-  const layer = document.createElement("section");
-  layer.className = "ai-entry-layer";
-  layer.setAttribute("aria-hidden", "false");
-  layer.innerHTML = `
-    <div class="ai-entry-sheet" role="dialog" aria-modal="true" aria-label="选择 AI 试搭方式">
-      <div class="ai-entry-sheet__grip"></div>
-      <header class="ai-entry-sheet__header">
-        <div>
-          <small>AI · FROM THIS VIDEO</small>
-          <strong>把这份喜欢带进生活</strong>
-        </div>
-        <button type="button" data-ai-close aria-label="关闭">×</button>
-      </header>
-      <div class="ai-entry-sheet__source">
-        <span class="ai-entry-sheet__thumb">▶</span>
-        <div><strong data-ai-caption></strong><small data-ai-author></small></div>
-      </div>
-      <div class="ai-entry-sheet__choices">
-        <button type="button" data-ai-entry="space">
-          <span class="ai-entry-sheet__icon ai-entry-sheet__icon--space">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M3 20h18M5 20V9l7-5 7 5v11"/>
-              <path d="M9 20v-6h6v6"/>
-            </svg>
-          </span>
-          <span><b>放进我的空间</b><small>延续现有 AI 一角焕新</small></span>
-          <i>›</i>
-        </button>
-        <button type="button" data-ai-entry="accessory">
-          <span class="ai-entry-sheet__icon ai-entry-sheet__icon--tryon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M7 9a5 5 0 0 1 10 0"/>
-              <path d="M5 9h14l1 11H4L5 9z"/>
-              <circle cx="17.5" cy="11.5" r="2.2"/>
-              <path d="M17.5 13.7v3"/>
-            </svg>
-          </span>
-          <span><b>挂到我的包上</b><small>进入双模型 3D 试搭</small></span>
-          <i>›</i>
-        </button>
-      </div>
-      <p class="ai-entry-sheet__note">当前视频入口只传递来源与时间点，不上传整段视频。</p>
-    </div>
-  `;
-
-  layer.querySelector("[data-ai-caption]").textContent =
-    item.caption || "当前视频";
-  layer.querySelector("[data-ai-author]").textContent =
-    `${item.author || "视频作者"} · ${Math.round(video.currentTime || 0)}s`;
-
-  const close = () => layer.remove();
-  layer.querySelector("[data-ai-close]").addEventListener("click", close);
-  layer.addEventListener("click", (event) => {
-    if (event.target === layer) close();
-  });
-  layer
-    .querySelector('[data-ai-entry="space"]')
-    .addEventListener("click", () => {
-      writeSessionValue(
-        "video-entry-context",
-        buildVideoEntryContext(
-          item,
-          video,
-          "把视频里的家居氛围适配到我的真实空间"
-        )
-      );
-      window.location.href = "./renewal.html#/task?source=video";
-    });
-  layer
-    .querySelector('[data-ai-entry="accessory"]')
-    .addEventListener("click", () => {
-      const context = buildVideoEntryContext(
-        item,
-        video,
-        "把视频里的小商品挂到我的包上"
-      );
-      writeSessionValue("douyin-accessory-entry-context", {
-        ...context,
-        kind: "video",
-        selected_asset_role: "attachment"
-      });
-      window.location.href = "./try-on.html?source=video";
-    });
-
-  document.querySelector(".phone")?.append(layer);
+  const trigger = video
+    .closest(".video-slide")
+    ?.querySelector(".visual-search-trigger");
+  // 视频流的唯一焕新入口先经过定帧、圈选和意图确认；不再跳过灵感资产，
+  // 也不在进入焕新页前把圈选误建模为商品资产。
+  trigger?.click();
 }
 
 function renderFeed() {
@@ -1144,6 +1063,9 @@ function renderFeed() {
     const counters = node.querySelectorAll(".stack-button small");
 
     node.dataset.index = String(index);
+    node.dataset.videoId = item.id;
+    node.dataset.author = item.author;
+    node.dataset.caption = item.caption;
     node.querySelector(".author").textContent = item.author;
     node.querySelector(".caption").textContent = item.caption;
     node.querySelector(".tags").textContent = item.tags;
@@ -1177,7 +1099,7 @@ function renderFeed() {
       counters[0].textContent = formatCount(item.likes);
     });
 
-    // 单一 AI 入口在底部动作层分流空间焕新与 3D 挂件试搭，避免挤占操作栏。
+    // 单一 AI 入口把当前视频的最小来源上下文交给一角焕新。
     const actionRail = node.querySelector(".action-rail");
     if (actionRail) {
       const fusionBtn = document.createElement("button");
@@ -1188,7 +1110,7 @@ function renderFeed() {
           <path d="M12 3l1.45 4.55L18 9l-4.55 1.45L12 15l-1.45-4.55L6 9l4.55-1.45L12 3z"/>
           <path d="M18.5 14l.75 2.25L21.5 17l-2.25.75L18.5 20l-.75-2.25L15.5 17l2.25-.75L18.5 14z"/>
         </svg>
-        <small>AI</small>
+        <small>焕新</small>
       `;
       fusionBtn.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -1205,14 +1127,16 @@ function renderFeed() {
 
 function toggleVideo(video, slide) {
   if (video.paused) {
+    slide.classList.remove("user-paused");
     playWithSound(video, slide);
   } else {
     video.pause();
-    slide.classList.add("paused");
+    slide.classList.add("paused", "user-paused");
   }
 }
 
 function playWithSound(video, slide) {
+  slide.classList.remove("user-paused");
   video.muted = false;
   video.volume = 1;
   video.play()
@@ -1304,7 +1228,7 @@ async function initDemo() {
   const feedShootButton = document.querySelector("#feedShootButton");
   if (feedShootButton) {
     feedShootButton.addEventListener("click", () => {
-      window.location.href = "./renewal.html#/home";
+      window.location.href = "./renewal.html?source=home";
     });
   }
 }

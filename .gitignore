@@ -20,11 +20,16 @@ server.err.log
 Thumbs.db
 .idea/
 .vscode/
+.claude/
 
 # Generated validation artifacts
 artifacts/
 playwright-report/
 test-results/
+
+# Ad-hoc local scratch dir for curl/health/openapi dumps during manual checks.
+# Never anchor a service to it.
+/tmp/
 
 # User-derived / generated 3D binaries stay local or in private object storage.
 apps/web/assets/models/*.glb

@@ -1,6 +1,6 @@
 {
   "name": "ai-corner-renewal",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "description": "将短视频家居灵感适配到真实空间的可解释 AI 焕新原型",
   "type": "module",
@@ -12,21 +12,23 @@
     "start:classic": "node scripts/start-all.mjs",
     "start:web": "node scripts/serve.mjs",
     "start:backend": "node services/orchestrator/src/index.js",
+    "start:production": "node services/orchestrator/src/index.js",
+    "openapi:generate": "node scripts/generate-openapi.mjs",
+    "openapi:check": "node scripts/generate-openapi.mjs --check",
     "check:agent-plan": "node scripts/check-agent-plan.mjs",
     "check:agent-plan-room": "node scripts/check-agent-plan-room.mjs",
+    "check:agent-plan-component": "node scripts/check-agent-plan-component.mjs",
     "check:agent-plan-image": "node scripts/check-agent-plan-image.mjs",
-    "generate:3d": "node scripts/run-hunyuan.mjs",
+    "check:agent-plan-products": "node scripts/check-agent-plan-product-discovery.mjs",
+    "benchmark:first-live": "node scripts/run-first-live-benchmark.mjs",
     "demo:backend": "node examples/run-backend-demo.mjs",
     "check:douyin": "npm --prefix apps/douyin-demo run check",
     "check:douyin-integration": "npm --prefix apps/douyin-demo run check:integration",
-    "test": "node --test",
-    "check": "node --check apps/web/app.js && node --check apps/web/accessory-studio.js && node --check apps/web/data/demo-data.js && node --check apps/web/data/accessory-demo-data.js && node --check scripts/start-all.mjs && node --check scripts/run-hunyuan.mjs && node --check scripts/check-agent-plan.mjs && node --check scripts/check-agent-plan-room.mjs && node --check scripts/check-agent-plan-image.mjs && node scripts/validate.mjs && node --test && npm run check:douyin"
+    "test": "node --test --test-concurrency=1",
+    "check": "node --check apps/web/app.js && node --check services/orchestrator/src/adapters/layout-planner.js && node --check apps/web/data/demo-data.js && node --check scripts/start-all.mjs && node --check scripts/check-agent-plan.mjs && node --check scripts/check-agent-plan-room.mjs && node --check scripts/check-agent-plan-component.mjs && node --check scripts/check-agent-plan-image.mjs && node --check scripts/check-agent-plan-product-discovery.mjs && node --check scripts/run-first-live-benchmark.mjs && node scripts/validate.mjs && npm run openapi:check && node --test --test-concurrency=1 && npm run check:douyin"
   },
   "engines": {
     "node": ">=22.5"
   },
-  "license": "MIT",
-  "dependencies": {
-    "three": "0.180.0"
-  }
+  "license": "MIT"
 }

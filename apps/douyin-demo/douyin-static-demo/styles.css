@@ -1456,12 +1456,6 @@ button:focus-visible {
   background: rgba(37, 244, 238, 0.1);
 }
 
-.ai-entry-sheet__icon--tryon {
-  color: #fff;
-  background: linear-gradient(145deg, var(--hot), #a43fff);
-  box-shadow: 0 8px 18px rgba(254, 44, 85, 0.18);
-}
-
 .ai-entry-sheet__note {
   margin: 11px 2px 0;
   color: rgba(255, 255, 255, 0.35);

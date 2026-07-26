@@ -12,6 +12,9 @@ const PARSE_STATES = new Set([
 ]);
 const DISPOSITIONS = new Set(["keep", "movable", "removable"]);
 const BBOX_KEYS = ["x", "y", "width", "height"];
+const STARTER_SPACE_ASSET_ID = "space-demo-desk";
+const STARTER_COMPONENT_ASSET_ID = "item-demo-lamp";
+const STARTER_SOURCE_COMPONENT_ID = "source-component-demo-mushroom-lamp";
 
 const clone = (value) => structuredClone(value);
 const uniqueStrings = (value) =>
@@ -107,7 +110,9 @@ function seedAssets(now) {
       scene_type: seed.sceneType || "desk_corner",
       reference_width_cm: seed.width,
       default_budget_cny: 500,
-      long_term_constraints: ["no_drilling"]
+      long_term_constraints: ["no_drilling"],
+      scene_origin: "ai_example",
+      read_only: true
     },
     dedup_key: null,
     last_used_at: createdAt,
@@ -144,7 +149,28 @@ function seedAssets(now) {
       style_key: styleKey,
       styles: [styleKey],
       colors: styleKey === "green" ? ["green", "warm_white"] : ["wood", "warm_white"],
-      materials: ["wood", "fabric"]
+      materials: ["wood", "fabric"],
+      intent_analysis: {
+        state: "ready",
+        suggested_type: "style",
+        summary: name,
+        component_reference: null,
+        style_reference: {
+          style_keywords: [styleKey],
+          colors: styleKey === "green" ? ["green", "warm_white"] : ["wood", "warm_white"],
+          materials: ["wood", "fabric"]
+        },
+        candidates: [],
+        source_mode: "demo",
+        provider: "deterministic-demo",
+        model: null
+      },
+      confirmed_intent: {
+        intent_type: "style",
+        summary: name,
+        confirmed_by: "system_default",
+        confirmed_at: createdAt
+      }
     },
     dedup_key: `demo:${assetId}`,
     last_used_at: createdAt,
@@ -197,6 +223,8 @@ function seedAssets(now) {
     reference_width_cm: asset.attributes.reference_width_cm,
     attributes: {
       scene_type: asset.attributes.scene_type,
+      scene_origin: "ai_example",
+      read_only: true,
       reference_width_cm: asset.attributes.reference_width_cm,
       editable_regions: [
         {
@@ -311,6 +339,8 @@ export class AssetParseService {
       setImmediate(async () => {
         try {
           if (!this.stopping) await this.process(actorId, parseRunId);
+        } catch {
+          // stop/close 竞态兜底：避免未处理的 promise rejection 污染进程。
         } finally {
           this.scheduled.delete(parseRunId);
           resolve();
@@ -438,6 +468,133 @@ export class AssetService {
       for (const version of seeds.versions) {
         this.repository.save("spaceVersions", actorId, version);
       }
+    });
+  }
+
+  /**
+   * Idempotently upgrades the read-only demo records into the real starter
+   * scenario shown by “搬进我家”. This deliberately runs even when the database
+   * already contains older demo seeds.
+   */
+  ensureStarterScenario(
+    actorId,
+    { spaceMediaId, componentMediaId }
+  ) {
+    const createdAt = this.now().toISOString();
+    const existingSpace = this.repository.find(
+      "assets",
+      actorId,
+      STARTER_SPACE_ASSET_ID,
+      { includeDeleted: true }
+    );
+    const existingVersion = this.repository.find(
+      "spaceVersions",
+      actorId,
+      `${STARTER_SPACE_ASSET_ID}-v1`,
+      { includeDeleted: true }
+    );
+    const existingComponent = this.repository.find(
+      "assets",
+      actorId,
+      STARTER_COMPONENT_ASSET_ID,
+      { includeDeleted: true }
+    );
+    if (!existingSpace || !existingVersion || !existingComponent) {
+      throw new Error("Starter scenario requires the base demo seed");
+    }
+
+    const space = {
+      ...existingSpace,
+      lifecycle: "saved",
+      parse_state: "ready",
+      name: "原来的脏乱书桌",
+      tags: ["demo_seed", "starter_scenario", "cluttered_desk"],
+      is_default: true,
+      media_ids: [spaceMediaId],
+      attributes: {
+        ...existingSpace.attributes,
+        scene_type: "desk_corner",
+        reference_width_cm: 180,
+        scene_origin: "ai_example",
+        read_only: true,
+        starter_sample: true
+      },
+      deleted_at: null,
+      updated_at: existingSpace.updated_at || createdAt
+    };
+    const version = {
+      ...existingVersion,
+      state: "sealed",
+      parse_state: "ready",
+      media_ids: [spaceMediaId],
+      reference_width_cm: 180,
+      attributes: {
+        ...existingVersion.attributes,
+        scene_type: "desk_corner",
+        scene_origin: "ai_example",
+        read_only: true,
+        starter_sample: true,
+        reference_width_cm: 180
+      },
+      updated_at: existingVersion.updated_at || createdAt
+    };
+    const component = {
+      ...existingComponent,
+      lifecycle: "saved",
+      parse_state: "ready",
+      name: "奶油白蘑菇小台灯",
+      tags: ["demo_seed", "starter_scenario", "source_component", "table_lamp"],
+      is_default: true,
+      media_ids: [componentMediaId],
+      provenance: {
+        kind: "video_context",
+        provider: "douyin_demo",
+        external_content_id: "starter-mushroom-lamp",
+        author_display: "初始体验样例",
+        timestamp_ms: 0,
+        selection_bbox: { x: 0, y: 0, width: 1, height: 1 }
+      },
+      attributes: {
+        user_role: "wanted",
+        identity_level: "visual_component",
+        starter_sample: true,
+        source_component: {
+          source_component_id: STARTER_SOURCE_COMPONENT_ID,
+          immutable_anchor: true,
+          query_media_id: componentMediaId,
+          category_code: "table_lamp",
+          label: "蘑菇造型桌面台灯",
+          colors: ["白色"],
+          materials: ["塑料", "亚克力"],
+          shape_keywords: ["蘑菇形"],
+          style_keywords: ["简约", "现代"],
+          search_queries: [
+            "蘑菇造型桌面台灯",
+            "白色简约台灯",
+            "现代床头台灯"
+          ],
+          visual_confidence: 0.95,
+          selected_catalog_candidate: {
+            candidate_id: "candidate-2-prod-green-mushroom-lamp",
+            product_id: "prod-green-mushroom-lamp",
+            name: "暖光蘑菇灯",
+            category_code: "lighting",
+            match_type: "visual_similar"
+          }
+        }
+      },
+      deleted_at: null,
+      updated_at: existingComponent.updated_at || createdAt
+    };
+
+    this.repository.transaction(() => {
+      this.repository.save("assets", actorId, space);
+      this.repository.save("spaceVersions", actorId, version);
+      this.repository.save("assets", actorId, component);
+      this.repository.bindMedia(actorId, STARTER_SPACE_ASSET_ID, [spaceMediaId]);
+      this.repository.bindMedia(actorId, STARTER_COMPONENT_ASSET_ID, [
+        componentMediaId
+      ]);
     });
   }
 
@@ -703,6 +860,115 @@ export class AssetService {
     return { status: 201, value: this.summary(asset) };
   }
 
+  /**
+   * Trusted server-side constructor for a component selected from a video frame.
+   * Clients cannot write component identity fields through the generic asset API.
+   */
+  createSourceComponent(
+    actorId,
+    { mediaId, sourceContext, componentIdentity, selectedCandidate, lifecycle = "saved" }
+  ) {
+    const media = this.repository.get("media", actorId, mediaId);
+    if (media.purpose !== "visual_search_query") {
+      throw invalid(
+        "media_purpose_mismatch",
+        `${mediaId} 不是视频圈选组件的视觉查询图片`
+      );
+    }
+    if (!sourceContext || typeof sourceContext !== "object") {
+      throw invalid("source_context_invalid", "缺少视频来源上下文");
+    }
+    validateBbox(sourceContext.selection_bbox, "/source_context/selection_bbox");
+    if (!["temporary", "saved"].includes(lifecycle)) {
+      throw invalid("asset_lifecycle_invalid", "组件资产只能是 temporary 或 saved");
+    }
+
+    const createdAt = this.now();
+    const assetId = `item-${randomUUID()}`;
+    const sourceComponentId = `source-component-${randomUUID()}`;
+    const categoryCode =
+      componentIdentity?.category_code ||
+      selectedCandidate?.category_code ||
+      "unknown_component";
+    const name =
+      selectedCandidate?.name ||
+      componentIdentity?.label ||
+      "视频圈选组件";
+    const asset = {
+      schema_version: "1.0",
+      asset_id: assetId,
+      asset_type: "item",
+      lifecycle,
+      parse_state: "ready",
+      name,
+      tags: ["source_component", categoryCode],
+      is_default: false,
+      resource_version: 1,
+      current_space_version_id: null,
+      expires_at:
+        lifecycle === "temporary"
+          ? new Date(
+              createdAt.getTime() +
+                this.config.temporaryRetentionHours * 60 * 60 * 1000
+            ).toISOString()
+          : null,
+      media_ids: [mediaId],
+      provenance: {
+        kind: "video_context",
+        provider: sourceContext.provider,
+        external_content_id: sourceContext.external_content_id,
+        author_display: sourceContext.author_display || null,
+        timestamp_ms: sourceContext.timestamp_ms,
+        selection_bbox: clone(sourceContext.selection_bbox)
+      },
+      attributes: {
+        user_role: "wanted",
+        identity_level: "visual_component",
+        source_component: {
+          source_component_id: sourceComponentId,
+          immutable_anchor: true,
+          query_media_id: mediaId,
+          category_code: categoryCode,
+          label: componentIdentity?.label || name,
+          colors: clone(componentIdentity?.colors || []),
+          materials: clone(componentIdentity?.materials || []),
+          shape_keywords: clone(componentIdentity?.shape_keywords || []),
+          style_keywords: clone(componentIdentity?.style_keywords || []),
+          search_queries: clone(componentIdentity?.search_queries || []),
+          visual_confidence: componentIdentity?.confidence ?? null,
+          selected_catalog_candidate: selectedCandidate
+            ? {
+                candidate_id: selectedCandidate.candidate_id,
+                product_id: selectedCandidate.product_id || null,
+                name: selectedCandidate.name,
+                category_code: selectedCandidate.category_code,
+                match_type: selectedCandidate.match_type || "visual_similar"
+              }
+            : null
+        }
+      },
+      dedup_key: null,
+      last_used_at: createdAt.toISOString(),
+      deleted_at: null,
+      created_at: createdAt.toISOString(),
+      updated_at: createdAt.toISOString()
+    };
+
+    this.repository.transaction(() => {
+      this.repository.save("assets", actorId, asset);
+      this.repository.bindMedia(actorId, assetId, [mediaId]);
+      if (lifecycle === "saved") {
+        media.retention_expires_at = null;
+        media.updated_at = createdAt.toISOString();
+        this.repository.save("media", actorId, media);
+      }
+    });
+    return {
+      ...this.summary(asset),
+      source_component: clone(asset.attributes.source_component)
+    };
+  }
+
   list(actorId, query = {}) {
     const supportedQuery = new Set([
       "asset_type",
@@ -815,6 +1081,12 @@ export class AssetService {
   patch(actorId, assetId, body) {
     assertNoOwnerId(body);
     const asset = this.repository.get("assets", actorId, assetId);
+    if (asset.attributes?.scene_origin === "ai_example") {
+      throw conflict(
+        "ai_example_scene_read_only",
+        "AI 示例场景为只读，请复制后再编辑"
+      );
+    }
     requireVersion(asset.resource_version, body?.resource_version, this.summary(asset));
     const changes = body?.changes;
     if (!changes || typeof changes !== "object" || Array.isArray(changes)) {
@@ -921,6 +1193,59 @@ export class AssetService {
         }
       }
     });
+    return this.summary(next);
+  }
+
+  confirmIntent(actorId, assetId, body) {
+    assertNoOwnerId(body);
+    const asset = this.repository.get("assets", actorId, assetId);
+    if (asset.asset_type !== "inspiration") {
+      throw invalid("intent_confirmation_invalid", "只有 inspiration 资产支持意图确认");
+    }
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      throw invalid("intent_confirmation_invalid", "请求体必须是对象");
+    }
+    if (body.schema_version !== "1.0") {
+      throw invalid("intent_confirmation_invalid", "schema_version 必须是 1.0");
+    }
+    rejectUnknownKeys(
+      body,
+      new Set(["schema_version", "resource_version", "intent_type", "summary"]),
+      "intent_confirmation_invalid"
+    );
+    requireVersion(asset.resource_version, body.resource_version, this.summary(asset));
+    if (!["component", "style"].includes(body.intent_type)) {
+      throw invalid("intent_confirmation_invalid", "intent_type 必须是 component 或 style");
+    }
+    if (
+      typeof body.summary !== "string" ||
+      !body.summary.trim() ||
+      body.summary.length > 200
+    ) {
+      throw invalid("intent_confirmation_invalid", "summary 必须是 1～200 字符");
+    }
+    const analysis = asset.attributes?.intent_analysis;
+    if (!analysis || analysis.state === "failed") {
+      throw conflict(
+        "intent_confirmation_unavailable",
+        "该资产尚未完成意图分析或分析已失败"
+      );
+    }
+    // 组件/风格与 analysis 的引用不一致时仍允许纠正，但确认后 confirmed_intent 是唯一权威
+    const now = this.now().toISOString();
+    const next = clone(asset);
+    next.attributes = clone(asset.attributes || {});
+    next.attributes.confirmed_intent = {
+      intent_type: body.intent_type,
+      summary: body.summary.trim(),
+      confirmed_by: "user",
+      confirmed_at: now
+    };
+    // 用户确认后 parse_state 必然是 ready
+    next.parse_state = "ready";
+    next.resource_version += 1;
+    next.updated_at = now;
+    this.repository.save("assets", actorId, next);
     return this.summary(next);
   }
 
@@ -1168,6 +1493,12 @@ export class AssetService {
       includeDeleted: true
     });
     if (!asset) throw new ApiError("resource_not_found", "资产不存在", 404);
+    if (asset.attributes?.scene_origin === "ai_example") {
+      throw conflict(
+        "ai_example_scene_read_only",
+        "AI 示例场景为只读，不能删除"
+      );
+    }
     if (asset.deleted_at && !asset.deletion_pending) return;
     const deletedAt = this.now().toISOString();
     asset.deleted_at = deletedAt;

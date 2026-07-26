@@ -9,7 +9,7 @@
 > 产品依据：产品同学 2026-07 新版《AI 一角焕新：产品蓝图与全链路功能清单》
 
 对应前端任务见：
-[抖音展示 Demo 前端交接](../../抖音展示demo/HANDOFF.md)。
+[抖音展示 Demo 前端交接](../apps/douyin-demo/HANDOFF.md)。
 
 ---
 
@@ -230,6 +230,7 @@ reduce_budget | change_style
 | 方法与路径 | 状态 | 迁移策略 |
 | --- | --- | --- |
 | `GET /api/health` | 已实现，继续保留 | 增加持久化版本、鉴权模式和上传限制 |
+| `GET /api/openapi.json` | 已实现 | 返回与共享路由清单、Schema 同源生成的 OpenAPI 3.1 |
 | `POST /api/generate` | 已实现，继续保留 | 内部适配到临时资产、DesignRequest 和 GenerationRun |
 | `POST /api/revise` | 已实现，继续保留 | 内部适配为 `reduce_budget` PlanRevision |
 
@@ -395,12 +396,14 @@ Asset、draft SpaceVersion、PlanAsset 和 Preference PATCH 携带当前
 | HTTP | 用途 |
 | --- | --- |
 | 400 | JSON/Multipart 无法解析 |
+| 403 | 浏览器 Origin 或资源访问被拒绝 |
 | 404 | 资源不存在或当前 actor 无权访问 |
+| 405 | 路径存在但方法不支持；响应同时返回 `Allow` Header 和 `allowed_methods` |
 | 409 | 幂等冲突、资源版本冲突、非法状态转换 |
 | 413 | 文件或请求体过大 |
 | 415 | 不支持的媒体类型 |
 | 422 | 结构合法但字段/业务规则不满足 |
-| 429 | 限流 |
+| 429 | 生产限流预留；当前单进程 P0 尚未启用 |
 | 500 | 未知内部错误，响应不含堆栈 |
 | 502/504 | 已选择不降级时的供应方失败/超时 |
 
@@ -1096,8 +1099,10 @@ PlanService 应把“参考资产 + 目标 + 显式偏好”组合成一个派�
   "phase": "planning",
   "phase_index": 6,
   "phase_total": 9,
+  "progress": 67,
   "source_mode": "live",
   "retryable": false,
+  "needs_input": null,
   "result": null,
   "error": null,
   "updated_at": "2026-07-25T12:06:08.000Z"
@@ -1112,7 +1117,9 @@ PlanService 应把“参考资产 + 目标 + 显式偏好”组合成一个派�
   "design_request_id": "design-request-001",
   "status": "succeeded",
   "phase": "packaging",
+  "progress": 100,
   "source_mode": "live",
+  "needs_input": null,
   "result": {
     "plan_asset_id": "plan-001",
     "plan_resource_version": 1,
@@ -1161,6 +1168,8 @@ PlanService 应把“参考资产 + 目标 + 显式偏好”组合成一个派�
   "status": "failed",
   "phase": "rendering",
   "source_mode": "live",
+  "progress": 78,
+  "needs_input": null,
   "result": null,
   "error": {
     "code": "render_provider_timeout",
@@ -1179,6 +1188,11 @@ PlanService 应把“参考资产 + 目标 + 显式偏好”组合成一个派�
   `run.status=succeeded + source_mode=fallback + plan!=null`；
 - `source_mode=fallback` 也允许 `AICard.status=needs_input`，此时 needs_input
   业务语义优先，不能强改为 fallback_ready；
+- `GenerationRun.needs_input` 是对终态 AICard `follow_up` 的稳定轮询投影，包含
+  `reason_code / question / required_fields / can_continue_with_assumptions /
+  has_preview`；无待补信息时固定为 `null`；
+- `progress` 是 0～100 的整数；queued 为 0，succeeded 为 100，failed/cancelled
+  保留停止时的阶段进度；
 - `AICard.status=needs_input` 是有效业务结果，不是 run failed；
 - `needs_input + plan!=null` 创建 PlanAsset/PlanVersion，并按普通成功返回 ID；
 - `needs_input + plan=null` 不创建空 PlanAsset/PlanVersion，run 仍为 succeeded，
